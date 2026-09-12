@@ -64,6 +64,9 @@ class CapabilitiesOut(BaseModel):
     # per sentence on CPU" warning copy. Never "cuda" unless every
     # GPU-relevant stage is actually configured for it.
     device: str
+    # Whether /process accepts clone_voice=True here. The UI must not offer
+    # the toggle otherwise (CONTRACTS.md #2).
+    voice_clone_available: bool
     max_upload_mb: int
     accepted_formats: list[str]
 
@@ -106,6 +109,7 @@ def get_capabilities() -> CapabilitiesOut:
         },
         asr_autodetect=settings.asr_autodetect,
         device=settings.compute_device,
+        voice_clone_available=settings.voice_clone_available,
         max_upload_mb=settings.max_upload_mb,
         accepted_formats=settings.accepted_video_format_list,
     )

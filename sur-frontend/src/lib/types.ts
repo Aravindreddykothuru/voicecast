@@ -221,6 +221,8 @@ export interface Capabilities {
   /** Conservative single summary of where real providers actually run.
    *  Never "cuda" unless every GPU-relevant stage is configured for it. */
   device: "cpu" | "cuda";
+  /** Whether POST /process accepts clone_voice=true on this deployment. */
+  voice_clone_available: boolean;
   max_upload_mb: number;
   accepted_formats: string[];
 }

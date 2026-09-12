@@ -33,20 +33,34 @@ _HEAD_KEY_RE = re.compile(r"(^|\.)(classifier|projector|score|head|out_proj)(\.|
 
 # The ONLY missing keys tolerated, and only because they are a documented
 # rename rather than absent training: PyTorch moved weight-norm from
-# `weight_g`/`weight_v` to the `parametrizations.weight.original0/1` form, so
-# every wav2vec2/hubert checkpoint saved before that switch reports the new
-# names as "missing" while carrying the old ones as "unexpected". The values
-# are present and identical -- only the spelling changed. Anything not
-# matching this stays fatal.
-_BENIGN_MISSING_RE = re.compile(
-    r"encoder\.pos_conv_embed\.conv\.parametrizations\.weight\.original[01]$"
-)
+# `<module>.weight_g`/`<module>.weight_v` to
+# `<module>.parametrizations.weight.original0/1`. transformers maps the old
+# names onto the new ones while loading, but still reports the new names as
+# "missing" and the old ones as "unexpected".
+#
+# Tolerated pairwise, never by pattern alone: `X.parametrizations.weight.
+# original0` is benign only if the checkpoint actually carries `X.weight_g`
+# (original1 <-> weight_v). This used to be a regex hard-wired to wav2vec2's
+# one pos_conv layer; MMS-TTS (VITS) reports the same rename on 128 keys
+# across its flow and posterior encoder, and a pattern broad enough to cover
+# those would also have excused a genuinely absent weight-normed layer.
+_WEIGHT_NORM_NEW = re.compile(r"^(?P<module>.+)\.parametrizations\.weight\.original(?P<idx>[01])$")
+_WEIGHT_NORM_OLD_SUFFIX = {"0": "weight_g", "1": "weight_v"}
 
 
-def _classify(keys: list[str]) -> tuple[list[str], list[str]]:
+def _is_weight_norm_rename(key: str, unexpected: set[str]) -> bool:
+    m = _WEIGHT_NORM_NEW.match(key)
+    return bool(m) and f"{m['module']}.{_WEIGHT_NORM_OLD_SUFFIX[m['idx']]}" in unexpected
+
+
+def _classify(missing: list[str], unexpected: list[str]) -> tuple[list[str], list[str]]:
     """Split missing keys into (head_keys, other_non_benign_keys)."""
-    head = [k for k in keys if _HEAD_KEY_RE.search(k)]
-    other = [k for k in keys if k not in head and not _BENIGN_MISSING_RE.search(k)]
+    unexpected_set = set(unexpected)
+    head = [k for k in missing if _HEAD_KEY_RE.search(k)]
+    other = [
+        k for k in missing
+        if k not in head and not _is_weight_norm_rename(k, unexpected_set)
+    ]
     return head, other
 
 
@@ -62,7 +76,7 @@ def load_hf_model(loader, model_name: str, **kwargs):
     unexpected = list(info.get("unexpected_keys") or [])
     mismatched = list(info.get("mismatched_keys") or [])
 
-    head_missing, other_missing = _classify(missing)
+    head_missing, other_missing = _classify(missing, unexpected)
 
     problems = []
     if head_missing:

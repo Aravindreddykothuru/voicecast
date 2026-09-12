@@ -494,15 +494,17 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
       await confirmUpload(project.id, up.source_video_id);
       await startProcessing(project.id, {
         preserve_emotion: preserveEmotion,
-        clone_voice: cloneVoice,
+        clone_voice: cloneVoice && caps.voice_clone_available,
         lip_sync_aware: false,
-        // "Preserve original pauses" maps to keeping the language-review gate
-        // on: the pipeline places each clip at its real timecode. Turning it
-        // off is the "pack clips together" behaviour that drifts.
+        // Autodetect parks the run after ASR so the detected language can be
+        // confirmed before the expensive stages. A pinned language is sent
+        // with the request instead: it used to be applied by calling
+        // /confirm-language right after /process, which 409s (a run that
+        // isn't reviewing never reaches the gate), so the pick was dropped
+        // and ASR auto-detected anyway.
         review_language: sourceLang === "auto",
+        source_language: sourceLang === "auto" ? null : sourceLang,
       });
-      // Source language override, when the user pinned one instead of auto.
-      if (sourceLang !== "auto") await confirmLanguage(project.id, sourceLang);
       onCreated(project.id);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Could not start the job");
@@ -607,9 +609,15 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
           <Checkbox checked={preserveEmotion} onChange={setPreserveEmotion}
             label="Preserve emotional delivery" badge="Emotion-aware"
             help="Carries the source segment's detected emotion into the synthesized voice." />
-          <Checkbox checked={cloneVoice} onChange={setCloneVoice}
-            label="Clone the original speaker's voice" badge="Zero-shot"
-            help="Uses a reference clip of the speaker so the dub keeps their timbre." />
+          {caps.voice_clone_available ? (
+            <Checkbox checked={cloneVoice} onChange={setCloneVoice}
+              label="Clone the original speaker's voice" badge="Zero-shot"
+              help="Uses a reference clip of the speaker so the dub keeps their timbre." />
+          ) : (
+            <p className="text-[12px] font-mono" style={{ color: C.textDim }}>
+              Voice cloning is not enabled on this deployment.
+            </p>
+          )}
         </Step>
 
         {error && <Callout tone="error"><span>{error}</span></Callout>}

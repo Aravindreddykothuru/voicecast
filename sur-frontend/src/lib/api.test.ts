@@ -8,7 +8,7 @@
  * retry it forever instead of asking the user to log in again.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { API_BASE, ApiError, getCapabilities, listProjects, resolveUrl } from "./api";
+import { API_BASE, ApiError, getCapabilities, listProjects, resolveUrl, startProcessing } from "./api";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -16,6 +16,31 @@ function jsonResponse(body: unknown, status = 200) {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+describe("startProcessing", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends a pinned source language with the process request itself", async () => {
+    // The New Dubbing screen used to pin a language with a second call to
+    // /confirm-language, which 409s for a run that never parks at the gate,
+    // so the choice was dropped. It must travel with /process.
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "p1" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await startProcessing("p1", {
+      preserve_emotion: true,
+      clone_voice: false,
+      lip_sync_aware: false,
+      review_language: false,
+      source_language: "hi",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${API_BASE}/api/projects/p1/process`);
+    expect(JSON.parse(init.body as string)).toMatchObject({ source_language: "hi", review_language: false });
+  });
+});
 
 describe("resolveUrl", () => {
   it("leaves an absolute presigned URL alone", () => {

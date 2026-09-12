@@ -23,13 +23,20 @@ chance confidence (0.14 across 8 labels). The API returned 200. Nothing
 alerted. The only symptom was that the emotion labels were meaningless.
 
 **The rule.**
-- No production code calls `from_pretrained` directly. All loads go through
-  `app/providers/loading.py::load_hf_model`.
+- No production code calls `from_pretrained` directly for a model with
+  weights. All loads go through `app/providers/loading.py::load_hf_model`.
 - Any missing weight that is not on the explicit benign allowlist is a hard
-  `ModelLoadError`. The allowlist currently contains exactly one entry: the
-  PyTorch `weight_norm` rename (`weight_g`/`weight_v` →
-  `parametrizations.weight.original0/1`), which is a spelling change, not
-  absent training.
+  `ModelLoadError`. The allowlist contains exactly one rule: the PyTorch
+  `weight_norm` rename (`X.weight_g`/`X.weight_v` →
+  `X.parametrizations.weight.original0/1`), which is a spelling change, not
+  absent training -- and it is applied **pairwise**: a missing
+  `X.parametrizations.weight.original0` is excused only if the checkpoint
+  actually carries `X.weight_g`. (It used to be a regex for wav2vec2's one
+  conv layer; MMS-TTS reports the rename on 128 keys, and a pattern broad
+  enough for those would also excuse a genuinely absent layer.)
+- Every real provider's constructor loads the weights its common path uses
+  and runs a behavioural self-check. The translation provider used to load
+  nothing until the first job, so its startup check proved nothing.
 - Missing **head** weights (`classifier`, `projector`, `score`, `head`,
   `out_proj`) are never tolerated, allowlist or not.
 - Every provider with a classification head runs `assert_not_degenerate` on a
@@ -62,6 +69,13 @@ while the model could only ever predict four.
   is the only way to resolve a target language, and it validates completeness
   on every call, so a half-filled entry fails in mocked runs too rather than
   waiting for production.
+- TTS availability per language is derived from the voice that speaks it
+  (`Language.mms_tts`), never a bare `True`. Every row used to say
+  `tts_supported=True` while the configured TTS model (CosyVoice2) could not
+  speak any of the twelve languages.
+- `voice_clone_available` is published and `/process` enforces it; a target
+  language is validated when the project is created, not after upload,
+  extraction and ASR have run.
 - Emotion labels are derived from the loaded model's own `config.id2label`
   (`EmotionProvider.available_labels()`), never hardcoded.
 - Both are published at `GET /api/capabilities`. The frontend renders that
@@ -92,8 +106,21 @@ line landed at 6s came out 6s long.
   (`amix`), and pads the result (`apad`) so the picture is never truncated.
 - Placement keys off `start_ms`, never list position.
 - Output duration must equal source duration.
+- Segments never overlap. Raw diarization turns overlap and fragment;
+  `timeline.normalize_turns` resolves overlaps (the later speaker keeps its
+  start), merges same-speaker fragments, and absorbs blips before any
+  segment row exists.
+- A clip longer than the time before the next spoken line is sped up
+  (pitch-preserving `atempo`) just enough to fit, capped at `MAX_TEMPO`;
+  whatever still doesn't fit is reported in the QA report (`overrun_ms`),
+  never trimmed silently. Translated Indic speech is routinely longer than
+  the English it replaces, so "placed at start_ms" alone still produced
+  one line talking over the next. See `timeline.plan_timeline`.
+- Segments with no speech produce no clip; their stretch stays silent.
 
-**Enforced by.** `tests/test_timeline_accuracy.py`. These tests render with
+**Enforced by.** `tests/test_timeline_planning.py` (pure planning, including
+the verbatim pyannote output that motivated it) and
+`tests/test_timeline_accuracy.py`. The latter render with
 **real ffmpeg** and then measure actual audio energy per time window — they
 assert energy at each expected timestamp and silence in the gaps. Mocking
 ffmpeg here would test nothing, because the bug lived in the ffmpeg
@@ -119,10 +146,15 @@ rotating it means editing and redeploying.
   naming the variable and the provider instead of letting a gated download
   return an opaque 401.
 - Workers verify it at startup when a gated provider is set to `real`.
+- Exception: under `HF_HUB_OFFLINE=1` (a process env var, read by
+  huggingface_hub itself) nothing is downloaded, so no token is required.
+  The gated weights must already be cached, and the startup model load
+  proves they are.
 
 **Enforced by.** `tests/test_secrets.py` — no token value in any `.env`, no
 token literal anywhere in tracked source, the accessor raises actionably when
 unset, and the value is re-read on each call so rotation is a restart.
+`tests/test_pipeline_hardening.py` covers the offline exception.
 
 ---
 
@@ -138,3 +170,33 @@ than falling back to a default target. Permanent failures (`ValueError`,
 `LookupError`, `TypeError`) are excluded from Celery autoretry via
 `dont_autoretry_for`, because retrying "project not found" three times with
 backoff only delays the error an operator needs to see.
+
+More of the same, found running the real pipeline end to end:
+`probe_duration_ms` swallowed every ffprobe error and returned 0;
+`LocalStorage.download_file` returned silently for a missing key; a missing
+ffmpeg binary surfaced as "exit status 1" with no stderr; a
+`/process` with `review_language=false` queued only half the chain and
+stranded the project in "processing"; the UI's pinned source language was
+dropped by a 409 nobody saw. Each now raises or is honoured, with a test in
+`tests/test_pipeline_hardening.py`.
+
+---
+
+## 6. Long stages are resumable, and never run twice at once
+
+**What went wrong.** `synthesize` rendered every segment inside one database
+transaction. On CPU that is minutes per segment; a failure on the last one
+rolled back every finished render and the retry started from zero. Separately,
+with `task_acks_late` Redis re-delivers any unacked message after its
+visibility timeout (default one hour) -- to another worker, while the first is
+still running it.
+
+**The rule.**
+- Per-segment stages commit each segment as it finishes; a retry resumes from
+  the first unfinished one.
+- `broker_transport_options.visibility_timeout` exceeds the longest stage.
+- A task runs only on a worker whose venv has its models: `regenerate` is
+  split into a translate half (`q.translate`) and a synthesize half
+  (`q.synthesize`), because the TTS venv has no IndicTrans2.
+
+**Enforced by.** `tests/test_pipeline_hardening.py`.

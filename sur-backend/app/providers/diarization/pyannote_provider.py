@@ -10,9 +10,13 @@ logger = logging.getLogger(__name__)
 
 
 class PyannoteDiarizationProvider(DiarizationProvider):
-    """Silero VAD for utterance boundaries + pyannote-audio for per-speaker
-    IDs. Requires `pip install -r requirements-ml.txt` and, for pyannote, a
-    HuggingFace token with access to the pretrained pipeline accepted."""
+    """pyannote-audio 3.1: voice activity, speaker change and speaker
+    identity in one pipeline. Requires `pip install -r requirements-ml.txt`
+    and either a HuggingFace token with the gated licences accepted, or the
+    weights already cached with HF_HUB_OFFLINE=1.
+
+    Raw turns overlap and fragment; the chunk_and_diarize task normalizes
+    them (app/pipeline/timeline.normalize_turns) before creating segments."""
 
     def __init__(self) -> None:
         try:
@@ -36,7 +40,9 @@ class PyannoteDiarizationProvider(DiarizationProvider):
         from pyannote.audio import Pipeline
 
         self._device = torch.device(settings.asr_device if torch.cuda.is_available() else "cpu")
-        self._vad_model, _ = torch.hub.load("snakers4/silero-vad", "silero_vad", trust_repo=True)
+        # A Silero VAD model used to be loaded here via torch.hub and never
+        # used: pyannote's own segmentation model already does VAD. It cost a
+        # GitHub round-trip on every worker boot and failed boots offline.
         self._diarization_pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1", use_auth_token=require_hf_token("DIARIZATION_PROVIDER=real (pyannote)")
         )

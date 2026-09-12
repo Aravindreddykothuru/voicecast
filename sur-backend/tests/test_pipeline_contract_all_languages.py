@@ -254,7 +254,10 @@ def test_translate_stage_calls_provider_with_the_projects_resolved_source_langua
     THAT source language for every segment -- not "en", whatever the mock
     would silently tolerate. A hardcoded src_lang at the translate_segment or
     translate() call site fails this immediately."""
-    source_lang, target_lang = "hi", "en"
+    # Target must be a real dub target: the translate stage now validates it
+    # up front (English is a source language here, never a dub target), and
+    # this test is about the source side.
+    source_lang, target_lang = "hi", "te"
     project_id = _make_project_with_segments(fake_storage, source_lang, target_lang)
 
     spy = _SpyTranslationProvider()

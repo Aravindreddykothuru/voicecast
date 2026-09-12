@@ -79,6 +79,9 @@ def get_tts_provider() -> TTSProvider:
         from app.providers.tts.mock_provider import MockTTSProvider
 
         return MockTTSProvider()
-    from app.providers.tts.cosyvoice_provider import CosyVoiceTTSProvider
+    # MMS-TTS renders; CosyVoice2 voice conversion re-voices when cloning is
+    # enabled. See app/providers/tts/mms_provider.py for why CosyVoice2 is no
+    # longer the renderer.
+    from app.providers.tts.mms_provider import MMSTTSProvider
 
-    return CosyVoiceTTSProvider()
+    return MMSTTSProvider()

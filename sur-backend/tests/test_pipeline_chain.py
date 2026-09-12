@@ -259,7 +259,13 @@ def test_a_stale_error_is_cleared_once_a_later_stage_actually_succeeds(fake_stor
         assert project.status == ProjectStatus.failed
         assert "transient blip" in project.error_message
 
-    with patch("app.pipeline.tasks.ffmpeg_utils.extract_audio_wav", lambda src, dst: open(dst, "wb").write(b"wav")):
+    # probe_duration_ms is stubbed like every other test here: it used to
+    # return 0 for these fake bytes by swallowing ffprobe's error, which this
+    # test relied on without meaning to. It now raises, as it should.
+    with (
+        patch("app.pipeline.tasks.ffmpeg_utils.extract_audio_wav", lambda src, dst: open(dst, "wb").write(b"wav")),
+        patch("app.pipeline.tasks.ffmpeg_utils.probe_duration_ms", lambda p: 12000),
+    ):
         pipeline_tasks.extract_audio.apply(args=[project_id, video_id]).get()
 
     with session_scope() as db:

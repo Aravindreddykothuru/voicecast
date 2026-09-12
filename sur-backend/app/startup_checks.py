@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 
 from app.capabilities import SUPPORTED_LANGUAGES, require_language
-from app.config import get_settings, hf_token
+from app.config import get_settings, hf_hub_offline, hf_token
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,15 @@ def verify_secrets() -> None:
         relevant = {QUEUE_PROVIDERS[q] for q in queues if q in QUEUE_PROVIDERS} & set(modes)
 
     gated = [modes[name][0] for name in sorted(relevant) if modes[name][1] == "real"]
+    if gated and not hf_token() and hf_hub_offline():
+        # Nothing will be downloaded, so there is nothing to authenticate. The
+        # weights must already be in the cache -- verify_models() proves that
+        # by loading them, and a missing gated model fails there, loudly.
+        logger.info(
+            "startup: HF_HUB_OFFLINE set; %s load gated weights from the local cache",
+            ", ".join(gated),
+        )
+        return
     if gated and not hf_token():
         raise StartupCheckError(
             f"{', '.join(gated)}=real needs a Hugging Face token (gated weights), but "

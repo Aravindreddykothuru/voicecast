@@ -15,19 +15,19 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
-from app.config import get_settings
+from app.config import get_settings, resolve_backend_path
 
 router = APIRouter(prefix="/api/storage", tags=["storage"])
 
-_ROOT = Path("./data/storage")
-
 
 def _resolve(key: str) -> Path:
-    # Mirrors LocalStorage._resolve_path -- keeps both sides of the same
-    # on-disk layout in agreement without importing the storage singleton.
-    safe_key = key.strip("/")
-    path = (_ROOT / safe_key).resolve()
-    if _ROOT.resolve() not in path.parents and path != _ROOT.resolve():
+    # Same root as LocalStorage (settings.local_storage_root, anchored at the
+    # backend directory). This used to be a CWD-relative "./data/storage", so
+    # an API started from another directory served a different tree than the
+    # workers wrote to.
+    root = Path(resolve_backend_path(get_settings().local_storage_root)).resolve()
+    path = (root / key.strip("/")).resolve()
+    if root not in path.parents and path != root:
         raise HTTPException(400, detail="Invalid storage key")
     return path
 

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.capabilities import require_language, require_source_language
 from app.config import get_settings
 from app.core.security import get_current_user
 from app.db import get_db
@@ -18,6 +19,7 @@ from app.models.segment import Segment
 from app.models.source_video import SourceVideo, SourceVideoStatus
 from app.models.user import User
 from app.pipeline.chain import continue_pipeline, start_pipeline
+from app.pipeline.tasks import detected_language_majority
 from app.schemas.export import ExportRead
 from app.schemas.project import (
     ConfirmLanguageRequest,
@@ -66,6 +68,13 @@ def create_project(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    # Refuse an unsupported target now, not after upload, extraction,
+    # diarization and ASR have run and the translate stage finally rejects it.
+    for code in body.target_languages:
+        try:
+            require_language(code)
+        except ValueError as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from None
     project = Project(user_id=user.id, title=body.title, target_languages=body.target_languages)
     db.add(project)
     db.commit()
@@ -182,17 +191,36 @@ def start_processing(
     if video is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="No uploaded source video for this project")
 
+    source_language = (body.source_language or "").strip() or None
+    if source_language:
+        try:
+            require_source_language(source_language)
+        except ValueError as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from None
+    if body.clone_voice and not get_settings().voice_clone_available:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Voice cloning is not available on this deployment (see /api/capabilities).",
+        )
+
     project.preserve_emotion = body.preserve_emotion
     project.clone_voice = body.clone_voice
     project.lip_sync_aware = body.lip_sync_aware
-    project.review_language = body.review_language
+    project.source_language = source_language
+    # A known source language leaves nothing to confirm.
+    project.review_language = body.review_language and source_language is None
     project.tts_model = body.tts_model
     project.status = ProjectStatus.queued
     project.error_message = None
+    project.error_is_permanent = None
     db.commit()
     db.refresh(project)
 
-    start_pipeline(project_id, video.id)
+    # review_language MUST be passed through. start_pipeline defaults it to
+    # True, and this call used to omit it: a run with review off then queued
+    # only extract->diarize->transcribe, transcribe (correctly) did not park,
+    # and the project sat in "processing" forever with nothing left queued.
+    start_pipeline(project_id, video.id, review_language=project.review_language)
     return project
 
 
@@ -249,11 +277,12 @@ def confirm_language(
             ),
         )
 
-    detected = db.execute(
-        select(Segment.detected_language)
-        .where(Segment.project_id == project_id, Segment.detected_language.is_not(None))
-        .limit(1)
-    ).scalar_one_or_none()
+    # Majority over segments with speech -- the same vote the translate stage
+    # uses. This used to take whichever row came back first, so accepting
+    # "the detection" could lock in a one-off misdetection on a short line.
+    detected = detected_language_majority(
+        db.execute(select(Segment).where(Segment.project_id == project_id)).scalars().all()
+    )
 
     override = (body.source_language or "").strip() or None
     project.status = ProjectStatus.processing

@@ -71,6 +71,29 @@ def test_accepts_checkpoint_missing_only_the_weight_norm_rename():
     assert load_hf_model(loader, "superb/wav2vec2-base-superb-er") is not None
 
 
+def test_accepts_the_weight_norm_rename_on_any_module_when_paired():
+    """MMS-TTS (VITS) reports the same rename on 128 keys across its flow and
+    posterior encoder -- a checkpoint that speaks intelligibly (Whisper CER
+    0.09) and must not be refused."""
+    modules = ["flow.flows.0.wavenet.in_layers.0", "posterior_encoder.wavenet.res_skip_layers.15"]
+    loader = _FakeLoader(
+        missing=[f"{m}.parametrizations.weight.original{i}" for m in modules for i in (0, 1)],
+        unexpected=[f"{m}.weight_{s}" for m in modules for s in ("g", "v")],
+    )
+    assert load_hf_model(loader, "facebook/mms-tts-tel") is not None
+
+
+def test_rejects_a_renamed_key_whose_old_weight_is_not_in_the_checkpoint():
+    """The rename is benign only if the checkpoint carries the old spelling.
+    Without the pair, the layer's weights really are absent."""
+    loader = _FakeLoader(
+        missing=["flow.flows.0.wavenet.in_layers.0.parametrizations.weight.original0"],
+        unexpected=["flow.flows.1.wavenet.in_layers.0.weight_g"],
+    )
+    with pytest.raises(ModelLoadError, match="missing from checkpoint"):
+        load_hf_model(loader, "facebook/mms-tts-tel")
+
+
 def test_rejects_mismatched_shapes():
     loader = _FakeLoader(mismatched=[("classifier.weight", (4, 256), (8, 256))])
     with pytest.raises(ModelLoadError, match="mismatched"):

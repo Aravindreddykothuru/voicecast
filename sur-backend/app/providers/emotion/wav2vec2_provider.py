@@ -138,9 +138,9 @@ class Wav2Vec2EmotionProvider(EmotionProvider):
             label = _LABEL_MAP.get(raw_label, "neutral")
             score = float(probs[idx])
 
-            # Prosody-derived valence/arousal proxy fused in per the PRD.
+            # Energy-derived arousal proxy. (A piptrack pitch estimate used to
+            # be computed here on every segment and then discarded.)
             rms = float(librosa.feature.rms(y=audio).mean())
-            pitches, _ = librosa.piptrack(y=audio, sr=sr)
             arousal = min(1.0, rms * 20)
             valence = 1.0 if label in ("happiness", "surprise") else (-1.0 if label in ("anger", "sadness", "fear") else 0.0)
 

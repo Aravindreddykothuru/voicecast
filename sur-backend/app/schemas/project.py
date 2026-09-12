@@ -76,3 +76,10 @@ class ProcessRequest(BaseModel):
     # the expensive stages run. Defaults to on: silently dubbing from a
     # mis-detected language is worse than one extra click.
     review_language: bool = True
+    # The source language, when the caller already knows it. ASR then decodes
+    # in that language instead of detecting, and there is nothing left to
+    # review, so review_language is ignored. The UI used to "pin" a language
+    # by calling /confirm-language right after /process -- which 409s,
+    # because a run that isn't reviewing never parks at the gate, so the
+    # choice was silently dropped and ASR auto-detected anyway.
+    source_language: str | None = None

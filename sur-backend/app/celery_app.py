@@ -13,6 +13,8 @@ CONTRACTS.md #1.
 """
 from __future__ import annotations
 
+import sys
+
 from celery import Celery
 
 from app.config import get_settings
@@ -65,6 +67,19 @@ celery_app.conf.update(
     result_expires=60 * 60 * 24,
     task_default_retry_delay=10,
     broker_connection_retry_on_startup=True,
+    # With task_acks_late, Redis re-delivers any message not acked within
+    # visibility_timeout (default 1 HOUR) to another worker -- while the
+    # first one is still running it. A synthesize stage on CPU runs minutes
+    # per segment, so a long video crossed that line and got two workers
+    # rendering the same segments concurrently. Must exceed the longest stage.
+    broker_transport_options={"visibility_timeout": 12 * 60 * 60},
+    result_backend_transport_options={"visibility_timeout": 12 * 60 * 60},
+    # Celery's default prefork pool is unsupported on Windows (billiard):
+    # tasks are received and then hang or die with an unpacking error. Solo
+    # runs tasks in the worker's main process -- also what we want for
+    # model-holding workers, which load their weights once in that process
+    # (startup_checks) and must not fork copies of several GB of them.
+    worker_pool="solo" if sys.platform == "win32" else "prefork",
 )
 
 
@@ -88,12 +103,27 @@ def _run_startup_checks(**_kwargs):
     """
     import logging
     import os
+    import time
 
     from app.startup_checks import run_worker_startup_checks
 
+    # worker_init fires before Celery configures logging, so without this
+    # every INFO line the checks emit ("provider loaded and self-checked",
+    # "self-check passed") is dropped and a worker that verified nothing
+    # looks exactly like one that verified everything. Celery replaces this
+    # handler with its own once it sets up logging.
+    root = logging.getLogger()
+    if not root.handlers:
+        logging.basicConfig(level=logging.INFO, format="[%(asctime)s: %(levelname)s/startup] %(name)s: %(message)s")
+
     load_models = os.environ.get("SUR_SKIP_MODEL_CHECKS", "").lower() not in ("1", "true", "yes")
+    started = time.monotonic()
     try:
         run_worker_startup_checks(load_models=load_models)
+        logging.getLogger(__name__).info(
+            "startup checks passed in %.1fs (models %s)",
+            time.monotonic() - started, "loaded" if load_models else "SKIPPED",
+        )
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).critical(
             "STARTUP CHECKS FAILED -- refusing to start this worker: %s", exc

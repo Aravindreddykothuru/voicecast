@@ -160,6 +160,65 @@ def test_segment_order_does_not_change_placement(tmp_path):
     assert _rms_db(out, 0.05, 1.5) < SILENCE_DB
 
 
+@requires_ffmpeg
+def test_many_segments_are_all_placed_when_mixed_in_batches(tmp_path):
+    """One ffmpeg input per clip hit Windows' command-line limit at a few
+    hundred segments; the mux now mixes in batches. No clip may be lost at a
+    batch boundary."""
+    video = str(tmp_path / "v.mp4")
+    out = str(tmp_path / "out.mp4")
+    tone = str(tmp_path / "t.wav")
+    _silent_video(video, 42)
+    _tone(tone, 0.4)
+    starts = [i * 1000 for i in range(40)]  # > one batch of 32
+    ffmpeg_utils.mux_timeline(video, [(tone, s) for s in starts], out)
+
+    for s in (0, 31_000, 32_000, 39_000):
+        assert _rms_db(out, s / 1000 + 0.05, 0.3) > SPEECH_DB, f"clip at {s}ms missing"
+    assert _rms_db(out, 40.6, 1.0) < SILENCE_DB
+    assert abs(_duration_s(out) - 42) <= 0.1
+
+
+@requires_ffmpeg
+def test_tempo_shortens_a_clip_without_moving_its_start(tmp_path):
+    video = str(tmp_path / "v.mp4")
+    a = str(tmp_path / "a.wav")
+    out = str(tmp_path / "out.mp4")
+    _silent_video(video, 6)
+    _tone(a, 2.0)
+
+    ffmpeg_utils.mux_timeline(video, [ffmpeg_utils.ClipPlacement(a, 1000, 2.0)], out)
+
+    assert _rms_db(out, 0.05, 0.9) < SILENCE_DB
+    assert _rms_db(out, 1.05, 0.9) > SPEECH_DB
+    assert _rms_db(out, 2.2, 1.5) < SILENCE_DB, "2s clip at tempo 2.0 must end by ~2s"
+
+
+@requires_ffmpeg
+def test_non_mp4_video_codec_is_reencoded_not_rejected(tmp_path):
+    video = str(tmp_path / "v.webm")
+    a = str(tmp_path / "a.wav")
+    out = str(tmp_path / "out.mp4")
+    _run(["ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=black:s=160x120:d=3",
+          "-an", "-c:v", "libvpx", "-b:v", "200k", video])
+    _tone(a, 1.0)
+
+    ffmpeg_utils.mux_timeline(video, [(a, 500)], out)
+    assert _rms_db(out, 0.55, 0.8) > SPEECH_DB
+    assert abs(_duration_s(out) - 3) <= 0.15
+
+
+@requires_ffmpeg
+def test_concat_audio_joins_clips_end_to_end(tmp_path):
+    """Builds a speaker's voice-clone reference from several of their lines."""
+    a, b = str(tmp_path / "a.wav"), str(tmp_path / "b.wav")
+    out = str(tmp_path / "ref.wav")
+    _tone(a, 0.5, 440)
+    _tone(b, 0.7, 880)
+    ffmpeg_utils.concat_audio([a, b], out)
+    assert abs(_duration_s(out) - 1.2) <= 0.05
+
+
 def test_mux_timeline_rejects_empty_placements():
     with pytest.raises(ValueError, match="no audio placements"):
         ffmpeg_utils.mux_timeline("v.mp4", [], "out.mp4")

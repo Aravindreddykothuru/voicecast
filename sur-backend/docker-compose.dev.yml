@@ -1,0 +1,48 @@
+# Infra ONLY, for running the API and the Celery workers natively on the host
+# (the `.venv` / `.venv-tts` split described in README "Running with real
+# models"). Unlike docker-compose.yml, nothing Python runs in a container here.
+#
+# Why this file exists instead of reusing the others:
+#   * docker-compose.test.yml's Postgres is tmpfs-backed and TRUNCATEd by the
+#     test suite -- a dev database living there is wiped on every container
+#     restart (and by every `pytest` run).
+#   * Ports 5432/5433/6379 are routinely taken by other local projects'
+#     containers. Sharing another app's Redis means sharing its Celery broker
+#     databases: tasks from one project can be consumed by the other's
+#     workers. So this stack gets its own, non-default ports.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d
+#   alembic upgrade head
+#   (then start the API/workers -- see README "Running natively on Windows")
+name: sur-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sur
+      POSTGRES_PASSWORD: sur  # pragma: allowlist secret -- local-only dev database
+      POSTGRES_DB: surdev
+    ports:
+      - "5435:5432"
+    volumes:
+      - sur-dev-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sur -d surdev"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  sur-dev-postgres:

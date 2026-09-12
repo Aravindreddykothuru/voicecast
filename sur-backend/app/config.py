@@ -5,7 +5,9 @@ nothing else in the codebase should call os.environ directly. This is what
 makes the "run without a GPU" and "swap a provider" requirements possible
 without touching pipeline code.
 """
+import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import model_validator
@@ -13,6 +15,20 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine.url import make_url
 
 ProviderMode = Literal["mock", "real"]
+
+# sur-backend/. Relative paths in settings (model dirs, tool binaries, local
+# storage) resolve against this, NOT the process's working directory: the API
+# and each worker are separate processes, often started from different
+# directories, and they must all agree on where a file lives. A relative
+# "./data/storage" meant an upload written by the API could be invisible to a
+# worker started one directory up.
+BACKEND_ROOT = Path(__file__).resolve().parent.parent
+
+
+def resolve_backend_path(value: str) -> str:
+    """Absolute paths pass through; relative ones anchor at BACKEND_ROOT."""
+    p = Path(value)
+    return str(p if p.is_absolute() else (BACKEND_ROOT / p).resolve())
 
 
 # The signing key a dev checkout gets. Named once so the field default and
@@ -54,6 +70,19 @@ class Settings(BaseSettings):
     storage_bucket: str = "sur-media"
     storage_region: str = "us-east-1"
     storage_use_ssl: bool = False
+    # STORAGE_BACKEND=local only. Relative values anchor at BACKEND_ROOT so
+    # the API (which serves /api/storage/*) and every worker share one tree.
+    local_storage_root: str = "data/storage"
+
+    # --- Media tooling ---
+    # Bare names are looked up on PATH (the Docker images apt-install
+    # ffmpeg). A native Windows checkout usually has no ffmpeg on PATH, so
+    # point these at the binaries instead, e.g.
+    # .tools/ffmpeg-9.0.1-essentials_build/bin/ffmpeg.exe (relative paths
+    # anchor at BACKEND_ROOT). A missing binary is a hard, non-retried error
+    # naming the variable to set -- see app/pipeline/ffmpeg_utils.py.
+    ffmpeg_binary: str = "ffmpeg"
+    ffprobe_binary: str = "ffprobe"
 
     # --- Providers ---
     asr_provider: ProviderMode = "mock"
@@ -84,7 +113,27 @@ class Settings(BaseSettings):
     translation_model_name: str = "ai4bharat/indictrans2-en-indic-1B"
     translation_indic_en_model_name: str = "ai4bharat/indictrans2-indic-en-1B"
     translation_indic_indic_model_name: str = "ai4bharat/indictrans2-indic-indic-1B"
+    # --- TTS ---
+    # TTS_PROVIDER=real renders speech with MMS-TTS (facebook/mms-tts-<lang>,
+    # one small VITS checkpoint per language; the per-language suffix lives
+    # in app/capabilities.py). CosyVoice2 used to be the renderer, but it was
+    # never trained on any Indic language: on CPU it spent 30+ minutes on one
+    # 3-second Telugu sentence and returned ~21s of unintelligible audio.
+    tts_mms_model_prefix: str = "facebook/mms-tts-"
+    # Voice cloning (a project's clone_voice flag): CosyVoice2 *voice
+    # conversion* re-voices the MMS speech as the original speaker. VC uses
+    # no text model, so the Indic-language limitation above doesn't apply.
+    # Off unless enabled -- it loads CosyVoice2 (~4GB) into the TTS worker.
+    tts_voice_clone: bool = False
+    # CosyVoice2 checkpoint directory, used only for voice conversion.
+    # Relative paths anchor at BACKEND_ROOT.
     tts_model_name: str = "cosyvoice2"
+    # CosyVoice ships as a source checkout, not a package. When set, this
+    # directory (and its third_party/Matcha-TTS) is put on sys.path by the
+    # provider itself, so a worker no longer depends on someone remembering
+    # to export PYTHONPATH -- the local TTS venv could not import cosyvoice
+    # at all without it. Docker sets PYTHONPATH instead and leaves this unset.
+    cosyvoice_src_dir: str | None = None
     tts_device: str = "cpu"
     # Must be a checkpoint whose classification head actually loads under the
     # installed transformers. Two earlier picks failed that bar:
@@ -141,6 +190,13 @@ class Settings(BaseSettings):
     @property
     def asr_autodetect(self) -> bool:
         return self.asr_language == "auto"
+
+    @property
+    def voice_clone_available(self) -> bool:
+        """Whether a clone_voice=True run can be served. Published via
+        /api/capabilities and enforced by /process, so the UI cannot offer a
+        toggle the TTS worker would then fail on."""
+        return self.tts_provider == "mock" or self.tts_voice_clone
 
     # Hosts that hold real user data. A process that is not explicitly
     # ENVIRONMENT=production must never open a connection to one of these.
@@ -267,13 +323,16 @@ def get_settings() -> Settings:
 # edit-and-redeploy, and a stale value can't linger in a cached object.
 # See CONTRACTS.md invariant #4 and README "Rotating the Hugging Face token".
 HF_TOKEN_ENV_VARS = ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN")
+# huggingface_hub's own switches, read by the library itself from the process
+# environment at import time -- so they are read from the same place here,
+# never from .env (a .env value would claim offline while the library, which
+# never sees it, still went to the network).
+HF_OFFLINE_ENV_VARS = ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE")
 
 
 def hf_token() -> str | None:
     """The Hugging Face token, or None if unset. Callers that require it should
     use require_hf_token() so the failure names the variable to set."""
-    import os
-
     for var in HF_TOKEN_ENV_VARS:
         value = os.environ.get(var)
         if value and value.strip():
@@ -281,16 +340,42 @@ def hf_token() -> str | None:
     return None
 
 
-def require_hf_token(reason: str) -> str:
+def hf_hub_offline() -> bool:
+    """True when huggingface_hub is forbidden from touching the network.
+
+    That is the deployment mode where weights are provisioned ahead of time
+    (a models volume, a warmed cache) and workers only ever read them. It is
+    also the ONLY way to load a gated model that is already cached without a
+    token: online, hf_hub_download re-raises GatedRepoError on its metadata
+    HEAD request even when every file is on disk, and pyannote resolves its
+    sub-models through that same call.
+    """
+    return any(
+        os.environ.get(var, "").strip().lower() in ("1", "true", "yes", "on")
+        for var in HF_OFFLINE_ENV_VARS
+    )
+
+
+def require_hf_token(reason: str) -> str | None:
     """Fail with an actionable message rather than letting a gated download
-    return an opaque 401. CONTRACTS.md #3: never substitute a silent default."""
+    return an opaque 401. CONTRACTS.md #3: never substitute a silent default.
+
+    Returns None under HF_HUB_OFFLINE: nothing will be downloaded, so there is
+    nothing to authenticate. Offline does not mean "unchecked" -- a gated
+    model missing from the cache still fails its load, loudly, and workers
+    load every configured model at startup (startup_checks.verify_models).
+    """
     token = hf_token()
-    if not token:
-        raise RuntimeError(
-            f"{reason} requires a Hugging Face token, but none of "
-            f"{', '.join(HF_TOKEN_ENV_VARS)} is set in the environment. "
-            "Create one at https://huggingface.co/settings/tokens (read scope), "
-            "accept the gated model's licence with that account, then export it "
-            "before starting the worker. It is intentionally not read from .env."
-        )
-    return token
+    if token:
+        return token
+    if hf_hub_offline():
+        return None
+    raise RuntimeError(
+        f"{reason} requires a Hugging Face token, but none of "
+        f"{', '.join(HF_TOKEN_ENV_VARS)} is set in the environment. "
+        "Create one at https://huggingface.co/settings/tokens (read scope), "
+        "accept the gated model's licence with that account, then export it "
+        "before starting the worker. It is intentionally not read from .env. "
+        "If the weights are already cached locally, set HF_HUB_OFFLINE=1 "
+        "instead to load them without a token."
+    )

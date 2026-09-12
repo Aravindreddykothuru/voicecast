@@ -36,6 +36,26 @@ class IndicTrans2Provider(TranslationProvider):
         self._processor = IndicProcessor(inference=True)
         # direction key ("en-indic" | "indic-en" | "indic-indic") -> (tokenizer, model)
         self._pairs: dict[str, tuple] = {}
+        self._self_check()
+
+    def _self_check(self) -> None:
+        """Load the default direction and translate one fixed line now.
+
+        Constructing this provider used to load no weights at all -- every
+        direction was lazy -- so the worker's startup check (CONTRACTS.md #1)
+        passed on a machine that could not translate, and the first job paid
+        the ~4GB load and found out. English -> the default target is the
+        path nearly every run takes; the other two directions stay lazy
+        (a run that never sees an Indic source never downloads them) and
+        still fail loudly on first use.
+        """
+        settings = get_settings()
+        out = self.translate("Good morning.", settings.default_target_language, src_lang="en").text
+        if not out.strip() or out.strip().lower() == "good morning.":
+            from app.providers.loading import ModelLoadError
+
+            raise ModelLoadError(f"IndicTrans2 self-check returned {out!r} for en->{settings.default_target_language}")
+        logger.info("IndicTrans2 self-check passed (en->%s: %s)", settings.default_target_language, out)
 
     def _load_pair(self, direction: str, model_name: str):
         if direction in self._pairs:
@@ -75,9 +95,14 @@ class IndicTrans2Provider(TranslationProvider):
         direction, model_name = self._direction_for(src.code, tgt.code)
         tokenizer, model = self._load_pair(direction, model_name)
 
+        import torch
+
         batch = self._processor.preprocess_batch([text], src_lang=src.flores, tgt_lang=tgt.flores)
-        inputs = tokenizer(batch, return_tensors="pt", padding=True, truncation=True)
-        generated = model.generate(**inputs, max_length=256)
-        decoded = tokenizer.batch_decode(generated, skip_special_tokens=True)
+        inputs = tokenizer(batch, return_tensors="pt", padding="longest", truncation=True)
+        # Beam search as in AI4Bharat's reference inference; greedy decoding
+        # (the previous default) drops or repeats words on longer lines.
+        with torch.inference_mode():
+            generated = model.generate(**inputs, max_length=256, num_beams=5, num_return_sequences=1)
+        decoded = tokenizer.batch_decode(generated, skip_special_tokens=True, clean_up_tokenization_spaces=True)
         out = self._processor.postprocess_batch(decoded, lang=tgt.flores)[0]
         return TranslationResult(text=out, src_lang=src_lang, target_lang=target_lang)

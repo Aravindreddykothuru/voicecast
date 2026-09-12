@@ -22,25 +22,37 @@ class Language:
     code: str          # what the API and DB speak, e.g. "te"
     name: str          # what the UI shows, e.g. "Telugu"
     flores: str        # what IndicTrans2 needs, e.g. "tel_Telu"
-    tts_supported: bool = True
+    # The facebook/mms-tts-<suffix> checkpoint that speaks this language, or
+    # None if no TTS voice exists for it. tts_supported is derived from this,
+    # never asserted separately -- it used to be a bare `True` on every row
+    # while the configured TTS model (CosyVoice2) could not speak a single
+    # one of these languages. See CONTRACTS.md #2.
+    mms_tts: str | None = None
+
+    @property
+    def tts_supported(self) -> bool:
+        return bool(self.mms_tts)
 
 
 # Every entry MUST carry a FLORES code: an entry without one is a language the
 # UI would offer and the pipeline would then fail on. tests/test_capabilities.py
 # enforces that, so adding a row without a mapping fails the build.
+# MMS suffixes verified to exist on the Hub, none requiring uroman
+# pre-processing (tokenizer_config.is_uroman == false). Urdu's checkpoint is
+# script-qualified; plain "urd" does not exist.
 SUPPORTED_LANGUAGES: tuple[Language, ...] = (
-    Language("hi", "Hindi", "hin_Deva"),
-    Language("te", "Telugu", "tel_Telu"),
-    Language("ta", "Tamil", "tam_Taml"),
-    Language("kn", "Kannada", "kan_Knda"),
-    Language("ml", "Malayalam", "mal_Mlym"),
-    Language("bn", "Bengali", "ben_Beng"),
-    Language("mr", "Marathi", "mar_Deva"),
-    Language("gu", "Gujarati", "guj_Gujr"),
-    Language("pa", "Punjabi", "pan_Guru"),
-    Language("or", "Odia", "ory_Orya"),
-    Language("as", "Assamese", "asm_Beng"),
-    Language("ur", "Urdu", "urd_Arab"),
+    Language("hi", "Hindi", "hin_Deva", "hin"),
+    Language("te", "Telugu", "tel_Telu", "tel"),
+    Language("ta", "Tamil", "tam_Taml", "tam"),
+    Language("kn", "Kannada", "kan_Knda", "kan"),
+    Language("ml", "Malayalam", "mal_Mlym", "mal"),
+    Language("bn", "Bengali", "ben_Beng", "ben"),
+    Language("mr", "Marathi", "mar_Deva", "mar"),
+    Language("gu", "Gujarati", "guj_Gujr", "guj"),
+    Language("pa", "Punjabi", "pan_Guru", "pan"),
+    Language("or", "Odia", "ory_Orya", "ory"),
+    Language("as", "Assamese", "asm_Beng", "asm"),
+    Language("ur", "Urdu", "urd_Arab", "urd-script_arabic"),
 )
 
 LANGUAGES_BY_CODE: dict[str, Language] = {lang.code: lang for lang in SUPPORTED_LANGUAGES}

@@ -12,15 +12,21 @@ from app.pipeline import ffmpeg_utils
 
 logger = logging.getLogger(__name__)
 
-CHUNK_MS = 4000  # fixed-width fallback chunking; real VAD would find silence boundaries
+CHUNK_MS = 4000  # one fake utterance per window
+# Each fake utterance is followed by this much silence, like real speech.
+# Contiguous same-speaker windows would be (correctly) merged into one turn
+# by app/pipeline/timeline.normalize_turns, which is not what a mock that
+# promises "several segments" should hand the pipeline.
+PAUSE_MS = 500
 
 
 class MockDiarizationProvider(DiarizationProvider):
-    """Deterministic stand-in for Silero VAD + pyannote-audio.
+    """Deterministic stand-in for pyannote-audio.
 
-    Splits the audio into fixed-width windows and alternates two speaker
-    tags, which is enough for the API/frontend contract (multiple segments,
-    at least one speaker change) without needing any model weights.
+    Splits the audio into fixed-width utterances separated by short pauses
+    and alternates two speaker tags, which is enough for the API/frontend
+    contract (multiple segments, at least one speaker change) without needing
+    any model weights. The last utterance runs to the end of the audio.
     """
 
     def chunk_and_diarize(self, audio_path: str) -> list[SpeakerChunk]:
@@ -30,13 +36,13 @@ class MockDiarizationProvider(DiarizationProvider):
         t = 0
         i = 0
         while t < total_ms:
-            end = min(t + CHUNK_MS, total_ms)
+            end = total_ms if t + CHUNK_MS >= total_ms else t + CHUNK_MS - PAUSE_MS
             # New "speaker" every 3rd chunk so multi-speaker projects have
             # something to diarize in the editor.
             if i and i % 3 == 0:
                 speaker_idx = (speaker_idx + 1) % 2
             chunks.append(SpeakerChunk(start_ms=t, end_ms=end, speaker_tag=f"SPEAKER_{speaker_idx:02d}"))
-            t = end
+            t += CHUNK_MS
             i += 1
         if not chunks:
             chunks = [SpeakerChunk(start_ms=0, end_ms=max(total_ms, 1000), speaker_tag="SPEAKER_00")]

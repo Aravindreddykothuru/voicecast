@@ -80,11 +80,47 @@ mid-pipeline.
 Some real providers (`IndicTrans2Provider`, `PyannoteDiarizationProvider`)
 need a HuggingFace token accepted for gated model weights.
 
-**TTS runs in its own worker, deliberately.** `CosyVoiceTTSProvider` needs
-CosyVoice2 installed from source, which pins `torch==2.3.1`; every other
-real provider above pins `torch==2.4.1`. The two cannot share a venv or a
-Docker image without one silently breaking the other (this is not
-theoretical -- it's why the split exists). Locally, install
+**How TTS works.** `TTS_PROVIDER=real` speaks with **MMS-TTS**
+(`facebook/mms-tts-<lang>`, one small VITS checkpoint per target language;
+the suffix per language lives in `app/capabilities.py`). CosyVoice2 was the
+renderer until it was measured: it has never been trained on an Indic
+script, and on CPU it spent 30+ minutes on one 3-second Telugu sentence and
+returned 21 seconds of audio that Whisper large-v3 transcribed at CER 1.56
+(and detected as Korean). MMS renders the same sentence in ~5s at CER 0.09.
+Detected emotion is carried as prosody (speaking rate, energy, VITS
+variation), weighted by the classifier's confidence -- MMS has no emotion
+conditioning, and the code says so rather than pretending otherwise. There
+is deliberately no pitch shift: measured, it cost intelligibility on short
+lines (CER 0.21 -> 0.36) for an effect a listener barely notices.
+
+Two more things sit between ASR and TTS because the real run needed them:
+numerals are spelled out before translation (`app/pipeline/text_normalize.py`;
+"at 9" was being dubbed as "at", since MMS vocabularies have no digits), and
+TTS is told the time until the *next spoken line* rather than the segment's
+own length, so it never squeezes a line that has a pause after it.
+
+To reproduce an end-to-end run and its checks against a running stack:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\e2e_dub.py --video path\to\clip.mp4 --target te --asr-check
+.\.venv\Scripts\python.exe scripts\e2e_dub.py --project <id> --asr-check   # verify an existing run
+```
+
+**Voice cloning** (`clone_voice`, enabled with `TTS_VOICE_CLONE=true`) keeps
+CosyVoice2, for the part it can do: *voice conversion*. It re-voices the MMS
+speech as the original speaker. The reference is built once per speaker from
+their longest lines (~12s) and stored on the speaker row, so every line a
+speaker says converts toward the same voice -- per-segment slices (0.5s for a
+one-word line) measurably hurt intelligibility. VC has no text model, so the
+language limitation doesn't apply. It is roughly 10x slower than real time on
+CPU. `/api/capabilities` publishes `voice_clone_available`, and
+`/process` refuses `clone_voice` when it's off.
+
+**TTS runs in its own worker, deliberately.** CosyVoice2 is installed from
+source and pins `torch==2.3.1`; every other real provider above pins
+`torch==2.4.1`. The two cannot share a venv or a Docker image without one
+silently breaking the other (this is not theoretical -- it's why the split
+exists). MMS-TTS runs in the TTS venv too. Locally, install
 `requirements-ml.txt` into `.venv` and `requirements-tts.txt` + CosyVoice
 into a second, separate `.venv-tts`, and run the TTS worker from that
 interpreter consuming only `q.synthesize`:
@@ -105,7 +141,45 @@ CONTRACTS.md #1.
 **Before shipping voice cloning or any cloned-voice output to real users**,
 read the PRD's risk list — consent capture, audio watermarking, and
 confirming commercial-use licensing on the TTS models are explicit
-open items, not implementation details to skip.
+open items, not implementation details to skip. **MMS-TTS weights are
+CC-BY-NC-4.0 (non-commercial).** A commercial deployment needs a
+differently-licensed Indic TTS behind the same `TTSProvider` interface
+(e.g. `ai4bharat/indic-parler-tts`, Apache-2.0, gated on the Hub).
+
+## Running natively on Windows (CPU)
+
+Docker runs only the infrastructure; the API and workers run from the two
+virtualenvs. Each command below is its own long-running terminal.
+
+```powershell
+docker compose -f docker-compose.dev.yml up -d        # Postgres :5435, Redis :6380
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\scripts\run-local.ps1 -Role api
+.\scripts\run-local.ps1 -Role worker -Offline         # every stage except synthesis
+.\scripts\run-local.ps1 -Role tts-worker -Offline     # q.synthesize, from .venv-tts
+```
+
+What this needs, and why each piece exists:
+
+- **Own ports.** `docker-compose.dev.yml` uses 5435/6380 because other local
+  projects' containers hold 5432-5434/6379, and a shared Redis means shared
+  Celery broker databases. `docker-compose.test.yml` is tmpfs and TRUNCATEd
+  by pytest -- never put dev data in it.
+- **ffmpeg paths.** Set `FFMPEG_BINARY`/`FFPROBE_BINARY` in `.env` when
+  ffmpeg is not on PATH (a missing binary is a clear, non-retried error).
+- **`-Offline`** sets `HF_HUB_OFFLINE=1`: models load from the local cache
+  only. That is also how the gated models (pyannote, IndicTrans2) load
+  without `HF_TOKEN` once cached -- online, huggingface_hub re-raises
+  `GatedRepoError` even for fully cached files.
+- **Solo pool.** Celery's prefork pool does not work on Windows;
+  `app/celery_app.py` selects `solo` there. One task at a time per worker,
+  which is also right for workers holding several GB of models.
+- **CosyVoice import path.** `COSYVOICE_SRC_DIR=.tools/CosyVoice` puts the
+  source checkout on `sys.path` from inside the provider.
+- **Startup checks** load and self-check every model the worker's queues
+  need before it accepts work; the worker log shows each one
+  (`/startup] ... loaded and self-checked`). Expect ~1 minute (main) and
+  ~2 minutes (TTS, with cloning enabled).
 
 ## API surface
 
@@ -164,13 +238,16 @@ app/
     base.py                the four ABCs pipeline tasks call through
     registry.py             env-var-driven factory (mock vs. real)
     */mock_provider.py       deterministic, GPU-free defaults
-    */<real>_provider.py     faster-whisper / IndicTrans2 / CosyVoice2 / wav2vec2 / pyannote
+    */<real>_provider.py     faster-whisper / IndicTrans2 / MMS-TTS / wav2vec2 / pyannote
+    tts/cosyvoice_vc.py      CosyVoice2 voice conversion (clone_voice)
   pipeline/
     tasks.py               the 7 Celery stage tasks
     chain.py                builds the full-project chain (/process)
-    regenerate.py            single-segment re-render (/regenerate)
+    regenerate.py            single-segment re-render (/regenerate), split across two queues
+    timeline.py              pure: diarization-turn normalization + clip fit planning
     events.py                Redis-pub/sub progress events -> WebSocket
     ffmpeg_utils.py           the only module that shells out to ffmpeg/ffprobe
+scripts/run-local.ps1     native Windows launcher for api / worker / tts-worker
 alembic/                  migrations
 tests/                    pytest suite (SQLite + Celery eager mode + mock providers -- no infra needed)
 docker-compose.yml

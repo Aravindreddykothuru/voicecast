@@ -134,6 +134,9 @@ export interface ProcessOptions {
   /** Pause after ASR so the detected source language can be confirmed
    *  before the expensive stages run. Backend default is true. */
   review_language?: boolean;
+  /** Known source language. ASR decodes in it instead of detecting, and the
+   *  backend skips the review gate (there is nothing left to confirm). */
+  source_language?: string | null;
 }
 
 export function startProcessing(projectId: string, opts: ProcessOptions): Promise<ProjectRead> {
@@ -154,6 +157,7 @@ export async function retryProject(projectId: string): Promise<ProjectRead> {
     lip_sync_aware: p.lip_sync_aware,
     tts_model: p.tts_model,
     review_language: p.review_language,
+    source_language: p.source_language,
   });
 }
 

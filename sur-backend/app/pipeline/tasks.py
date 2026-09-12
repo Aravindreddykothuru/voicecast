@@ -1,15 +1,25 @@
 """One Celery task per pipeline stage (PRD section 07).
 
 Every task:
-  * is idempotent -- re-running it re-derives state from what's already in
-    Postgres rather than assuming a clean slate, so a retried task never
-    double-creates rows or double-charges a GPU render;
+  * is idempotent and resumable -- it re-derives the work left from Postgres
+    rather than assuming a clean slate, and the per-segment stages commit
+    each segment as it finishes. That second part matters on CPU: synthesize
+    used to hold every segment in one transaction, so a failure on segment
+    17 of 20 rolled back 16 finished renders (minutes each) and the retry
+    started from zero. Now a retry picks up at segment 17, and the UI sees
+    segments land as they are rendered instead of all at the very end;
   * only ever touches models/providers/storage -- never a model library
     directly (see app/providers/base.py's docstring for why);
   * emits stage_started/stage_progress/stage_completed around its work and
     error on failure, over the same EventBus the WebSocket gateway reads;
   * binds project_id (and segment_id where relevant) into the logging
     context so every log line for a run is greppable by project_id.
+
+Segments with no speech (ASR returned no text -- a laugh, music, a VAD false
+positive) flow through every stage as explicit no-ops: nothing is translated
+or spoken for them and the mux leaves their stretch silent. Translating an
+empty string and asking TTS to say it produced either a crash or a
+hallucinated sentence.
 
 `app/pipeline/chain.py` wires these into the Celery chain that /process
 kicks off. `app/pipeline/regenerate.py` calls the per-segment helpers here
@@ -18,15 +28,22 @@ extract/diarize/transcribe.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
+import os
 import shutil
 import tempfile
+from collections import Counter
+from collections.abc import Iterable
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 
 from app.celery_app import celery_app
 from app.config import get_settings
+from app.db import session_scope
 from app.logging_conf import bind_context, clear_context
+from app.models.base import is_uuid
 from app.models.export_job import ExportJob, ExportStatus
 from app.models.project import Project, ProjectStatus
 from app.models.segment import EmotionLabel, Segment, SegmentStatus
@@ -40,7 +57,8 @@ from app.pipeline.events import (
     emit_stage_progress,
     emit_stage_started,
 )
-from app.models.base import is_uuid
+from app.pipeline.text_normalize import spell_out_numbers_en
+from app.pipeline.timeline import GUARD_MS, TimelineSlot, normalize_turns, plan_timeline
 from app.providers.base import EmotionResult, SpeakerChunk, SynthesisRequest
 from app.providers.registry import (
     get_asr_provider,
@@ -49,7 +67,6 @@ from app.providers.registry import (
     get_translation_provider,
     get_tts_provider,
 )
-from app.db import session_scope
 from app.storage import get_storage
 
 logger = logging.getLogger(__name__)
@@ -68,6 +85,10 @@ def _target_lang(project: Project) -> str:
     return project.target_languages[0] if project.target_languages else get_settings().default_target_language
 
 
+def has_speech(segment: Segment) -> bool:
+    return bool((segment.source_text or "").strip())
+
+
 def _mark_project_failed(project_id: str, stage: str, exc: Exception) -> None:
     with session_scope() as db:
         # Guard first: this runs inside the exception handler, so a DataError
@@ -76,7 +97,7 @@ def _mark_project_failed(project_id: str, stage: str, exc: Exception) -> None:
         project = db.get(Project, project_id) if is_uuid(project_id) else None
         if project:
             project.status = ProjectStatus.failed
-            project.error_message = f"{stage}: {exc}"
+            project.error_message = f"{stage}: {exc}"[:2000]
             project.error_is_permanent = isinstance(exc, _PERMANENT)
     emit_error(project_id, stage, str(exc), permanent=isinstance(exc, _PERMANENT))
 
@@ -114,6 +135,24 @@ def _require_audio_key(db, source_video_id: str) -> str:
     return video.audio_storage_key
 
 
+def _segment_ids(db, project_id: str, statuses: Iterable[SegmentStatus]) -> list[str]:
+    return list(
+        db.execute(
+            select(Segment.id)
+            .where(Segment.project_id == project_id, Segment.status.in_(list(statuses)))
+            .order_by(Segment.index)
+        ).scalars()
+    )
+
+
+@contextlib.contextmanager
+def _downloaded(storage, key: str, name: str):
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, name)
+        storage.download_file(key, path)
+        yield path
+
+
 # ---------------------------------------------------------------------------
 # Stage 1: extract_audio
 # ---------------------------------------------------------------------------
@@ -138,8 +177,8 @@ def extract_audio(self, project_id: str, source_video_id: str) -> str:
 
             storage = get_storage()
             with tempfile.TemporaryDirectory() as tmp:
-                video_path = f"{tmp}/source.mp4"
-                audio_path = f"{tmp}/audio.wav"
+                video_path = os.path.join(tmp, "source.mp4")
+                audio_path = os.path.join(tmp, "audio.wav")
                 storage.download_file(video.storage_key, video_path)
                 ffmpeg_utils.extract_audio_wav(video_path, audio_path)
 
@@ -164,8 +203,8 @@ def extract_audio(self, project_id: str, source_video_id: str) -> str:
 # ---------------------------------------------------------------------------
 # Stage 2: chunk_and_diarize
 # ---------------------------------------------------------------------------
-# No segment may exceed this. synthesize uses each segment's own audio slice
-# as the CosyVoice2 voice-clone reference, and CosyVoice2 hard-asserts that
+# No segment may exceed this. A voice-cloned render uses the segment's own
+# audio slice as the CosyVoice2 reference, and CosyVoice2 hard-asserts that
 # reference is <= 30s ("do not support extract speech token for audio longer
 # than 30s"). Real diarization happily returns a 40s monologue turn, so the
 # cap is applied to every chunk -- provider output and the no-speech fallback
@@ -208,18 +247,22 @@ def chunk_and_diarize(self, project_id: str, source_video_id: str) -> str:
             _set_stage(db, project, stage)
 
             existing = db.execute(
-                select(Segment).where(Segment.source_video_id == source_video_id)
-            ).scalars().all()
+                select(Segment.id).where(Segment.source_video_id == source_video_id).limit(1)
+            ).first()
             if existing:
-                logger.info("chunk_and_diarize: %d segments already exist, skipping (idempotent)", len(existing))
+                logger.info("chunk_and_diarize: segments already exist, skipping (idempotent)")
                 emit_stage_completed(project_id, stage)
                 return project_id
 
             storage = get_storage()
-            with tempfile.TemporaryDirectory() as tmp:
-                audio_path = f"{tmp}/audio.wav"
-                storage.download_file(video.audio_storage_key, audio_path)
-                chunks = get_diarization_provider().chunk_and_diarize(audio_path)
+            with _downloaded(storage, video.audio_storage_key, "audio.wav") as audio_path:
+                raw = get_diarization_provider().chunk_and_diarize(audio_path)
+
+            # Overlapping turns become overlapping dubbed voices; same-speaker
+            # fragments become ASR calls on half a sentence. See timeline.py.
+            chunks = normalize_turns(raw)
+            if len(chunks) != len(raw):
+                logger.info("chunk_and_diarize: normalized %d raw turns into %d", len(raw), len(chunks))
 
             if not chunks:
                 # Diarization found no speech turns. On a genuinely empty or
@@ -320,15 +363,9 @@ def transcribe(self, project_id: str) -> str:
         with session_scope() as db:
             project = _require_project(db, project_id)
             _set_stage(db, project, stage)
-            segments = db.execute(
-                select(Segment)
-                .where(
-                    Segment.project_id == project_id,
-                    Segment.status.in_([SegmentStatus.pending, SegmentStatus.transcribed]),
-                )
-                .order_by(Segment.index)
-            ).scalars().all()
-            if not segments:
+            language = project.source_language
+            ids = _segment_ids(db, project_id, (SegmentStatus.pending, SegmentStatus.transcribed))
+            if not ids:
                 # Not a benign "nothing to do": every earlier stage completed
                 # yet no segment exists, so the run would otherwise strand in
                 # "processing" with no error. Fail loudly instead.
@@ -336,15 +373,14 @@ def transcribe(self, project_id: str) -> str:
                     "transcribe: no segments to transcribe -- diarization "
                     "produced nothing for this project."
                 )
+            audio_key = _require_audio_key(db, db.get(Segment, ids[0]).source_video_id)
 
-            storage = get_storage()
-            audio_key = _require_audio_key(db, segments[0].source_video_id)
-            with tempfile.TemporaryDirectory() as tmp:
-                audio_path = f"{tmp}/audio.wav"
-                storage.download_file(audio_key, audio_path)
-                for i, seg in enumerate(segments):
-                    _transcribe_one(audio_path, seg, project.source_language)
-                    emit_stage_progress(project_id, stage, (i + 1) / len(segments), completed=i + 1, total=len(segments))
+        with _downloaded(get_storage(), audio_key, "audio.wav") as audio_path:
+            for i, seg_id in enumerate(ids):
+                with session_scope() as db:
+                    _transcribe_one(audio_path, db.get(Segment, seg_id), language)
+                emit_stage_progress(project_id, stage, (i + 1) / len(ids), completed=i + 1, total=len(ids))
+
         with session_scope() as db:
             project = _require_project(db, project_id)
             if project.review_language:
@@ -385,32 +421,30 @@ def detect_emotion(self, project_id: str) -> str:
         with session_scope() as db:
             project = _require_project(db, project_id)
             _set_stage(db, project, stage)
-            segments = db.execute(
-                select(Segment)
-                .where(Segment.project_id == project_id, Segment.status == SegmentStatus.transcribed)
-                .order_by(Segment.index)
-            ).scalars().all()
-            if not segments:
+            preserve = project.preserve_emotion
+            ids = _segment_ids(db, project_id, (SegmentStatus.transcribed,))
+            if not ids:
                 emit_stage_completed(project_id, stage)
                 return project_id
+            audio_key = _require_audio_key(db, db.get(Segment, ids[0]).source_video_id) if preserve else None
 
-            if not project.preserve_emotion:
-                for seg in segments:
-                    seg.emotion_label = EmotionLabel.neutral
-                    seg.emotion_score = 1.0
-                    seg.status = SegmentStatus.emotion_detected
-                emit_stage_progress(project_id, stage, 1.0)
-                emit_stage_completed(project_id, stage)
-                return project_id
-
-            storage = get_storage()
-            audio_key = _require_audio_key(db, segments[0].source_video_id)
-            with tempfile.TemporaryDirectory() as tmp:
-                audio_path = f"{tmp}/audio.wav"
-                storage.download_file(audio_key, audio_path)
-                for i, seg in enumerate(segments):
-                    _detect_emotion_one(audio_path, seg)
-                    emit_stage_progress(project_id, stage, (i + 1) / len(segments), completed=i + 1, total=len(segments))
+        with contextlib.ExitStack() as stack:
+            audio_path = stack.enter_context(_downloaded(get_storage(), audio_key, "audio.wav")) if audio_key else None
+            for i, seg_id in enumerate(ids):
+                with session_scope() as db:
+                    seg = db.get(Segment, seg_id)
+                    if not has_speech(seg):
+                        # Nothing was said, so there is no register to carry.
+                        seg.emotion_label = None
+                        seg.emotion_score = None
+                        seg.status = SegmentStatus.emotion_detected
+                    elif not preserve:
+                        seg.emotion_label = EmotionLabel.neutral
+                        seg.emotion_score = 1.0
+                        seg.status = SegmentStatus.emotion_detected
+                    else:
+                        _detect_emotion_one(audio_path, seg)
+                emit_stage_progress(project_id, stage, (i + 1) / len(ids), completed=i + 1, total=len(ids))
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
@@ -434,9 +468,34 @@ def translate_segment(segment: Segment, target_lang: str, source_lang: str) -> N
     CONTRACTS.md #3 and #5.
     """
     bind_context(segment_id=segment.id)
-    result = get_translation_provider().translate(segment.source_text or "", target_lang, src_lang=source_lang)
-    segment.translated_text = result.text
+    if not has_speech(segment):
+        segment.translated_text = ""
+    else:
+        text = segment.source_text or ""
+        if source_lang == "en":
+            # Numerals would otherwise reach the TTS voice, which can't say
+            # them. See app/pipeline/text_normalize.py.
+            text = spell_out_numbers_en(text)
+        result = get_translation_provider().translate(text, target_lang, src_lang=source_lang)
+        segment.translated_text = result.text
     segment.status = SegmentStatus.translated
+
+
+def detected_language_majority(segments: Iterable) -> str | None:
+    """Most common ASR-detected language across segments that contain speech.
+
+    Segments with no text are excluded: Whisper's language guess on silence
+    or music is noise, and on a clip with a few such gaps it could outvote
+    the real language. Shared by the translate stage and the language gate
+    (/confirm-language), which used to take whichever segment row came back
+    first instead.
+    """
+    detected = [
+        s.detected_language
+        for s in segments
+        if s.detected_language and (getattr(s, "source_text", None) is None or has_speech(s))
+    ]
+    return Counter(detected).most_common(1)[0][0] if detected else None
 
 
 def _project_source_language(project: Project, segments: list[Segment]) -> str:
@@ -450,11 +509,9 @@ def _project_source_language(project: Project, segments: list[Segment]) -> str:
     """
     if project.source_language:
         return project.source_language
-    from collections import Counter
-
-    detected = [s.detected_language for s in segments if s.detected_language]
-    if detected:
-        return Counter(detected).most_common(1)[0][0]
+    majority = detected_language_majority(segments)
+    if majority:
+        return majority
     raise ValueError(
         f"project {project.id} has no confirmed source_language and no segment "
         "reported a detected_language -- cannot translate without guessing."
@@ -472,25 +529,29 @@ def translate(self, project_id: str) -> str:
             project = _require_project(db, project_id)
             _set_stage(db, project, stage)
             target_lang = _target_lang(project)
-            segments = db.execute(
-                select(Segment)
-                .where(Segment.project_id == project_id, Segment.status == SegmentStatus.emotion_detected)
-                .order_by(Segment.index)
+            all_segments = db.execute(
+                select(Segment).where(Segment.project_id == project_id).order_by(Segment.index)
             ).scalars().all()
+            if all_segments and not any(has_speech(s) for s in all_segments):
+                raise ValueError(
+                    "no speech was transcribed in any segment -- there is nothing to dub. "
+                    "The source may be silent or music-only."
+                )
 
             # Resolved and validated ONCE, before spending any translation
-            # calls: an unsupported source language (require_source_language
-            # inside translate_segment would also catch it, per-segment) fails
-            # the whole stage immediately and clearly instead of burning
-            # partial work first.
-            source_lang = _project_source_language(project, segments)
-            from app.capabilities import require_source_language
+            # calls: an unsupported source or target language fails the whole
+            # stage immediately and clearly instead of burning partial work.
+            source_lang = _project_source_language(project, all_segments)
+            from app.capabilities import require_language, require_source_language
 
             require_source_language(source_lang)
+            require_language(target_lang)
+            ids = _segment_ids(db, project_id, (SegmentStatus.emotion_detected,))
 
-            for i, seg in enumerate(segments):
-                translate_segment(seg, target_lang, source_lang)
-                emit_stage_progress(project_id, stage, (i + 1) / max(len(segments), 1), completed=i + 1, total=len(segments))
+        for i, seg_id in enumerate(ids):
+            with session_scope() as db:
+                translate_segment(db.get(Segment, seg_id), target_lang, source_lang)
+            emit_stage_progress(project_id, stage, (i + 1) / max(len(ids), 1), completed=i + 1, total=len(ids))
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
@@ -503,75 +564,125 @@ def translate(self, project_id: str) -> str:
 # ---------------------------------------------------------------------------
 # Stage 6: synthesize
 # ---------------------------------------------------------------------------
+# How much of a speaker's own speech to give voice conversion as its
+# reference. CosyVoice2 caps the reference at 30s.
+REFERENCE_TARGET_MS = 12_000
+REFERENCE_MAX_MS = 28_000
+
+
+def _voice_reference(db, storage, segment: Segment, tmp: str) -> str:
+    """A local WAV of this segment's speaker, for voice cloning.
+
+    One reference per speaker, built once from that speaker's longest spoken
+    segments (~12s) and stored on the Speaker row, so every line a speaker
+    says is converted toward the same voice. It used to be each segment's
+    own audio slice: a one-word line got a 0.5s reference, every line got a
+    different one, and on the real run the cloned dub read back at corpus
+    CER 0.30 against 0.16 for the same dub unconverted.
+
+    Raises rather than quietly rendering in a stock voice: clone_voice was
+    explicitly requested.
+    """
+    path = os.path.join(tmp, "reference_clip.wav")
+    speaker = db.get(Speaker, segment.speaker_id) if segment.speaker_id else None
+    if speaker and speaker.reference_clip_url:
+        storage.download_file(speaker.reference_clip_url, path)
+        return path
+
+    candidates = [segment]
+    if speaker is not None:
+        candidates = db.execute(
+            select(Segment).where(Segment.project_id == segment.project_id, Segment.speaker_id == speaker.id)
+        ).scalars().all()
+    spoken = [s for s in candidates if has_speech(s)] or [segment]
+    chosen, total = [], 0
+    for s in sorted(spoken, key=lambda s: s.end_ms - s.start_ms, reverse=True):
+        span = s.end_ms - s.start_ms
+        if total >= REFERENCE_TARGET_MS:
+            break
+        if total + span > REFERENCE_MAX_MS:
+            continue
+        chosen.append(s)
+        total += span
+    chosen.sort(key=lambda s: s.start_ms)
+
+    full_audio = os.path.join(tmp, "full_audio.wav")
+    storage.download_file(_require_audio_key(db, segment.source_video_id), full_audio)
+    pieces = []
+    for i, s in enumerate(chosen):
+        with ffmpeg_utils.extract_audio_slice(full_audio, s.start_ms, s.end_ms) as slice_path:
+            piece = os.path.join(tmp, f"ref_{i:02d}.wav")
+            shutil.copyfile(slice_path, piece)
+            pieces.append(piece)
+    ffmpeg_utils.concat_audio(pieces, path)
+
+    if speaker is not None:
+        key = f"projects/{segment.project_id}/speakers/{speaker.id}/reference.wav"
+        storage.upload_file(key, path, content_type="audio/wav")
+        speaker.reference_clip_url = key
+    return path
+
+
+def _available_ms(db, segment: Segment, original_ms: int) -> int:
+    later = db.execute(
+        select(Segment.start_ms, Segment.source_text)
+        .where(Segment.project_id == segment.project_id, Segment.start_ms > segment.start_ms)
+        .order_by(Segment.start_ms)
+    ).all()
+    next_start = next((start for start, text in later if (text or "").strip()), None)
+    if next_start is None:
+        video = db.get(SourceVideo, segment.source_video_id)
+        next_start = video.duration_ms if video and video.duration_ms else segment.end_ms
+    return max(next_start - segment.start_ms - GUARD_MS, original_ms)
+
+
 def synthesize_segment(db, storage, segment: Segment, project: Project) -> None:
     """Shared by the full-project stage task and single-segment /regenerate."""
     bind_context(segment_id=segment.id)
+    text = (segment.translated_text or "").strip()
+    if not text:
+        # No speech in, no speech out: the mux leaves this stretch silent.
+        segment.tts_audio_url = None
+        segment.tts_duration_ms = None
+        segment.sync_offset_pct = None
+        segment.status = SegmentStatus.synthesized
+        return
 
     with tempfile.TemporaryDirectory() as tmp:
-        voice_ref_path = None
-        voice_ref_text = None
-        if project.clone_voice and segment.speaker_id:
-            speaker = db.get(Speaker, segment.speaker_id)
-            if speaker and speaker.reference_clip_url:
-                # reference_clip_url is a storage key (set during voice-cloning
-                # setup, P3) -- TTS providers need a local file, so pull it down
-                # once per render rather than assuming the provider can fetch it.
-                voice_ref_path = f"{tmp}/reference_clip.wav"
-                storage.download_file(speaker.reference_clip_url, voice_ref_path)
-                voice_ref_text = segment.source_text
-
-        if voice_ref_path is None and segment.source_text:
-            # P3's per-speaker reference clip is never populated by any stage
-            # today, and zero-shot TTS providers (CosyVoice2) have no
-            # synthesis path at all without *some* reference audio -- the
-            # segment's own source-language audio is a perfectly good stand-in
-            # (it's literally that speaker's voice) and needs nothing beyond
-            # what extract_audio/chunk_and_diarize already produced.
-            video = db.get(SourceVideo, segment.source_video_id)
-            if video and video.audio_storage_key:
-                # Best-effort: a provider that doesn't need a reference (the
-                # mock) must still render if the extracted audio is missing or
-                # ffmpeg is unavailable, so failures here degrade to "no
-                # reference" rather than failing the whole segment. Providers
-                # that *do* require one raise their own clear error.
-                try:
-                    full_audio_path = f"{tmp}/full_audio.wav"
-                    storage.download_file(video.audio_storage_key, full_audio_path)
-                    with ffmpeg_utils.extract_audio_slice(
-                        full_audio_path, segment.start_ms, segment.end_ms
-                    ) as slice_path:
-                        voice_ref_path = f"{tmp}/reference_clip.wav"
-                        shutil.copyfile(slice_path, voice_ref_path)
-                    voice_ref_text = segment.source_text
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning(
-                        "could not derive a voice reference from source audio (%s): %s",
-                        video.audio_storage_key,
-                        exc,
-                    )
-                    voice_ref_path = None
-                    voice_ref_text = None
+        voice_ref_path = voice_ref_text = None
+        if project.clone_voice:
+            voice_ref_path = _voice_reference(db, storage, segment, tmp)
+            voice_ref_text = segment.source_text
 
         emotion = None
         if project.preserve_emotion and segment.emotion_label:
             emotion = EmotionResult(label=segment.emotion_label.value, score=segment.emotion_score or 0.0)
 
+        original_ms = max(segment.end_ms - segment.start_ms, 1)
         request = SynthesisRequest(
-            text=segment.translated_text or "",
+            text=text,
             target_lang=_target_lang(project),
             voice_reference_path=voice_ref_path,
             voice_reference_text=voice_ref_text,
             emotion=emotion,
+            # The time this line may occupy: up to the next spoken line, the
+            # same window the mux planner allows (app/pipeline/timeline.py).
+            # It used to be the segment's own length, so TTS squeezed a line
+            # to fit even when a pause followed that the mux would happily
+            # have used -- measurably less intelligible speech for nothing.
+            target_duration_ms=_available_ms(db, segment, original_ms),
             extra={"tts_model": project.tts_model} if project.tts_model else {},
         )
         result = get_tts_provider().synthesize(request)
-
-        key = f"projects/{project.id}/segments/{segment.id}/tts.wav"
-        storage.upload_file(key, result.local_audio_path, content_type="audio/wav")
+        try:
+            key = f"projects/{project.id}/segments/{segment.id}/tts.wav"
+            storage.upload_file(key, result.local_audio_path, content_type="audio/wav")
+        finally:
+            with contextlib.suppress(OSError):
+                os.remove(result.local_audio_path)
 
     segment.tts_audio_url = key
     segment.tts_duration_ms = result.duration_ms
-    original_ms = max(segment.end_ms - segment.start_ms, 1)
     segment.sync_offset_pct = round(100.0 * (result.duration_ms - original_ms) / original_ms, 2)
     segment.status = SegmentStatus.synthesized
 
@@ -586,17 +697,15 @@ def synthesize(self, project_id: str) -> str:
         with session_scope() as db:
             project = _require_project(db, project_id)
             _set_stage(db, project, stage)
-            storage = get_storage()
-            segments = db.execute(
-                select(Segment)
-                .where(Segment.project_id == project_id, Segment.status == SegmentStatus.translated)
-                .order_by(Segment.index)
-            ).scalars().all()
-            for i, seg in enumerate(segments):
-                synthesize_segment(db, storage, seg, project)
-                db.flush()
-                emit_segment_ready(project_id, seg.id)
-                emit_stage_progress(project_id, stage, (i + 1) / max(len(segments), 1), completed=i + 1, total=len(segments))
+            ids = _segment_ids(db, project_id, (SegmentStatus.translated,))
+
+        storage = get_storage()
+        for i, seg_id in enumerate(ids):
+            with session_scope() as db:
+                seg = db.get(Segment, seg_id)
+                synthesize_segment(db, storage, seg, db.get(Project, project_id))
+            emit_segment_ready(project_id, seg_id)
+            emit_stage_progress(project_id, stage, (i + 1) / max(len(ids), 1), completed=i + 1, total=len(ids))
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
@@ -617,17 +726,17 @@ def mux_export(self, project_id: str) -> str:
     emit_stage_started(project_id, stage)
     try:
         with session_scope() as db:
-            project = db.get(Project, project_id)
-            if project is None:
-                raise ValueError(f"project {project_id} not found")
+            project = _require_project(db, project_id)
             _set_stage(db, project, stage)
             segments = db.execute(
                 select(Segment)
                 .where(Segment.project_id == project_id)
                 .order_by(Segment.index)
             ).scalars().all()
-            if not segments or any(s.status != SegmentStatus.synthesized for s in segments):
+            if not segments or any(s.status not in (SegmentStatus.synthesized, SegmentStatus.muxed) for s in segments):
                 raise ValueError("not all segments are synthesized yet")
+            if not any(s.tts_audio_url for s in segments):
+                raise ValueError("no segment produced any speech to mux")
 
             source_video = db.get(SourceVideo, segments[0].source_video_id)
             if source_video is None:
@@ -646,48 +755,39 @@ def mux_export(self, project_id: str) -> str:
             export.status = ExportStatus.running
 
             with tempfile.TemporaryDirectory() as tmp:
-                video_path = f"{tmp}/source.mp4"
+                video_path = os.path.join(tmp, "source.mp4")
                 storage.download_file(source_video.storage_key, video_path)
+                duration_ms = source_video.duration_ms or ffmpeg_utils.probe_duration_ms(video_path)
 
-                # (local path, start_ms) -- each clip is laid at its own
-                # timecode so the dub stays aligned with the picture.
-                placements: list[tuple[str, int]] = []
-                for i, seg in enumerate(segments):
-                    if not seg.tts_audio_url:
-                        raise ValueError(f"segment {seg.id} has no rendered audio to mux")
-                    p = f"{tmp}/seg_{i:04d}.wav"
-                    storage.download_file(seg.tts_audio_url, p)
-                    placements.append((p, seg.start_ms))
-                    emit_stage_progress(project_id, stage, 0.1 + 0.6 * (i + 1) / len(segments))
+                plan = plan_timeline(
+                    [
+                        TimelineSlot(s.id, s.start_ms, s.end_ms, s.tts_duration_ms if s.tts_audio_url else None)
+                        for s in segments
+                    ],
+                    duration_ms,
+                )
+                by_id = {s.id: s for s in segments}
+                placements: list[ffmpeg_utils.ClipPlacement] = []
+                for i, clip in enumerate(plan):
+                    path = os.path.join(tmp, f"seg_{i:04d}.wav")
+                    storage.download_file(by_id[clip.segment_id].tts_audio_url, path)
+                    placements.append(ffmpeg_utils.ClipPlacement(path, clip.start_ms, clip.tempo))
+                    emit_stage_progress(project_id, stage, 0.1 + 0.6 * (i + 1) / len(plan))
+                    if clip.overrun_ms:
+                        logger.warning(
+                            "mux_export: segment %s still runs %dms past its window at tempo %.2f",
+                            clip.segment_id, clip.overrun_ms, clip.tempo,
+                        )
 
-                out_path = f"{tmp}/output.mp4"
+                out_path = os.path.join(tmp, "output.mp4")
                 ffmpeg_utils.mux_timeline(video_path, placements, out_path)
 
                 out_key = f"projects/{project_id}/exports/{export.id}/output.mp4"
                 storage.upload_file(out_key, out_path, content_type="video/mp4")
 
-            qa_report = {
-                "segments": [
-                    {
-                        "segment_id": s.id,
-                        "sync_offset_pct": s.sync_offset_pct,
-                        "emotion_label": s.emotion_label.value if s.emotion_label else None,
-                    }
-                    for s in segments
-                ],
-                "overall": {
-                    "segment_count": len(segments),
-                    "avg_sync_offset_pct": round(
-                        sum(abs(s.sync_offset_pct or 0) for s in segments) / len(segments), 2
-                    ),
-                },
-            }
-
             export.output_url = out_key
-            export.qa_report = qa_report
+            export.qa_report = _qa_report(segments, plan, duration_ms)
             export.status = ExportStatus.ready
-            from datetime import datetime, timezone
-
             export.completed_at = datetime.now(timezone.utc)
 
             for s in segments:
@@ -708,3 +808,37 @@ def mux_export(self, project_id: str) -> str:
         raise
     finally:
         clear_context()
+
+
+def _qa_report(segments: list[Segment], plan, duration_ms: int) -> dict:
+    fits = {c.segment_id: c for c in plan}
+    voiced = [s for s in segments if s.tts_audio_url]
+    rows = []
+    for s in segments:
+        fit = fits.get(s.id)
+        rows.append(
+            {
+                "segment_id": s.id,
+                "start_ms": s.start_ms,
+                "end_ms": s.end_ms,
+                "has_speech": fit is not None,
+                "sync_offset_pct": s.sync_offset_pct,
+                "emotion_label": s.emotion_label.value if s.emotion_label else None,
+                "tempo": fit.tempo if fit else None,
+                "fitted_ms": fit.fitted_ms if fit else None,
+                "overrun_ms": fit.overrun_ms if fit else None,
+            }
+        )
+    offsets = [abs(s.sync_offset_pct) for s in voiced if s.sync_offset_pct is not None]
+    return {
+        "segments": rows,
+        "overall": {
+            "segment_count": len(segments),
+            "speech_segment_count": len(voiced),
+            "duration_ms": duration_ms,
+            "avg_sync_offset_pct": round(sum(offsets) / len(offsets), 2) if offsets else 0.0,
+            "max_tempo": max((c.tempo for c in plan), default=1.0),
+            "overrun_segment_count": sum(1 for c in plan if c.overrun_ms),
+            "total_overrun_ms": sum(c.overrun_ms for c in plan),
+        },
+    }
