@@ -112,8 +112,11 @@ speech as the original speaker. The reference is built once per speaker from
 their longest lines (~12s) and stored on the speaker row, so every line a
 speaker says converts toward the same voice -- per-segment slices (0.5s for a
 one-word line) measurably hurt intelligibility. VC has no text model, so the
-language limitation doesn't apply. It is roughly 10x slower than real time on
-CPU. `/api/capabilities` publishes `voice_clone_available`, and
+language limitation doesn't apply, but it is not free: on the end-to-end test
+clip the same Telugu dub read back at corpus CER 0.16 unconverted and 0.24
+cloned, with the worst 3-word line at 0.44. It is also roughly 10x slower than
+real time on CPU (12.5 minutes for 30 seconds of speech). Offer it as the
+opt-in it is. `/api/capabilities` publishes `voice_clone_available`, and
 `/process` refuses `clone_voice` when it's off.
 
 **TTS runs in its own worker, deliberately.** CosyVoice2 is installed from
