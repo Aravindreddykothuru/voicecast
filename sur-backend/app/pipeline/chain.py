@@ -27,13 +27,21 @@ from app.pipeline.tasks import (
 )
 
 
-def start_pipeline(project_id: str, source_video_id: str, *, review_language: bool = True):
+def start_pipeline(
+    project_id: str, source_video_id: str, *, review_language: bool = True, retranscribe: bool = False
+):
     """Extract -> diarize -> transcribe, then either stop for confirmation or
-    continue straight through."""
+    continue straight through.
+
+    `retranscribe` re-runs ASR on segments that were already transcribed (a
+    reviewer corrected or pinned the language). Without it, transcribe only
+    picks up segments still pending, so restarting a failed or stalled run
+    resumes instead of redoing finished work.
+    """
     links = [
         extract_audio.s(project_id, source_video_id),
         chunk_and_diarize.s(source_video_id),
-        transcribe.s(),
+        transcribe.s(retranscribe=retranscribe),
     ]
     if not review_language:
         links += _expensive_stages()

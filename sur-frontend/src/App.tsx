@@ -4,6 +4,7 @@ import EchoLanding from "@/EchoLanding";
 import { getStoredAuth, logout, type StoredAuth } from "@/lib/auth";
 import {
   ApiError,
+  apiReachable,
   listProjects,
   getProject,
   createProject,
@@ -18,7 +19,9 @@ import {
   patchSegment,
   regenerateSegment,
   resolveUrl,
+  type RegenerateStages,
 } from "@/lib/api";
+import { canRestart, runProgress, runVerdict, seedStages } from "@/lib/runState";
 import {
   CapabilitiesProvider,
   useCapabilities,
@@ -30,12 +33,13 @@ import {
 } from "@/lib/capabilities";
 import { emotionColor, UNCERTAIN_COLOR } from "@/lib/theme";
 import {
-  PIPELINE_STAGE_ORDER,
+  EXTRA_STAGE_LABELS,
   PIPELINE_STAGE_LABELS,
   projectError,
   type Capabilities,
   type ProjectListItem,
   type ProjectRead,
+  type SegmentQaEntry,
   type SegmentRead,
   type ExportRead,
 } from "@/lib/types";
@@ -289,7 +293,13 @@ function fmtWhen(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function stageLabel(stage: string | null): string | null {
+  if (!stage) return null;
+  return PIPELINE_STAGE_LABELS[stage as keyof typeof PIPELINE_STAGE_LABELS] ?? EXTRA_STAGE_LABELS[stage] ?? stage;
+}
+
 const STATUS_META: Record<string, { label: string; color: string; bg: string; bd: string }> = {
+  stalled: { label: "Stalled", color: C.amber.fg, bg: C.amber.bg, bd: C.amber.bd },
   ready: { label: "Ready", color: C.green.fg, bg: C.green.bg, bd: C.green.bd },
   failed: { label: "Failed", color: C.red.fg, bg: C.red.bg, bd: C.red.bd },
   processing: { label: "Processing", color: C.cyan.fg, bg: C.cyan.bg, bd: C.cyan.bd },
@@ -356,7 +366,8 @@ function Dashboard({ go, openProject }: { go: (s: Screen) => void; openProject: 
         <MetricCard label="Total Dubs" value={projects ? String(projects.length) : "—"} sub="all projects" color={C.teal} />
         <MetricCard label="Ready / Finished" value={projects ? String(readyCount) : "—"} sub="export available" color={C.green.fg} />
         <MetricCard label="In Pipeline" value={projects ? String(inPipeline) : "—"} sub="queued or processing" color={C.amber.fg} />
-        <MetricCard label="Processing Device" value={caps.device.toUpperCase()} sub={caps.device === "cpu" ? "~2 min per sentence" : "GPU accelerated"} color={C.cyan.fg} />
+        <MetricCard label="Processing Device" value={caps.device.toUpperCase()}
+          sub={`${caps.tts_engine} voices · ${caps.tts_commercial_use ? "commercial use OK" : "non-commercial license"}`} color={C.cyan.fg} />
       </div>
 
       {error && <Callout tone="error"><span>{error}</span></Callout>}
@@ -380,12 +391,15 @@ function Dashboard({ go, openProject }: { go: (s: Screen) => void; openProject: 
           {projects.map((p) => {
             const targets = p.target_languages.map((c) => languageName(caps, c)).join(", ");
             const src = p.source_language ? sourceLanguageName(caps, p.source_language) : "auto";
-            const meta = STATUS_META[p.status] ?? STATUS_META.draft;
-            const stageLabel = p.current_stage ? PIPELINE_STAGE_LABELS[p.current_stage as keyof typeof PIPELINE_STAGE_LABELS] ?? p.current_stage : null;
-            const showProgress = p.status === "ready" || p.status === "processing" || p.status === "queued";
-            const pct = p.status === "ready" ? 100 : p.status === "processing" ? 60 : p.status === "queued" ? 15 : 0;
+            const verdict = runVerdict(p);
+            const meta = (verdict.kind === "stalled" ? STATUS_META.stalled : STATUS_META[p.status]) ?? STATUS_META.draft;
+            const stage = stageLabel(p.current_stage);
+            const showProgress = ["ready", "processing", "queued", "awaiting_language_confirmation"].includes(p.status);
+            // Real position in the pipeline; this used to be a fixed 15%/60%.
+            const pct = Math.round(runProgress(p) * 100);
             const hovered = hoverId === p.id;
             const busy = busyId === p.id;
+            const restartable = canRestart(p);
             return (
               <div key={p.id}
                 onMouseEnter={() => setHoverId(p.id)} onMouseLeave={() => setHoverId(null)}
@@ -405,9 +419,9 @@ function Dashboard({ go, openProject }: { go: (s: Screen) => void; openProject: 
                       style={{ color: meta.color, background: meta.bg, borderColor: meta.bd }}>
                       <StatusDot color={meta.color} />{meta.label}
                     </span>
-                    {p.status === "failed" && stageLabel && (
+                    {p.status === "failed" && stage && (
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ color: C.red.fg, background: C.red.bg, border: `1px solid ${C.red.bd}` }}>
-                        {stageLabel}
+                        {stage}
                       </span>
                     )}
                   </div>
@@ -415,9 +429,15 @@ function Dashboard({ go, openProject }: { go: (s: Screen) => void; openProject: 
                     <span style={{ color: C.textMid }}>{src} → {targets}</span>
                     <span>{fmtDuration(p.source_video_duration_ms)}</span>
                     <span>{p.segment_count} segments</span>
-                    {stageLabel && p.status !== "failed" && <span>{stageLabel}</span>}
+                    {stage && p.status !== "failed" && <span>{stage}</span>}
                     <span>{fmtWhen(p.created_at)}</span>
                   </div>
+                  {verdict.kind === "stalled" && (
+                    <span className="text-[11px] font-mono" style={{ color: C.amber.fg }}>{verdict.reason}</span>
+                  )}
+                  {verdict.kind === "failed" && (
+                    <span className="text-[11px] font-mono truncate" style={{ color: C.red.fg }} title={verdict.message}>{verdict.message}</span>
+                  )}
                   {showProgress && (
                     <div className="h-1 rounded-full overflow-hidden max-w-sm" style={{ background: C.surface }}>
                       <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: meta.color }} />
@@ -425,12 +445,12 @@ function Dashboard({ go, openProject }: { go: (s: Screen) => void; openProject: 
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <GhostBtn onClick={() => openProject(p.id, ["awaiting_language_confirmation", "processing", "queued"].includes(p.status) ? "processing" : "editor")}>
+                  <GhostBtn onClick={() => openProject(p.id, ["awaiting_language_confirmation", "processing", "queued", "failed", "draft", "uploading"].includes(p.status) ? "processing" : "editor")}>
                     Open
                   </GhostBtn>
-                  {p.status === "failed" && (
+                  {restartable && (
                     <GhostBtn onClick={() => retry(p.id)} disabled={busy} style={{ color: C.amber.fg, borderColor: C.amber.bd }}>
-                      {busy ? "…" : "Retry"}
+                      {busy ? "…" : verdict.kind === "stalled" ? "Restart" : "Retry"}
                     </GhostBtn>
                   )}
                   <GhostBtn onClick={() => download(p.id)} disabled={busy || p.status !== "ready"} style={{ color: C.teal, borderColor: C.tealBorder }}>
@@ -457,8 +477,8 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
   const [file, setFile] = useState<File | null>(null);
   const [sourceLang, setSourceLang] = useState<string>(caps.asr_autodetect ? "auto" : (caps.source_languages[0]?.code ?? ""));
   const [target, setTarget] = useState<string>("");
-  const [preservePauses, setPreservePauses] = useState(true);
   const [preserveEmotion, setPreserveEmotion] = useState(true);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [cloneVoice, setCloneVoice] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -487,8 +507,11 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
     if (!file) return;
     setSubmitting(true);
     setError(null);
+    setCreatedId(null);
+    let projectId: string | null = null;
     try {
       const project = await createProject(title.trim(), [target]);
+      projectId = project.id;
       const up = await createUploadUrl(project.id, file.name, file.type || "video/mp4");
       await putUploadFile(up.upload_url, file);
       await confirmUpload(project.id, up.source_video_id);
@@ -507,7 +530,11 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
       });
       onCreated(project.id);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Could not start the job");
+      const reason = e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Could not start the job";
+      // A failure after the project exists used to leave an orphan stuck in
+      // "uploading" on the dashboard with nothing pointing at it.
+      setCreatedId(projectId);
+      setError(projectId ? `The project was created but not started: ${reason}` : reason);
       setSubmitting(false);
     }
   };
@@ -527,7 +554,13 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
         {caps.device === "cpu" && (
           <Callout tone="warn">
             <span className="font-medium">CPU throughput</span>
-            <span>Roughly 2 minutes of processing per sentence. A 3-minute clip can take over an hour. A CUDA worker is an order of magnitude faster.</span>
+            <span>Every stage runs on the processor: expect processing to take several times the video&apos;s length, and much longer with voice cloning. The Processing screen shows live per-stage progress.</span>
+          </Callout>
+        )}
+        {!caps.tts_commercial_use && caps.tts_engine !== "mock" && (
+          <Callout tone="warn">
+            <span className="font-medium">Non-commercial voices</span>
+            <span>This deployment&apos;s TTS voices are licensed {caps.tts_licenses.join(", ")}. Output may not be used commercially.</span>
           </Callout>
         )}
 
@@ -603,9 +636,9 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
 
         {/* 5 — Options */}
         <Step n={5} title="Pipeline options">
-          <Checkbox checked={preservePauses} onChange={setPreservePauses}
-            label="Preserve original pauses and timing" badge="Sync"
-            help="Off packs clips together and the dub drifts out of sync." />
+          {/* A "Preserve original pauses" checkbox used to sit here. It was
+              never sent to the backend -- every dub keeps each line at its
+              source timecode -- so it was a control that did nothing. */}
           <Checkbox checked={preserveEmotion} onChange={setPreserveEmotion}
             label="Preserve emotional delivery" badge="Emotion-aware"
             help="Carries the source segment's detected emotion into the synthesized voice." />
@@ -620,7 +653,14 @@ function NewProject({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id
           )}
         </Step>
 
-        {error && <Callout tone="error"><span>{error}</span></Callout>}
+        {error && (
+          <Callout tone="error">
+            <span>{error}</span>
+            {createdId && (
+              <button type="button" className="underline self-start" onClick={() => onCreated(createdId)}>Open the project</button>
+            )}
+          </Callout>
+        )}
 
         <div className="flex items-center gap-3 pt-1">
           <PrimaryBtn onClick={submit} disabled={!canSubmit}>
@@ -688,6 +728,7 @@ function Processing({ projectId, go }: { projectId: string | null; go: (s: Scree
   const [error, setError] = useState<string | null>(null);
   const [override, setOverride] = useState<string>("");
   const [gateBusy, setGateBusy] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const events = useProjectEvents(projectId);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -712,19 +753,48 @@ function Processing({ projectId, go }: { projectId: string | null; go: (s: Scree
   }
 
   const perr = project ? projectError(project) : null;
+  const verdict = project ? runVerdict(project) : null;
   const awaiting = project?.status === "awaiting_language_confirmation";
-  const detected = mostCommonDetected(segments);
+  // The backend's own detection -- the language it will accept. The UI used
+  // to recount segments itself, including silent ones, and could name a
+  // different language than the one "Continue" then locked in.
+  const detected = project?.detected_source_language
+    ? {
+        code: project.detected_source_language,
+        confidence: project.detected_source_language_confidence ?? 0,
+        count: segments.filter((s) => s.detected_language === project.detected_source_language && (s.source_text ?? "").trim()).length,
+        spoken: segments.filter((s) => (s.source_text ?? "").trim()).length,
+      }
+    : null;
+  const stages = seedStages(project, events.stages);
 
   const submitGate = async (rerun: boolean) => {
     setGateBusy(true);
     setError(null);
     try {
-      await confirmLanguage(projectId, rerun ? override || detected?.code : override || undefined);
+      if (rerun) {
+        await confirmLanguage(projectId, override || detected?.code, { forceRetranscribe: true });
+      } else {
+        await confirmLanguage(projectId, override || null);
+      }
       refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not confirm the language");
     } finally {
       setGateBusy(false);
+    }
+  };
+
+  const restart = async () => {
+    setRestarting(true);
+    setError(null);
+    try {
+      await retryProject(projectId);
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not restart the run");
+    } finally {
+      setRestarting(false);
     }
   };
 
@@ -747,9 +817,41 @@ function Processing({ projectId, go }: { projectId: string | null; go: (s: Scree
 
       {perr && (
         <Callout tone={perr.kind === "permanent" ? "error" : "warn"}>
-          <span className="font-medium">{perr.kind === "permanent" ? "This run cannot succeed" : "Temporary failure"}</span>
+          <span className="font-medium">{perr.kind === "permanent" ? "This run cannot succeed" : "The run failed"}</span>
           <span>{perr.message}</span>
-          {perr.stage && <span style={{ color: C.textMuted }}>Failed at: {perr.stage}</span>}
+          {perr.stage && <span style={{ color: C.textMuted }}>Failed at: {stageLabel(perr.stage)}</span>}
+          {perr.kind !== "permanent" && (
+            <PrimaryBtn onClick={restart} disabled={restarting} style={{ alignSelf: "flex-start" }}>
+              {restarting ? "Restarting…" : "Retry (resumes from the last finished segment)"}
+            </PrimaryBtn>
+          )}
+        </Callout>
+      )}
+
+      {verdict?.kind === "stalled" && (
+        <Callout tone="warn">
+          <span className="font-medium">No progress</span>
+          <span>{verdict.reason}</span>
+          <PrimaryBtn onClick={restart} disabled={restarting} style={{ alignSelf: "flex-start" }}>
+            {restarting ? "Restarting…" : "Restart the run"}
+          </PrimaryBtn>
+        </Callout>
+      )}
+
+      {events.errorMessage && project && project.status !== "failed" && (
+        <Callout tone="warn">
+          <span className="font-medium">A stage reported an error{events.errorIsPermanent ? "" : " and will retry"}</span>
+          <span>{events.errorMessage}</span>
+        </Callout>
+      )}
+
+      {project?.current_stage === "regenerate" && verdict?.kind === "active" && (
+        <Callout tone="info"><span>Regenerating a segment; the export is re-muxed when it finishes.</span></Callout>
+      )}
+
+      {project && (project.status === "draft" || project.status === "uploading") && (
+        <Callout tone="info">
+          <span>This project has not been started{project.status === "uploading" ? " (its upload never completed)" : ""}.</span>
         </Callout>
       )}
 
@@ -763,7 +865,7 @@ function Processing({ projectId, go }: { projectId: string | null; go: (s: Scree
                 {sourceLanguageName(caps, detected.code)}
               </span>
               <span className="text-[11px] font-mono" style={{ color: C.textMuted }}>
-                {(detected.confidence * 100).toFixed(0)}% confidence · {detected.count}/{segments.length} segments
+                {(detected.confidence * 100).toFixed(0)}% confidence · {detected.count}/{detected.spoken} spoken segments
               </span>
             </div>
           ) : (
@@ -784,7 +886,9 @@ function Processing({ projectId, go }: { projectId: string | null; go: (s: Scree
             <PrimaryBtn onClick={() => submitGate(false)} disabled={gateBusy || (!detected && !override)}>
               {gateBusy ? "…" : "Continue"}
             </PrimaryBtn>
-            <GhostBtn onClick={() => submitGate(true)} disabled={gateBusy || !override}>Re-run ASR with this language</GhostBtn>
+            <GhostBtn onClick={() => submitGate(true)} disabled={gateBusy || (!override && !detected)}>
+              Re-run ASR forced to {override ? sourceLanguageName(caps, override) : detected ? sourceLanguageName(caps, detected.code) : "this language"}
+            </GhostBtn>
           </div>
         </div>
       )}
@@ -793,7 +897,7 @@ function Processing({ projectId, go }: { projectId: string | null; go: (s: Scree
         <div className="rounded-xl p-5" style={{ background: C.card, border: `1px solid ${C.border}` }}>
           <h2 className="text-xs font-mono font-semibold tracking-widest uppercase mb-4" style={{ color: C.textMuted }}>Pipeline Stages</h2>
           <div className="flex flex-col gap-3">
-            {events.stages.map((s) => <StageRow key={s.key} s={s} />)}
+            {stages.map((s) => <StageRow key={s.key} s={s} />)}
           </div>
         </div>
 
@@ -855,41 +959,49 @@ function StageRow({ s }: { s: StageState }) {
   );
 }
 
-function mostCommonDetected(segments: SegmentRead[]): { code: string; confidence: number; count: number } | null {
-  const byCode = new Map<string, { n: number; confSum: number }>();
-  for (const s of segments) {
-    if (!s.detected_language) continue;
-    const e = byCode.get(s.detected_language) ?? { n: 0, confSum: 0 };
-    e.n += 1;
-    e.confSum += s.detected_language_confidence ?? 0;
-    byCode.set(s.detected_language, e);
-  }
-  let best: { code: string; confidence: number; count: number } | null = null;
-  for (const [code, e] of byCode) {
-    if (!best || e.n > best.count) best = { code, confidence: e.confSum / e.n, count: e.n };
-  }
-  return best;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Editor — real segments; edit translation + regenerate one segment
 // ─────────────────────────────────────────────────────────────────────────────
 function Editor({ projectId }: { projectId: string | null }) {
   const caps = useReadyCapabilities();
   const [segments, setSegments] = useState<SegmentRead[] | null>(null);
+  const [project, setProject] = useState<ProjectRead | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (!projectId) return;
-    listSegments(projectId).then((rows) => {
+    try {
+      const [p, rows] = await Promise.all([getProject(projectId), listSegments(projectId)]);
+      setProject(p);
       setSegments(rows);
       setSelId((cur) => cur ?? rows[0]?.id ?? null);
-    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load segments"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load segments");
+    }
   }, [projectId]);
-  useEffect(load, [load]);
+  useEffect(() => { void load(); }, [load]);
+
+  // A regenerate used to be fire-and-forget: the screen never refreshed, so
+  // the new audio never appeared and a failure was invisible. While the
+  // project is running, poll until it settles.
+  const running = !!project && (project.status === "queued" || project.status === "processing") && !project.stalled;
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (running) {
+      wasRunning.current = true;
+      const t = setInterval(() => { void load(); }, 3000);
+      return () => clearInterval(t);
+    }
+    if (wasRunning.current && project) {
+      wasRunning.current = false;
+      setNotice(project.status === "ready" ? "Done: the segment was re-voiced and the export re-muxed." : null);
+    }
+  }, [running, load, project]);
+  const perr = project ? projectError(project) : null;
 
   const seg = segments?.find((s) => s.id === selId) ?? null;
   useEffect(() => { setDraft(seg?.translated_text ?? ""); }, [seg?.id, seg?.translated_text]);
@@ -898,18 +1010,24 @@ function Editor({ projectId }: { projectId: string | null }) {
 
   const save = async () => {
     if (!seg) return;
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setNotice(null);
     try {
       await patchSegment(seg.id, { translated_text: draft });
       await load();
+      setNotice("Saved. Re-voice the line to hear it in the dub.");
     } catch (e) { setError(e instanceof Error ? e.message : "Save failed"); }
     finally { setBusy(false); }
   };
-  const regen = async () => {
+  // "Re-voice" keeps the saved text; "Re-translate" replaces it. The editor
+  // used to always send both stages, so re-voicing after an edit silently
+  // threw the edit away and spoke a fresh machine translation.
+  const regen = async (stages: RegenerateStages) => {
     if (!seg) return;
-    setBusy(true); setError(null);
+    setBusy(true); setError(null); setNotice(null);
     try {
-      await regenerateSegment(seg.id, ["translate", "synthesize"]);
+      await regenerateSegment(seg.id, stages);
+      setNotice("Regenerating… the export is re-muxed when it finishes.");
+      await load();
     } catch (e) { setError(e instanceof Error ? e.message : "Regenerate failed"); }
     finally { setBusy(false); }
   };
@@ -923,6 +1041,9 @@ function Editor({ projectId }: { projectId: string | null }) {
         </p>
       </div>
       {error && <Callout tone="error"><span>{error}</span></Callout>}
+      {perr && <Callout tone="error"><span className="font-medium">The last run failed</span><span>{perr.message}</span></Callout>}
+      {project?.stalled && <Callout tone="warn"><span>{project.stalled_reason}</span></Callout>}
+      {notice && !error && <Callout tone="info"><span>{notice}</span></Callout>}
 
       <div className="flex gap-4 flex-col lg:flex-row">
         <div className="w-full lg:w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col" style={{ background: C.card, border: `1px solid ${C.border}`, maxHeight: 520 }}>
@@ -965,13 +1086,27 @@ function Editor({ projectId }: { projectId: string | null }) {
                   className="w-full text-xs font-mono rounded-lg px-3 py-2 outline-none resize-y"
                   style={{ background: C.bgDeep, border: `1px solid ${C.border}`, color: C.text }} />
               </div>
-              <div className="flex gap-2">
-                <PrimaryBtn onClick={save} disabled={busy || draft === (seg.translated_text ?? "")}>Save text</PrimaryBtn>
-                <GhostBtn onClick={regen} disabled={busy}>Regenerate segment</GhostBtn>
+              <div className="flex gap-2 flex-wrap items-center">
+                <PrimaryBtn onClick={save} disabled={busy || running || draft === (seg.translated_text ?? "")}>Save text</PrimaryBtn>
+                <GhostBtn onClick={() => regen(["synthesize"])}
+                  disabled={busy || running || draft !== (seg.translated_text ?? "") || !(seg.translated_text ?? "").trim()}>
+                  Re-voice this line
+                </GhostBtn>
+                <GhostBtn onClick={() => regen(["translate", "synthesize"])}
+                  disabled={busy || running || draft !== (seg.translated_text ?? "") || !(seg.source_text ?? "").trim()}>
+                  Re-translate &amp; re-voice
+                </GhostBtn>
                 {seg.tts_audio_url && (
-                  <audio controls src={resolveUrl(seg.tts_audio_url)} className="h-8" />
+                  // Cache-busted on updated_at: the object key doesn't change
+                  // when a segment is re-voiced, so the browser kept playing
+                  // the old clip.
+                  <audio controls key={seg.updated_at} src={`${resolveUrl(seg.tts_audio_url)}?v=${encodeURIComponent(seg.updated_at)}`} className="h-8" />
                 )}
               </div>
+              {draft !== (seg.translated_text ?? "") && (
+                <Hint>Save the text before re-voicing; unsaved edits are not sent.</Hint>
+              )}
+              {running && <Hint>Editing is paused while the project is processing.</Hint>}
             </>
           )}
         </div>
@@ -994,26 +1129,29 @@ function msToTc(ms: number): string {
 function Preview({ projectId }: { projectId: string | null }) {
   const caps = useReadyCapabilities();
   const [segments, setSegments] = useState<SegmentRead[] | null>(null);
+  const [fits, setFits] = useState<Map<string, SegmentQaEntry> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) return;
     listSegments(projectId).then(setSegments).catch((e) => setError(e instanceof Error ? e.message : "Failed to load segments"));
+    getExport(projectId)
+      .then((e) => setFits(new Map((e?.qa_report?.segments ?? []).map((r) => [r.segment_id, r]))))
+      .catch(() => setFits(new Map()));
   }, [projectId]);
 
   if (!projectId) return <div className="p-6 text-[13px] font-mono" style={{ color: C.textMuted }}>Open a project first.</div>;
 
   const segs = segments ?? [];
-  const durationMs = segs.reduce((max, s) => Math.max(max, s.end_ms, s.start_ms + (s.tts_duration_ms ?? 0)), 1);
+  const durationMs = segs.reduce((max, s) => Math.max(max, s.end_ms, s.start_ms + (fits?.get(s.id)?.fitted_ms ?? s.tts_duration_ms ?? 0)), 1);
   const idxOf = (label: string | null) => emotionIndexOf(caps, label);
 
-  const drifts = segs.map((s) => {
-    const dubStart = s.start_ms; // mux places the clip at the source timecode
-    const dubEnd = s.start_ms + (s.tts_duration_ms ?? s.end_ms - s.start_ms);
-    const overrun = dubEnd - s.end_ms;
-    return Math.max(0, overrun);
-  });
-  const maxDrift = drifts.length ? Math.max(...drifts) : 0;
+  // Overrun as the mux actually placed each clip: it may use the pause
+  // after a line and speed a long clip up (QA report). Measuring raw clip
+  // length against the segment end used to flag every normal fit as
+  // "clips are not landing on their timecodes".
+  const muxed = !!fits && fits.size > 0;
+  const maxDrift = muxed ? Math.max(0, ...[...fits!.values()].map((r) => r.overrun_ms ?? 0)) : 0;
 
   return (
     <div className="p-6 flex flex-col gap-5">
@@ -1026,11 +1164,14 @@ function Preview({ projectId }: { projectId: string | null }) {
       {error && <Callout tone="error"><span>{error}</span></Callout>}
 
       <div className="rounded-xl p-5 flex flex-col gap-4" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-        <Track label="Source segments" segs={segs} durationMs={durationMs} dub={false} caps={caps} idxOf={idxOf} />
-        <Track label="Dubbed clips" segs={segs} durationMs={durationMs} dub={true} caps={caps} idxOf={idxOf} />
-        <div className="text-[12px] font-mono" style={{ color: maxDrift > 200 ? C.red.fg : C.textMuted }}>
-          Max clip overrun: {Math.round(maxDrift)} ms
-          {maxDrift > 200 && " — clips are not landing on their timecodes."}
+        <Track label="Source segments" segs={segs} durationMs={durationMs} dub={false} caps={caps} idxOf={idxOf} fits={fits} />
+        <Track label="Dubbed clips" segs={segs} durationMs={durationMs} dub={true} caps={caps} idxOf={idxOf} fits={fits} />
+        <div className="text-[12px] font-mono" style={{ color: maxDrift > 0 ? C.red.fg : C.textMuted }}>
+          {muxed
+            ? maxDrift > 0
+              ? `A clip still runs ${Math.round(maxDrift)} ms over the next line after timing fit.`
+              : "Every clip fits before the next line (after timing fit)."
+            : "Timing is fitted when the export is muxed; showing raw clip lengths."}
         </div>
         <EmotionLegend caps={caps} />
       </div>
@@ -1042,17 +1183,18 @@ function Preview({ projectId }: { projectId: string | null }) {
   );
 }
 
-function Track({ label, segs, durationMs, dub, caps, idxOf }: {
-  label: string; segs: SegmentRead[]; durationMs: number; dub: boolean; caps: Capabilities; idxOf: (l: string | null) => number | null;
+function Track({ label, segs, durationMs, dub, caps, idxOf, fits }: {
+  label: string; segs: SegmentRead[]; durationMs: number; dub: boolean; caps: Capabilities;
+  idxOf: (l: string | null) => number | null; fits: Map<string, SegmentQaEntry> | null;
 }) {
   const pct = (ms: number) => (ms / durationMs) * 100;
   return (
     <div>
       <div className="text-[12px] mb-1 font-mono" style={{ color: C.textMuted }}>{label}</div>
       <div className="relative h-12 rounded-lg" style={{ background: C.surface }}>
-        {segs.map((s) => {
+        {segs.filter((s) => !dub || s.tts_audio_url).map((s) => {
           const start = s.start_ms;
-          const width = dub ? (s.tts_duration_ms ?? s.end_ms - s.start_ms) : s.end_ms - s.start_ms;
+          const width = dub ? (fits?.get(s.id)?.fitted_ms ?? s.tts_duration_ms ?? s.end_ms - s.start_ms) : s.end_ms - s.start_ms;
           const idx = idxOf(s.emotion_label);
           const uncertain = (s.emotion_score ?? 0) < caps.emotion_confidence_floor;
           const color = idx == null ? C.teal : uncertain ? UNCERTAIN_COLOR : emotionColor(idx);
@@ -1084,7 +1226,7 @@ function Export({ projectId }: { projectId: string | null }) {
 
   if (!projectId) return <div className="p-6 text-[13px] font-mono" style={{ color: C.textMuted }}>Open a project first.</div>;
 
-  const qaSegs = (exp?.qa_report?.segments ?? []) as unknown as Array<Record<string, unknown>>;
+  const qaSegs: SegmentQaEntry[] = exp?.qa_report?.segments ?? [];
 
   return (
     <div className="p-6 flex flex-col gap-5">
@@ -1141,22 +1283,32 @@ function Export({ projectId }: { projectId: string | null }) {
               <div className="px-5 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
                 <h2 className="text-sm font-semibold" style={{ color: C.text }}>Per-segment QA</h2>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  {Object.keys(qaSegs[0]).map((h) => (
+                  {["Starts", "Speech", "Emotion", "Tempo", "Plays", "Overrun", "Sync offset"].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-[10px] font-mono font-semibold tracking-widest uppercase" style={{ color: C.textDim }}>{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
-                  {qaSegs.map((r, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      {Object.values(r).map((v, j) => (
-                        <td key={j} className="px-5 py-3 text-xs font-mono" style={{ color: C.textMid }}>{String(v)}</td>
+                  {qaSegs.map((r) => (
+                    <tr key={r.segment_id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      {[
+                        msToTc(r.start_ms),
+                        r.has_speech ? "yes" : "silent",
+                        r.emotion_label ?? "—",
+                        r.tempo != null ? `×${r.tempo.toFixed(2)}` : "—",
+                        r.fitted_ms != null ? `${r.fitted_ms} ms` : "—",
+                        r.overrun_ms != null ? `${r.overrun_ms} ms` : "—",
+                        r.sync_offset_pct != null ? `${r.sync_offset_pct}%` : "—",
+                      ].map((v, j) => (
+                        <td key={j} className="px-5 py-3 text-xs font-mono" style={{ color: j === 5 && (r.overrun_ms ?? 0) > 0 ? C.red.fg : C.textMid }}>{v}</td>
                       ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </>
@@ -1191,6 +1343,17 @@ function Studio() {
   const handleEnter = () => { setAuth(getStoredAuth()); go("dashboard"); };
   const handleLogout = () => { logout(); setAuth(null); go("landing"); };
 
+  // Real reachability, re-checked every 30s. This used to be a hardcoded
+  // "Core: Online" that stayed green with the backend down.
+  const [apiUp, setApiUp] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const check = () => apiReachable().then((ok) => { if (alive) setApiUp(ok); });
+    check();
+    const t = setInterval(check, 30000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+
   if (screen === "landing") return <EchoLandingLazy enter={handleEnter} />;
 
   return (
@@ -1211,7 +1374,8 @@ function Studio() {
         </nav>
         <div className="flex items-center gap-3">
           <span className="hidden md:flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest" style={{ color: C.textMuted }}>
-            <StatusDot color={C.green.fg} />Core: Online
+            <StatusDot color={apiUp === false ? C.red.fg : apiUp ? C.green.fg : C.textDim} />
+            API: {apiUp === null ? "checking" : apiUp ? "online" : "offline"}
           </span>
           {auth && (
             <span className="hidden lg:inline text-[11px] font-mono truncate max-w-[160px]" style={{ color: C.textMid }} title={auth.user.email}>

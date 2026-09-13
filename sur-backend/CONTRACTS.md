@@ -69,10 +69,12 @@ while the model could only ever predict four.
   is the only way to resolve a target language, and it validates completeness
   on every call, so a half-filled entry fails in mocked runs too rather than
   waiting for production.
-- TTS availability per language is derived from the voice that speaks it
-  (`Language.mms_tts`), never a bare `True`. Every row used to say
+- TTS availability per language is derived from the voices that speak it
+  (`Language.voices`, filtered by the configured engine and license policy in
+  `tts_voices`), never a bare `True`. Every row used to say
   `tts_supported=True` while the configured TTS model (CosyVoice2) could not
-  speak any of the twelve languages.
+  speak any of the twelve languages. `POST /api/projects` refuses a target
+  language with no voice (422) instead of failing at the synthesize stage.
 - `voice_clone_available` is published and `/process` enforces it; a target
   language is validated when the project is created, not after upload,
   extraction and ASR have run.
@@ -200,3 +202,114 @@ still running it.
   (`q.synthesize`), because the TTS venv has no IndicTrans2.
 
 **Enforced by.** `tests/test_pipeline_hardening.py`.
+
+---
+
+## 7. Speech comes from a voice we may ship, is fitted once, and is cloned only within budget
+
+**What went wrong.**
+- The only working Indic engine, MMS-TTS, is CC-BY-NC-4.0, so every dub was
+  unshippable, and nothing in the code knew that.
+- Voice cloning (CosyVoice2 voice conversion) raised the dub's Whisper CER
+  from 0.16 to 0.24, reaching 0.44 on one line, and took 12.5 CPU-minutes
+  for 30 s of speech. Nothing measured or bounded either cost.
+- One-word lines read back badly. The engine sped a line up to 1.25× to fit
+  its window, then `plan_timeline` sped the already fitted clip up to
+  another 1.35×. That is 1.69× and two WSOLA passes on exactly the lines with
+  the least audio to spare. The QA report's `tempo` showed only the second
+  factor.
+- An earlier emotion pitch shift blurred short lines (CER 0.21 → 0.36).
+
+**The rule.**
+- Every voice is declared in `app/capabilities.py` with its engine, model,
+  license and commercial flag. `TTS_ENGINE` selects the engine, so a swap is
+  a config change behind the same `TTSProvider` interface.
+- With `TTS_REQUIRE_COMMERCIAL_LICENSE=true` (the default):
+  - only commercially licensed voices are offered
+  - the registry refuses to build a non-commercial engine
+  - a language with no such voice reports `tts_available=false`
+  - `POST /api/projects` returns 422 for that language
+  - `/api/capabilities` publishes `tts_engine`, `tts_licenses` and
+    `tts_commercial_use`
+- Default engine: **SYSPIN VITS** (IISc/ARTPARK, **CC-BY-4.0**; commercial use
+  with attribution to "SYSPIN, IISc Bangalore and ARTPARK"). It covers te,
+  hi, kn, mr and bn with male and female voices. Each speaker gets the voice
+  matching their estimated F0 (`speakers.voice_gender`).
+- **Engines never time-fit.** `mux_export` (`timeline.plan_timeline`) is the
+  single place a clip is sped up, so its `tempo` (≤ `MAX_TEMPO`) is the
+  whole compression and the QA report shows it. An engine applies an
+  emotion's rate only when the line fits its window, and renders at neutral
+  rate otherwise.
+- **Voice cloning must pass a budget before the TTS worker accepts work.**
+  `voice_clone.check_budget` converts a fixed probe and checks:
+  - real-time factor ≤ `TTS_VOICE_CLONE_MAX_RTF`
+  - duration within 10%
+  - speech envelope preserved (correlation ≥ 0.6)
+
+  A converter that fails is a startup error, not a slow or garbled job.
+  Default converter: OpenVoice V2 (MIT). `/process` refuses `clone_voice`
+  when cloning is unavailable.
+- Emotion is rendered only through controls the model really has:
+  - SYSPIN's TorchScript graph takes token ids only, so emotion there is
+    post-hoc rate (pitch-preserving) and energy
+  - MMS adds VITS `noise_scale`
+  - there is no pitch shift and no emotion conditioning, and the code says
+    so rather than pretending otherwise
+
+**Measured** (Whisper large-v3 CER, Telugu, forced language):
+
+<<MEASURED: engine bake-off, cloning CER/similarity/RTF, short-line results>>
+
+**Enforced by.**
+- `tests/test_run_lifecycle.py`: license filtering, registry refusal,
+  create-project 422, capabilities fields.
+- `tests/test_tts_time_budget.py`: engines don't fit; the mux tempo is the
+  whole speed-up.
+- `tests/test_voice_clone_budget.py`.
+- `tests/test_pipeline_hardening.py`: no pitch in prosody; one voice
+  reference per speaker.
+
+---
+
+## 8. A run never hangs silently, and the UI speaks the API's actual contract
+
+**What went wrong.**
+- A run that no worker picked up, or whose worker died, stayed "processing"
+  forever. The UI spun with no error and no way out, because `/process`
+  409'd any retry.
+- Separately, the frontend's hand-written types had drifted from the API:
+  - a QA report shape that didn't exist
+  - regenerate stages the backend rejected
+  - `detail` arrays rendered as `[object Object]`
+  - a language-gate count recomputed client-side
+
+  Every one of these rendered as `undefined` or a silent no-op, never as a
+  test failure.
+
+**The rule.**
+- While a pipeline task runs, the worker stamps `projects.heartbeat_at`
+  every `HEARTBEAT_INTERVAL_SECONDS` (Celery `task_prerun`/`task_postrun`,
+  `app/pipeline/liveness.py`).
+- `ProjectRead` reports `stalled`, `stalled_reason` and `last_activity_at`.
+  A queued or processing run quiet for `STALL_AFTER_SECONDS` is stalled, and
+  the reason names the cause: nothing picked it up, or the worker on stage X
+  stopped.
+- Mutating endpoints (`/process`, upload, segment PATCH, regenerate) return
+  409 while a run is active and not stalled. A stalled or failed run can be
+  restarted, and the resumable stages continue from where they stopped.
+- `regenerate` marks the project `processing`/`regenerate`, re-muxes the
+  export, and marks the project `failed` with the reason if either half
+  fails.
+- The OpenAPI schema is committed at
+  `sur-frontend/src/lib/api-contract/openapi.json`
+  (`scripts/export_openapi.py`). The backend test fails when it is stale.
+  The frontend contract test validates every request the client sends and
+  every response field it reads against it.
+
+**Enforced by.**
+- `tests/test_run_lifecycle.py`
+- `tests/test_openapi_contract_snapshot.py`
+- `sur-frontend/src/lib/api.contract.test.ts`
+- `sur-frontend/src/lib/runState.test.ts`
+- `sur-frontend/e2e/stall.spec.ts` (browser, against a stack with its
+  workers stopped)

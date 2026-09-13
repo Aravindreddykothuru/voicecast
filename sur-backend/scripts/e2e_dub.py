@@ -13,7 +13,8 @@ and silence before the first line and between lines; no clip overruns or
 overlapping speech (from the QA report); every spoken segment rendered.
 --asr-check adds Whisper large-v3 (slow on CPU): the dubbed track is
 auto-detected as the target language, and speech read back per line (with
-context) scores corpus CER <= 0.25, every line of 3+ words <= 0.35.
+context) scores corpus CER <= 0.25, every line of 3+ words <= 0.35, and every 1-2 word line <= 0.35 scored
+inside the surrounding dub (short clips alone sit below Whisper's floor).
 """
 from __future__ import annotations
 
@@ -182,18 +183,39 @@ def verify(result: dict, out: str, source_duration_s: float | None, asr_check: b
         # Per line with context, aggregated -- a single long-form decode of the
         # whole track can skip lines outright.
         lines, dist, chars = [], 0.0, 0
-        for s in placed:
-            a = max(int((s["start_ms"] - 300) / 1000 * sr), 0)
-            b = int((s["start_ms"] + fits[s["id"]]["fitted_ms"] + 300) / 1000 * sr)
+        for i, s in enumerate(placed):
+            ref = s["translated_text"]
+            start_ms, end_ms = s["start_ms"], s["start_ms"] + fits[s["id"]]["fitted_ms"]
+            a = max(int((start_ms - 300) / 1000 * sr), 0)
+            b = int((end_ms + 300) / 1000 * sr)
             hyp = " ".join(x.text.strip() for x in model.transcribe(audio[a:b], language=target, beam_size=5)[0])
-            cer, n = _cer(s["translated_text"], hyp), len(_norm(s["translated_text"]))
+            cer, n = _cer(ref, hyp), len(_norm(ref))
             dist, chars = dist + cer * n, chars + n
-            lines.append({"index": s["index"], "words": len(s["translated_text"].split()), "cer": round(cer, 3),
-                          "ref": s["translated_text"], "hyp": hyp})
-            print(f"   line {s['index']} CER {cer:.3f}\n     ref: {s['translated_text']}\n     hyp: {hyp}", flush=True)
+            row = {"index": s["index"], "words": len(ref.split()), "cer": round(cer, 3), "ref": ref, "hyp": hyp}
+            if row["words"] < 3:
+                # A one- or two-word clip decoded on its own is below what
+                # Whisper recognises reliably, which measures the recogniser,
+                # not the voice. Short lines are scored instead inside the dub
+                # around them (previous line start .. next line end), keeping
+                # the words Whisper places within this line's own window --
+                # and then held to the same bar as full sentences.
+                ctx_a = placed[i - 1]["start_ms"] if i else max(start_ms - 3000, 0)
+                ctx_b = (placed[i + 1]["start_ms"] + fits[placed[i + 1]["id"]]["fitted_ms"]
+                         if i + 1 < len(placed) else end_ms + 3000)
+                segs, _ = model.transcribe(audio[int(ctx_a / 1000 * sr):min(int(ctx_b / 1000 * sr), len(audio))],
+                                           language=target, beam_size=5, word_timestamps=True)
+                w0, w1 = (start_ms - ctx_a) / 1000 - 0.12, (end_ms - ctx_a) / 1000 + 0.12
+                row["context_hyp"] = " ".join(w.word.strip() for seg in segs for w in (seg.words or [])
+                                              if w0 <= (w.start + w.end) / 2 <= w1)
+                row["context_cer"] = round(_cer(ref, row["context_hyp"]), 3)
+            lines.append(row)
+            print(f"   line {s['index']} CER {cer:.3f}" + (f" (in context {row['context_cer']:.3f})" if "context_cer" in row else "")
+                  + f"\n     ref: {ref}\n     hyp: {hyp}", flush=True)
         check("dub_intelligible", dist / max(chars, 1) <= 0.25, f"corpus CER {dist / max(chars, 1):.3f}")
         check("full_sentences_intelligible", all(r["cer"] <= 0.35 for r in lines if r["words"] >= 3),
               [(r["index"], r["cer"]) for r in lines if r["words"] >= 3])
+        check("short_lines_intelligible", all(r["context_cer"] <= 0.35 for r in lines if r["words"] < 3),
+              [(r["index"], r["cer"], r["context_cer"]) for r in lines if r["words"] < 3])
         report["lines"] = lines
 
     with open(os.path.join(out, "report.json"), "w", encoding="utf-8") as f:

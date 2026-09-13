@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.segment import EmotionLabel, SegmentStatus
 
@@ -46,11 +47,26 @@ class SegmentPatch(BaseModel):
 class RegenerateRequest(BaseModel):
     """POST /api/segments/{id}/regenerate.
 
-    `stages` lets the caller ask for exactly what changed -- editing text
-    only needs ["synthesize"]; overriding the emotion label needs it too
-    (to re-condition synthesis) but never needs ["transcribe"]. Defaults to
-    re-running translate+synthesize, matching the PRD's "re-run translation
-    and/or TTS for one segment only".
+    `stages` lets the caller ask for exactly what changed: an edited
+    translation or an emotion override needs ["synthesize"] (re-translating
+    would throw the edit away); ["translate", "synthesize"] re-derives the
+    text too. The export is re-muxed afterwards either way.
+
+    Validated, not filtered: unknown stage names used to be dropped silently
+    (and an empty result fell back to the default), and ["translate"] alone
+    left the rendered audio saying the old line.
     """
 
-    stages: list[str] = Field(default_factory=lambda: ["translate", "synthesize"])
+    stages: list[Literal["translate", "synthesize"]] = Field(
+        default_factory=lambda: ["translate", "synthesize"], min_length=1
+    )
+
+    @field_validator("stages")
+    @classmethod
+    def _must_resynthesize(cls, stages: list[str]) -> list[str]:
+        if "synthesize" not in stages:
+            raise ValueError(
+                "stages must include 'synthesize': re-translating without re-voicing "
+                "leaves the dub saying the old line"
+            )
+        return sorted(set(stages), key=["translate", "synthesize"].index)

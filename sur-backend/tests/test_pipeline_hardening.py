@@ -405,4 +405,6 @@ def test_every_tts_capable_language_names_a_voice():
     from app.capabilities import SUPPORTED_LANGUAGES
 
     for lang in SUPPORTED_LANGUAGES:
-        assert lang.tts_supported == bool(lang.mms_tts)
+        assert lang.tts_supported == bool(lang.voices)
+        for voice in lang.voices:
+            assert voice.engine in ("mms", "syspin") and voice.model and voice.license

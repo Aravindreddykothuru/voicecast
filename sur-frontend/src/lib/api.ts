@@ -42,23 +42,47 @@ function authHeader(): Record<string, string> {
   }
 }
 
+/** FastAPI error bodies come in two shapes: HTTPException gives
+ *  {detail: "message"}, request validation gives {detail: [{loc, msg}, ...]}.
+ *  The second used to be passed straight to `new Error(...)` and rendered as
+ *  "[object Object]". Exported for tests. */
+export function errorDetail(body: unknown, fallback: string): string {
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    return detail
+      .map((d: { loc?: unknown[]; msg?: string }) => {
+        const field = Array.isArray(d.loc) ? d.loc.filter((p) => p !== "body").join(".") : "";
+        return field ? `${field}: ${d.msg ?? "invalid"}` : (d.msg ?? "invalid");
+      })
+      .join("; ");
+  }
+  return fallback;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      // Real identity once logged in; the dev stub only matters before
-      // that (see app/core/security.py's layered get_current_user).
-      "X-User-Email": USER_EMAIL,
-      ...authHeader(),
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: {
+        // Real identity once logged in; the dev stub only matters before
+        // that (see app/core/security.py's layered get_current_user).
+        "X-User-Email": USER_EMAIL,
+        ...authHeader(),
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch {
+    // fetch rejects (not resolves with a status) when the API is down or
+    // blocked by CORS; the raw TypeError said only "Failed to fetch".
+    throw new ApiError(0, `Cannot reach the API at ${API_BASE}. Is the backend running?`);
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {
-      const body = await res.json();
-      detail = body.detail ?? detail;
+      detail = errorDetail(await res.json(), detail);
     } catch {
       /* non-JSON error body -- keep statusText */
     }
@@ -162,11 +186,18 @@ export async function retryProject(projectId: string): Promise<ProjectRead> {
 }
 
 /** Accept or correct the detected source language, then resume the run.
- *  Passing a different code re-runs ASR with it before continuing. */
-export function confirmLanguage(projectId: string, sourceLanguage?: string): Promise<ProjectRead> {
+ *  A code different from the backend's detection re-runs ASR with it;
+ *  `forceRetranscribe` re-runs ASR even with the detected language (the
+ *  "re-run ASR" button used to send the detected code, which the backend
+ *  treated as a plain accept -- a silent no-op). */
+export function confirmLanguage(
+  projectId: string,
+  sourceLanguage?: string | null,
+  opts: { forceRetranscribe?: boolean } = {},
+): Promise<ProjectRead> {
   return request(`/api/projects/${projectId}/confirm-language`, {
     method: "POST",
-    body: JSON.stringify({ source_language: sourceLanguage ?? null }),
+    body: JSON.stringify({ source_language: sourceLanguage ?? null, force_retranscribe: !!opts.forceRetranscribe }),
   });
 }
 
@@ -189,8 +220,15 @@ export function patchSegment(
   return request(`/api/segments/${segmentId}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
 
-export function regenerateSegment(segmentId: string, stages: string[] = ["translate", "synthesize"]) {
-  return request(`/api/segments/${segmentId}/regenerate`, {
+/** "synthesize" re-voices the saved translation (use after editing it);
+ *  "translate" + "synthesize" re-derives the text first, discarding edits.
+ *  The backend re-muxes the export afterwards and reports progress on the
+ *  project (current_stage "regenerate"). Translate-only is rejected: it
+ *  would leave the dub saying the old line. */
+export type RegenerateStages = ["synthesize"] | ["translate", "synthesize"];
+
+export function regenerateSegment(segmentId: string, stages: RegenerateStages) {
+  return request<{ ok: boolean }>(`/api/segments/${segmentId}/regenerate`, {
     method: "POST",
     body: JSON.stringify({ stages }),
   });
@@ -204,4 +242,15 @@ export function regenerateSegment(segmentId: string, stages: string[] = ["transl
 // ── Capabilities ────────────────────────────────────────────────────────
 export function getCapabilities(): Promise<Capabilities> {
   return request("/api/capabilities");
+}
+
+/** Whether the API process answers at all (GET /healthz). The header used to
+ *  print a hardcoded "Core: Online" whatever the backend's state. */
+export async function apiReachable(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/healthz`);
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

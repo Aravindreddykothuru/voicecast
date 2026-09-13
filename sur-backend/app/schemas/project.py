@@ -28,6 +28,18 @@ class ProjectRead(BaseModel):
     review_language: bool = True
     created_at: datetime
     updated_at: datetime
+    # Liveness, computed by the backend (app/pipeline/liveness.py). A run
+    # nobody is working on used to look identical to a slow one.
+    last_activity_at: datetime | None = None
+    stalled: bool = False
+    stalled_reason: str | None = None
+    # The source language the backend will use if the language gate is
+    # accepted as-is: the majority of ASR detections over segments with
+    # speech, and the mean confidence of those votes. The UI shows THIS
+    # instead of recounting segments itself -- its own count included silent
+    # segments and could name a different language than the one accepted.
+    detected_source_language: str | None = None
+    detected_source_language_confidence: float | None = None
 
 
 class ProjectListItem(ProjectRead):
@@ -63,6 +75,12 @@ class ConfirmLanguageRequest(BaseModel):
     """
 
     source_language: str | None = None
+    # Re-run ASR forced to the chosen (or detected) language even when it
+    # matches the detection. Detection runs per chunk, so a mostly-correct
+    # run can still have misdetected lines that forcing the language fixes.
+    # Without this flag "re-run ASR" with the detected language silently
+    # did nothing.
+    force_retranscribe: bool = False
 
 
 class ProcessRequest(BaseModel):

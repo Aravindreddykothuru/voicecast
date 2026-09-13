@@ -12,7 +12,14 @@ import logging
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.capabilities import EMOTION_COLOR_FALLBACK, EMOTION_COLORS, SOURCE_LANGUAGES, SUPPORTED_LANGUAGES
+from app.capabilities import (
+    EMOTION_COLOR_FALLBACK,
+    EMOTION_COLORS,
+    SOURCE_LANGUAGES,
+    SUPPORTED_LANGUAGES,
+    tts_available,
+    tts_voices,
+)
 from app.config import get_settings
 from app.providers.registry import get_emotion_provider
 
@@ -67,6 +74,16 @@ class CapabilitiesOut(BaseModel):
     # Whether /process accepts clone_voice=True here. The UI must not offer
     # the toggle otherwise (CONTRACTS.md #2).
     voice_clone_available: bool
+    # A queued/processing run silent for longer than this is reported as
+    # stalled (ProjectRead.stalled). The UI shows the backend's verdict and
+    # never runs its own timer against a hardcoded number.
+    stall_after_seconds: int
+    # Which TTS engine renders speech and what its weights' licenses allow.
+    # tts_commercial_use is true only when every voice this deployment can
+    # use permits commercial use.
+    tts_engine: str
+    tts_licenses: list[str]
+    tts_commercial_use: bool
     max_upload_mb: int
     accepted_formats: list[str]
 
@@ -87,7 +104,7 @@ def get_capabilities() -> CapabilitiesOut:
                 code=lang.code,
                 display_name=lang.name,
                 flores_code=lang.flores,
-                tts_available=lang.tts_supported,
+                tts_available=tts_available(lang),
             )
             for lang in SUPPORTED_LANGUAGES
         ],
@@ -110,6 +127,12 @@ def get_capabilities() -> CapabilitiesOut:
         asr_autodetect=settings.asr_autodetect,
         device=settings.compute_device,
         voice_clone_available=settings.voice_clone_available,
+        stall_after_seconds=settings.stall_after_seconds,
+        tts_engine="mock" if settings.tts_provider == "mock" else settings.tts_engine,
+        tts_licenses=sorted({v.license for lang in SUPPORTED_LANGUAGES for v in tts_voices(lang)}),
+        tts_commercial_use=settings.tts_provider != "mock" and all(
+            v.commercial for lang in SUPPORTED_LANGUAGES for v in tts_voices(lang)
+        ),
         max_upload_mb=settings.max_upload_mb,
         accepted_formats=settings.accepted_video_format_list,
     )

@@ -18,20 +18,48 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class Voice:
+    """One TTS checkpoint that can speak a language.
+
+    License is part of the capability, not a footnote: a deployment that
+    must be commercially usable (TTS_REQUIRE_COMMERCIAL_LICENSE=true) may
+    only offer languages that have a voice with `commercial=True`, and the
+    UI shows those as unavailable rather than letting a job run on weights
+    the business may not ship. See CONTRACTS.md #2 and #7.
+    """
+
+    engine: str             # "mms" | "syspin" -- which provider code loads it
+    model: str              # Hugging Face repo id
+    license: str            # SPDX-style identifier of the weights' license
+    commercial: bool        # whether the license permits commercial use
+    gender: str | None = None
+
+
+def _mms(suffix: str) -> Voice:
+    # facebook/mms-tts-*: CC-BY-NC-4.0 -- research/non-commercial only.
+    return Voice("mms", f"facebook/mms-tts-{suffix}", "CC-BY-NC-4.0", commercial=False)
+
+
+def _syspin(name: str, gender: str) -> Voice:
+    # IISc SYSPIN VITS (TorchScript): CC-BY-4.0 -- commercial use allowed
+    # with attribution. Character-based, so no GPL phonemizer is involved.
+    return Voice("syspin", f"SYSPIN/tts_vits_coquiai_{name}{gender.capitalize()}", "CC-BY-4.0", commercial=True, gender=gender)
+
+
+@dataclass(frozen=True)
 class Language:
     code: str          # what the API and DB speak, e.g. "te"
     name: str          # what the UI shows, e.g. "Telugu"
     flores: str        # what IndicTrans2 needs, e.g. "tel_Telu"
-    # The facebook/mms-tts-<suffix> checkpoint that speaks this language, or
-    # None if no TTS voice exists for it. tts_supported is derived from this,
-    # never asserted separately -- it used to be a bare `True` on every row
-    # while the configured TTS model (CosyVoice2) could not speak a single
-    # one of these languages. See CONTRACTS.md #2.
-    mms_tts: str | None = None
+    # Every checkpoint that can speak this language. Availability is derived
+    # from these (tts_voices), never asserted: every row used to say
+    # tts_supported=True while the configured TTS model (CosyVoice2) could
+    # not speak a single one of these languages.
+    voices: tuple[Voice, ...] = ()
 
     @property
     def tts_supported(self) -> bool:
-        return bool(self.mms_tts)
+        return bool(self.voices)
 
 
 # Every entry MUST carry a FLORES code: an entry without one is a language the
@@ -39,21 +67,42 @@ class Language:
 # enforces that, so adding a row without a mapping fails the build.
 # MMS suffixes verified to exist on the Hub, none requiring uroman
 # pre-processing (tokenizer_config.is_uroman == false). Urdu's checkpoint is
-# script-qualified; plain "urd" does not exist.
+# script-qualified; plain "urd" does not exist. SYSPIN voices are the
+# TorchScript releases; its Gujarati release is a Coqui checkpoint that needs
+# the Coqui runtime and is not wired up.
 SUPPORTED_LANGUAGES: tuple[Language, ...] = (
-    Language("hi", "Hindi", "hin_Deva", "hin"),
-    Language("te", "Telugu", "tel_Telu", "tel"),
-    Language("ta", "Tamil", "tam_Taml", "tam"),
-    Language("kn", "Kannada", "kan_Knda", "kan"),
-    Language("ml", "Malayalam", "mal_Mlym", "mal"),
-    Language("bn", "Bengali", "ben_Beng", "ben"),
-    Language("mr", "Marathi", "mar_Deva", "mar"),
-    Language("gu", "Gujarati", "guj_Gujr", "guj"),
-    Language("pa", "Punjabi", "pan_Guru", "pan"),
-    Language("or", "Odia", "ory_Orya", "ory"),
-    Language("as", "Assamese", "asm_Beng", "asm"),
-    Language("ur", "Urdu", "urd_Arab", "urd-script_arabic"),
+    Language("hi", "Hindi", "hin_Deva", (_mms("hin"), _syspin("Hindi", "male"), _syspin("Hindi", "female"))),
+    Language("te", "Telugu", "tel_Telu", (_mms("tel"), _syspin("Telugu", "male"), _syspin("Telugu", "female"))),
+    Language("ta", "Tamil", "tam_Taml", (_mms("tam"),)),
+    Language("kn", "Kannada", "kan_Knda", (_mms("kan"), _syspin("Kannada", "male"), _syspin("Kannada", "female"))),
+    Language("ml", "Malayalam", "mal_Mlym", (_mms("mal"),)),
+    Language("bn", "Bengali", "ben_Beng", (_mms("ben"), _syspin("Bengali", "male"), _syspin("Bengali", "female"))),
+    Language("mr", "Marathi", "mar_Deva", (_mms("mar"), _syspin("Marathi", "male"), _syspin("Marathi", "female"))),
+    Language("gu", "Gujarati", "guj_Gujr", (_mms("guj"),)),
+    Language("pa", "Punjabi", "pan_Guru", (_mms("pan"),)),
+    Language("or", "Odia", "ory_Orya", (_mms("ory"),)),
+    Language("as", "Assamese", "asm_Beng", (_mms("asm"),)),
+    Language("ur", "Urdu", "urd_Arab", (_mms("urd-script_arabic"),)),
 )
+
+
+def tts_voices(lang: Language) -> list[Voice]:
+    """The voices the configured engine may use for `lang`, license policy applied."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    return [
+        v for v in lang.voices
+        if v.engine == settings.tts_engine and (v.commercial or not settings.tts_require_commercial_license)
+    ]
+
+
+def tts_available(lang: Language) -> bool:
+    """Whether a dub INTO `lang` can be rendered on this deployment. The mock
+    provider speaks anything; a real engine needs a voice that passes policy."""
+    from app.config import get_settings
+
+    return get_settings().tts_provider == "mock" or bool(tts_voices(lang))
 
 LANGUAGES_BY_CODE: dict[str, Language] = {lang.code: lang for lang in SUPPORTED_LANGUAGES}
 

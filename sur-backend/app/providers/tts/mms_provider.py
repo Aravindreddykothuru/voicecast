@@ -1,26 +1,18 @@
-"""Indic TTS: MMS-TTS (VITS) speaks the words; CosyVoice2 voice conversion
-optionally re-voices them as the original speaker.
+"""MMS-TTS (facebook/mms-tts-*, VITS) -- RESEARCH / NON-COMMERCIAL ENGINE.
 
-Why not CosyVoice2 end to end, which is what TTS_PROVIDER=real used to mean:
-CosyVoice2's text model is trained on Chinese/English/Japanese/Korean and
-has never seen an Indic script. Measured on this project's CPU worker, one
-3-second Telugu sentence took 30+ CPU-minutes and came back as ~21s of
-babble -- its LLM never emits a stop token for text it can't read, so it
-generates to its length cap. MMS-TTS has a checkpoint per Indic language;
-the same sentence renders in ~5s and Whisper large-v3 transcribes it back
-at CER 0.09 with Telugu auto-detected at 98% confidence.
+Weights are CC-BY-NC-4.0. The registry refuses this engine while
+TTS_REQUIRE_COMMERCIAL_LICENSE is true; use TTS_ENGINE=syspin for anything
+commercial. It stays because it covers all twelve target languages and has
+the highest measured intelligibility on Telugu (CONTRACTS.md #7).
 
-Emotion: MMS has no emotion conditioning, so the detected register is
-carried by prosody -- speaking rate, energy and VITS' own variation scale --
-weighted by the classifier's confidence. That is honestly less than a model
-conditioned on emotion, and is documented as such rather than dressed up as
-more.
+Why not CosyVoice2, which is what TTS_PROVIDER=real once meant: its text
+model has never seen an Indic script. One 3-second Telugu sentence took 30+
+CPU-minutes and came back as ~21s of babble (Whisper CER 1.56).
 
-No pitch shift, deliberately. It was here (librosa phase vocoder, up to
-+/-1.5 semitones) until it was measured: on "అందరికీ శుభోదయం." Whisper CER
-went 0.21 -> 0.36 with the happiness shift and back to 0.21 with only the
-shift removed; combined with rate squeezing it reached 0.86. The vocoder
-smears formants, and on short Indic syllables that costs the words.
+Emotion hooks this model genuinely exposes (verified on VitsModel):
+speaking_rate and noise_scale. No pitch or emotion conditioning exists, so
+prosody is rate, variation and energy -- see app/providers/tts/common.py,
+including why there is deliberately no post-hoc pitch shift.
 """
 from __future__ import annotations
 
@@ -29,62 +21,19 @@ import logging
 import os
 import tempfile
 import unicodedata
-from dataclasses import dataclass
 
 from app.capabilities import require_language
 from app.config import get_settings
-from app.providers.base import EmotionResult, SynthesisRequest, SynthesisResult, TTSProvider
+from app.providers.base import SynthesisRequest, SynthesisResult, TTSProvider
 from app.providers.registry import ProviderNotInstalledError
+from app.providers.tts.common import EMOTION_PROSODY, Prosody, fits_window, normalize, prosody_for, trim_silence
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass(frozen=True)
-class Prosody:
-    rate: float = 1.0          # VITS speaking_rate (>1 = faster)
-    gain_db: float = 0.0       # relative to the normalized level
-    noise_delta: float = 0.0   # added to VITS noise_scale (more/less variation)
-
-
-# Direction per label follows the acoustic correlates of each emotion (rate,
-# intensity, variability); magnitudes are deliberately modest so a
-# misclassification is a slightly odd read, not a caricature. No pitch
-# component -- see the module docstring.
-EMOTION_PROSODY: dict[str, Prosody] = {
-    "neutral": Prosody(),
-    "happiness": Prosody(rate=1.06, gain_db=1.5, noise_delta=0.08),
-    "anger": Prosody(rate=1.08, gain_db=3.0, noise_delta=0.13),
-    "sadness": Prosody(rate=0.90, gain_db=-2.0, noise_delta=-0.12),
-    "fear": Prosody(rate=1.08, gain_db=-1.0, noise_delta=0.08),
-    "surprise": Prosody(rate=1.04, gain_db=1.5, noise_delta=0.13),
-}
-
-# Speaking-rate ceiling when fitting a line to the time the picture allows.
-# app/pipeline/timeline.py can speed a clip up a little more at mux time;
-# together they stay short of speech that sounds sped up.
-MAX_FIT_RATE = 1.25
-TARGET_RMS_DBFS = -20.0
-
-
-def prosody_for(emotion: EmotionResult | None, confidence_floor: float) -> Prosody:
-    """Blend from neutral toward the label's prosody by classifier confidence.
-
-    Below the confidence floor the UI shows the label as "uncertain"
-    (/api/capabilities), so rendering it would contradict what the reviewer
-    sees; it renders neutral. An unknown label raises rather than silently
-    reading as neutral."""
-    if emotion is None:
-        return Prosody()
-    target = EMOTION_PROSODY.get(emotion.label)
-    if target is None:
-        raise ValueError(f"no prosody mapping for emotion label {emotion.label!r}")
-    span = max(1.0 - confidence_floor, 1e-6)
-    w = min(max((emotion.score - confidence_floor) / span, 0.0), 1.0)
-    return Prosody(
-        rate=1.0 + (target.rate - 1.0) * w,
-        gain_db=target.gain_db * w,
-        noise_delta=target.noise_delta * w,
-    )
+# Re-exported: tests and evaluation scripts import these from here.
+__all__ = ["EMOTION_PROSODY", "MMSTTSProvider", "Prosody", "prosody_for"]
+_trim_silence = trim_silence
+_normalize = normalize
 
 
 class MMSTTSProvider(TTSProvider):
@@ -101,9 +50,9 @@ class MMSTTSProvider(TTSProvider):
         self._voices: dict[str, tuple] = {}
         self._converter = None
         if self._settings.tts_voice_clone:
-            from app.providers.tts.cosyvoice_vc import CosyVoiceVoiceConverter
+            from app.providers.tts.voice_clone import get_voice_converter
 
-            self._converter = CosyVoiceVoiceConverter()
+            self._converter = get_voice_converter()
         self._self_check(self._settings.default_target_language)
 
     # -- model management -------------------------------------------------
@@ -111,22 +60,22 @@ class MMSTTSProvider(TTSProvider):
         if lang_code in self._voices:
             return self._voices[lang_code]
         lang = require_language(lang_code)
-        if not lang.mms_tts:
-            raise ValueError(f"no TTS voice is configured for {lang.name} ({lang.code})")
+        voice = next((v for v in lang.voices if v.engine == "mms"), None)
+        if voice is None:
+            raise ValueError(f"no MMS voice is configured for {lang.name} ({lang.code})")
 
         from transformers import AutoTokenizer, VitsModel
 
         from app.providers.loading import load_hf_model
 
-        name = f"{self._settings.tts_mms_model_prefix}{lang.mms_tts}"
-        tokenizer = AutoTokenizer.from_pretrained(name)
+        tokenizer = AutoTokenizer.from_pretrained(voice.model)
         # Fail-loud load (CONTRACTS.md #1): VITS reports its weight-norm
         # layers under the renamed parametrization keys, which the loader
         # accepts only pairwise against the checkpoint's own weight_g/weight_v.
-        model = load_hf_model(VitsModel, name)
+        model = load_hf_model(VitsModel, voice.model)
         model.eval()
         self._voices[lang_code] = (tokenizer, model)
-        logger.info("TTS: loaded %s for %s", name, lang.name)
+        logger.info("TTS: loaded %s for %s (%s)", voice.model, lang.name, voice.license)
         return self._voices[lang_code]
 
     def _self_check(self, lang_code: str) -> None:
@@ -184,51 +133,25 @@ class MMSTTSProvider(TTSProvider):
         prosody = prosody_for(request.emotion, self._settings.emotion_confidence_floor)
 
         wav, sr = self._render(lang.code, text, prosody)
-        wav = _trim_silence(wav, sr)
+        wav = trim_silence(wav, sr)
 
-        target = request.target_duration_ms
-        if target:
-            natural_ms = 1000 * len(wav) / sr
-            if natural_ms > target * 1.05:
-                fit_rate = min(prosody.rate * natural_ms / target, MAX_FIT_RATE)
-                if fit_rate > prosody.rate + 0.02:
-                    faster = Prosody(fit_rate, prosody.gain_db, prosody.noise_delta)
-                    wav, sr = self._render(lang.code, text, faster, report_dropped=False)
-                    wav = _trim_silence(wav, sr)
+        # No time fitting here: mux_export (timeline.plan_timeline) is the one
+        # place a clip is sped up to its window, within one MAX_TEMPO budget
+        # (CONTRACTS.md #7). A line that won't fit anyway is re-rendered at
+        # neutral rate, so the emotion's rate doesn't compound with the mux's.
+        if abs(prosody.rate - 1.0) > 0.01 and not fits_window(len(wav) / sr, request.target_duration_ms):
+            neutral_rate = Prosody(1.0, prosody.gain_db, prosody.noise_delta)
+            wav, sr = self._render(lang.code, text, neutral_rate, report_dropped=False)
+            wav = trim_silence(wav, sr)
 
         if request.voice_reference_path:
             if self._converter is None:
-                raise ValueError(
-                    "voice cloning was requested but TTS_VOICE_CLONE is off on this worker"
-                )
-            wav, sr = self._converter.convert(wav, sr, request.voice_reference_path)
-            wav = _trim_silence(wav, sr)
+                raise ValueError("voice cloning was requested but TTS_VOICE_CLONE is off on this worker")
+            wav, sr = self._converter.convert(wav, sr, request.voice_reference_path, voice_key=f"mms:{lang.code}")
+            wav = trim_silence(wav, sr)
 
-        wav = _normalize(wav, prosody.gain_db)
+        wav = normalize(wav, prosody.gain_db)
         fd, path = tempfile.mkstemp(suffix=".wav")
         os.close(fd)  # release our handle first -- see ffmpeg_utils.extract_audio_slice
         sf.write(path, wav, sr, subtype="PCM_16")
         return SynthesisResult(local_audio_path=path, duration_ms=int(1000 * len(wav) / sr), sample_rate=sr)
-
-
-def _trim_silence(wav, sr: int, top_db: float = 40.0):
-    """Leading silence would land the speech after the segment's start_ms --
-    a sync error introduced by the renderer, not the source."""
-    import librosa
-
-    trimmed, _ = librosa.effects.trim(wav, top_db=top_db)
-    pad = int(0.03 * sr)
-    return trimmed if len(trimmed) > pad else wav
-
-
-def _normalize(wav, gain_db: float):
-    """Consistent loudness across segments (and across voices, after VC),
-    then the emotion's relative gain, with a peak limit."""
-    import numpy as np
-
-    rms = float(np.sqrt(np.mean(wav ** 2))) + 1e-12
-    out = wav * (10 ** ((TARGET_RMS_DBFS + gain_db) / 20) / rms)
-    peak = float(np.max(np.abs(out)))
-    if peak > 0.97:
-        out = out * (0.97 / peak)
-    return out.astype("float32")

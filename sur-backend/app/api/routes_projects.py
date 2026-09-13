@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import uuid
+from statistics import mean
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.capabilities import require_language, require_source_language
+from app.capabilities import require_language, require_source_language, tts_available
 from app.config import get_settings
 from app.core.security import get_current_user
 from app.db import get_db
@@ -19,7 +20,8 @@ from app.models.segment import Segment
 from app.models.source_video import SourceVideo, SourceVideoStatus
 from app.models.user import User
 from app.pipeline.chain import continue_pipeline, start_pipeline
-from app.pipeline.tasks import detected_language_majority
+from app.pipeline.liveness import ACTIVE_STATUSES, run_liveness
+from app.pipeline.tasks import detected_language_majority, has_speech
 from app.schemas.export import ExportRead
 from app.schemas.project import (
     ConfirmLanguageRequest,
@@ -35,6 +37,47 @@ from app.schemas.segment import SegmentRead
 from app.storage import get_storage
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+
+def project_read(db: Session, project: Project, model: type[ProjectRead] = ProjectRead, **extra) -> ProjectRead:
+    """Every project response carries the backend's own verdicts -- liveness
+    and the detected source language -- so the UI renders them instead of
+    re-deriving them (differently) from raw rows."""
+    live = run_liveness(db, project)
+    segments = db.execute(select(Segment).where(Segment.project_id == project.id)).scalars().all()
+    detected = detected_language_majority(segments)
+    confidence = None
+    if detected:
+        votes = [s.detected_language_confidence for s in segments
+                 if s.detected_language == detected and has_speech(s) and s.detected_language_confidence is not None]
+        confidence = round(mean(votes), 3) if votes else None
+    return model.model_validate(project, from_attributes=True).model_copy(update={
+        "last_activity_at": live.last_activity_at,
+        "stalled": live.stalled,
+        "stalled_reason": live.stalled_reason,
+        "detected_source_language": detected,
+        "detected_source_language_confidence": confidence,
+        **extra,
+    })
+
+
+def require_idle(db: Session, project: Project, action: str) -> None:
+    """Refuse to start work on a project some worker is already working on.
+
+    POST /process had no state guard at all, so a second click (or the UI's
+    retry) enqueued a second full chain alongside the first. A run that has
+    stalled -- no heartbeat for STALL_AFTER_SECONDS -- may be restarted; its
+    stages resume from what is committed.
+    """
+    if project.status.value in ACTIVE_STATUSES and not run_liveness(db, project).stalled:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail=(
+                f"Cannot {action}: this project is {project.status.value} "
+                f"({project.current_stage or 'waiting for a worker'}). Wait for it to finish; "
+                "it can be restarted if it stops reporting progress."
+            ),
+        )
 
 
 @router.get("", response_model=list[ProjectListItem])
@@ -54,11 +97,7 @@ def list_projects(db: Session = Depends(get_db), user: User = Depends(get_curren
         seg_count = db.execute(
             select(func.count(Segment.id)).where(Segment.project_id == p.id)
         ).scalar_one()
-        items.append(
-            ProjectListItem.model_validate(p, from_attributes=True).model_copy(
-                update={"source_video_duration_ms": duration, "segment_count": seg_count}
-            )
-        )
+        items.append(project_read(db, p, ProjectListItem, source_video_duration_ms=duration, segment_count=seg_count))
     return items
 
 
@@ -72,19 +111,24 @@ def create_project(
     # diarization and ASR have run and the translate stage finally rejects it.
     for code in body.target_languages:
         try:
-            require_language(code)
+            lang = require_language(code)
         except ValueError as exc:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from None
+        if not tts_available(lang):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{lang.name} has no text-to-speech voice on this deployment (see /api/capabilities).",
+            )
     project = Project(user_id=user.id, title=body.title, target_languages=body.target_languages)
     db.add(project)
     db.commit()
     db.refresh(project)
-    return project
+    return project_read(db, project)
 
 
 @router.get("/{project_id}", response_model=ProjectRead)
-def get_project(project: Project = Depends(get_owned_project)):
-    return project
+def get_project(db: Session = Depends(get_db), project: Project = Depends(get_owned_project)):
+    return project_read(db, project)
 
 
 @router.post("/{project_id}/upload", response_model=UploadUrlResponse)
@@ -98,6 +142,7 @@ def create_upload_url(
     "presigned multipart URL" ingest design. (A single presigned PUT covers
     the MVP; swap for presigned multipart-upload parts if you need >5GB
     source files.)"""
+    require_idle(db, project, "upload a new video")
     settings = get_settings()
     if body.content_type not in settings.accepted_video_format_list:
         raise HTTPException(
@@ -173,7 +218,7 @@ def confirm_upload(
     project.status = ProjectStatus.draft
     db.commit()
     db.refresh(project)
-    return project
+    return project_read(db, project)
 
 
 @router.post("/{project_id}/process", response_model=ProjectRead)
@@ -183,9 +228,20 @@ def start_processing(
     db: Session = Depends(get_db),
     project: Project = Depends(get_owned_project),
 ):
+    """Start a run, or restart a failed or stalled one (stages resume from
+    what is already committed)."""
+    if project.status == ProjectStatus.awaiting_language_confirmation:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            detail="This run is waiting for its source language to be confirmed -- "
+                   "use /confirm-language instead of restarting it.",
+        )
+    require_idle(db, project, "start processing")
+
     video = db.execute(
         select(SourceVideo)
-        .where(SourceVideo.project_id == project_id, SourceVideo.status == SourceVideoStatus.uploaded)
+        .where(SourceVideo.project_id == project_id,
+               SourceVideo.status.in_([SourceVideoStatus.uploaded, SourceVideoStatus.extracted]))
         .order_by(SourceVideo.created_at.desc())
     ).scalars().first()
     if video is None:
@@ -211,6 +267,7 @@ def start_processing(
     project.review_language = body.review_language and source_language is None
     project.tts_model = body.tts_model
     project.status = ProjectStatus.queued
+    project.current_stage = None
     project.error_message = None
     project.error_is_permanent = None
     db.commit()
@@ -221,7 +278,7 @@ def start_processing(
     # only extract->diarize->transcribe, transcribe (correctly) did not park,
     # and the project sat in "processing" forever with nothing left queued.
     start_pipeline(project_id, video.id, review_language=project.review_language)
-    return project
+    return project_read(db, project)
 
 
 @router.get("/{project_id}/segments", response_model=list[SegmentRead])
@@ -266,7 +323,8 @@ def confirm_language(
 
     The pipeline parks after ASR (see chain.py) precisely so this decision is
     made before minutes of TTS are spent. Passing a different `source_language`
-    re-runs transcription with it first; passing none accepts the detection.
+    re-runs transcription with it first; `force_retranscribe` re-runs it even
+    with the detected language; passing neither accepts the detection.
     """
     if project.status != ProjectStatus.awaiting_language_confirmation:
         raise HTTPException(
@@ -278,22 +336,33 @@ def confirm_language(
         )
 
     # Majority over segments with speech -- the same vote the translate stage
-    # uses. This used to take whichever row came back first, so accepting
-    # "the detection" could lock in a one-off misdetection on a short line.
+    # uses and ProjectRead.detected_source_language reports.
     detected = detected_language_majority(
         db.execute(select(Segment).where(Segment.project_id == project_id)).scalars().all()
     )
 
     override = (body.source_language or "").strip() or None
+    if override:
+        try:
+            require_source_language(override)
+        except ValueError as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from None
+    chosen = override or detected
+    if chosen is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="ASR detected no language for this project; choose the source language explicitly.",
+        )
+
     project.status = ProjectStatus.processing
     project.error_message = None
     project.error_is_permanent = None
+    project.source_language = chosen
 
-    if override and override != detected:
-        # Corrected: redo ASR with the chosen language, then continue. The
-        # transcribe stage picks up already-transcribed segments again, so the
-        # text is genuinely re-derived rather than patched.
-        project.source_language = override
+    if chosen != detected or body.force_retranscribe:
+        # Redo ASR forced to the chosen language, then continue. retranscribe
+        # re-picks already-transcribed segments, so the text is genuinely
+        # re-derived rather than patched.
         project.review_language = False  # don't park a second time
         db.commit()
         video = db.execute(
@@ -303,11 +372,10 @@ def confirm_language(
         ).scalars().first()
         if video is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="No source video for this project")
-        start_pipeline(project.id, video.id, review_language=False)
+        start_pipeline(project.id, video.id, review_language=False, retranscribe=True)
     else:
-        project.source_language = detected
         db.commit()
         continue_pipeline(project.id)
 
     db.refresh(project)
-    return project
+    return project_read(db, project)

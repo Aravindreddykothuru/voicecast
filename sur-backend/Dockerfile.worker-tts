@@ -29,10 +29,19 @@ RUN git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git /opt/Cosy
 # Linux, unlike the Windows dev setup).
 RUN cd /opt/CosyVoice/third_party/Matcha-TTS && python setup.py build_ext --inplace
 
+# OpenVoice V2 (MIT) supplies the default voice-cloning converter
+# (TTS_VOICE_CLONE_ENGINE=openvoice). Only its model code is used -- not its
+# text frontend -- so none of its app dependencies are installed. Pinned to
+# the commit the converter was verified against.
+RUN git clone https://github.com/myshell-ai/OpenVoice.git /opt/OpenVoice \
+    && cd /opt/OpenVoice && git checkout 74a1d14
+
 # CosyVoice's own code does `sys.path.append('.../third_party/Matcha-TTS')`
 # at its entry points (webui.py); this provider imports cosyvoice.cli.cosyvoice
 # directly, so both paths are supplied via PYTHONPATH instead.
-ENV PYTHONPATH="/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS"
+ENV PYTHONPATH="/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS:/opt/OpenVoice"
+# Commercially licensed voices by default; see .env.example.
+ENV TTS_ENGINE=syspin TTS_REQUIRE_COMMERCIAL_LICENSE=true TTS_VOICE_CLONE_ENGINE=openvoice
 
 COPY app ./app
 

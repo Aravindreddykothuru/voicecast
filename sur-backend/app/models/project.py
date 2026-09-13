@@ -1,6 +1,7 @@
 import enum
+from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, Enum, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, Base, TimestampMixin, UUIDPKMixin
@@ -66,6 +67,10 @@ class Project(UUIDPKMixin, TimestampMixin, Base):
     source_language: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # False lets a caller (automation, tests) skip the confirmation gate.
     review_language: Mapped[bool] = mapped_column(default=True)
+    # Stamped every few seconds by the worker running this project's current
+    # task (app/pipeline/liveness.py); how the API tells a slow run from a
+    # dead one. Migration 0007.
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     owner: Mapped["User"] = relationship(back_populates="projects")  # noqa: F821
     source_videos: Mapped[list["SourceVideo"]] = relationship(  # noqa: F821

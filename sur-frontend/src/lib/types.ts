@@ -31,6 +31,16 @@ export interface ProjectRead {
   review_language: boolean;
   created_at: string;
   updated_at: string;
+  /** Latest worker heartbeat or row change. */
+  last_activity_at: string | null;
+  /** Backend verdict: queued/processing with no heartbeat for
+   *  stall_after_seconds. The UI shows this; it never times runs itself. */
+  stalled: boolean;
+  stalled_reason: string | null;
+  /** The language the backend will accept at the gate (majority of ASR
+   *  detections over segments with speech). Do not recount segments. */
+  detected_source_language: string | null;
+  detected_source_language_confidence: number | null;
 }
 
 export interface ProjectListItem extends ProjectRead {
@@ -109,11 +119,22 @@ export interface SegmentRead {
 
 export type ExportStatus = "pending" | "running" | "ready" | "failed";
 
+/** app/pipeline/tasks.py::_qa_report. This interface used to promise `wer`
+ *  and `speaker_similarity`, which the backend never sent, and omitted the
+ *  timing fields it does send. */
 export interface SegmentQaEntry {
   segment_id: string;
-  wer?: number;
-  sync_offset_pct?: number;
-  speaker_similarity?: number;
+  start_ms: number;
+  end_ms: number;
+  has_speech: boolean;
+  sync_offset_pct: number | null;
+  emotion_label: string | null;
+  /** Playback speed the mux applied to fit the line (1 = unchanged). */
+  tempo: number | null;
+  /** Clip length after tempo, i.e. how long it actually plays. */
+  fitted_ms: number | null;
+  /** How far it still runs past the next line; 0 when it fits. */
+  overrun_ms: number | null;
 }
 
 export interface QaReport {
@@ -144,6 +165,11 @@ export const PIPELINE_STAGE_ORDER = [
   "mux_export",
 ] as const;
 export type PipelineStageKey = (typeof PIPELINE_STAGE_ORDER)[number];
+
+/** Stage names a project can report that are not part of the main chain. */
+export const EXTRA_STAGE_LABELS: Record<string, string> = {
+  regenerate: "Regenerating segment",
+};
 
 export const PIPELINE_STAGE_LABELS: Record<PipelineStageKey, string> = {
   extract_audio: "Audio Extraction",
@@ -223,6 +249,12 @@ export interface Capabilities {
   device: "cpu" | "cuda";
   /** Whether POST /process accepts clone_voice=true on this deployment. */
   voice_clone_available: boolean;
+  /** Seconds without a heartbeat before the backend calls a run stalled. */
+  stall_after_seconds: number;
+  tts_engine: string;
+  tts_licenses: string[];
+  /** True only when every usable voice's license permits commercial use. */
+  tts_commercial_use: boolean;
   max_upload_mb: number;
   accepted_formats: string[];
 }

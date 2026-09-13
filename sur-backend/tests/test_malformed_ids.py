@@ -51,7 +51,7 @@ _BODIES = {
     "/api/projects/{id}/process": {},
     "/api/projects/{id}/confirm-language": {},
     "/api/segments/{id}": {"translated_text": "x"},
-    "/api/segments/{id}/regenerate": {"stages": ["translate"]},
+    "/api/segments/{id}/regenerate": {"stages": ["synthesize"]},
 }
 
 

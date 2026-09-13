@@ -16,6 +16,9 @@ class Speaker(UUIDPKMixin, TimestampMixin, Base):
     # a vector-store id -- provider-defined, treated as opaque here).
     embedding_ref: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     reference_clip_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # "male" | "female" | "unknown", estimated from this speaker's audio the
+    # first time a gendered TTS engine renders them. Migration 0007.
+    voice_gender: Mapped[str | None] = mapped_column(String(16), nullable=True)
     consent_captured: Mapped[bool] = mapped_column(default=False)
 
     project: Mapped["Project"] = relationship(back_populates="speakers")  # noqa: F821

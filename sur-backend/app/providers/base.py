@@ -51,7 +51,10 @@ class SynthesisRequest:
     voice_reference_path: str | None = None  # local wav for zero-shot cloning (P3)
     voice_reference_text: str | None = None  # transcript matching voice_reference_path, if any
     emotion: EmotionResult | None = None  # conditions prosody (P2)
-    target_duration_ms: int | None = None  # sync-fit hint (P4); providers may ignore it
+    # Time until the next spoken line. Informational: providers must NOT
+    # time-compress to it -- mux_export (timeline.plan_timeline) is the single
+    # fitter, so a clip is never stretched twice (CONTRACTS.md #7).
+    target_duration_ms: int | None = None
     extra: dict = field(default_factory=dict)
 
 

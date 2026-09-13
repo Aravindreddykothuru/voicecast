@@ -37,7 +37,7 @@ from collections import Counter
 from collections.abc import Iterable
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.celery_app import celery_app
 from app.config import get_settings
@@ -57,6 +57,7 @@ from app.pipeline.events import (
     emit_stage_progress,
     emit_stage_started,
 )
+from app.pipeline import liveness
 from app.pipeline.text_normalize import spell_out_numbers_en
 from app.pipeline.timeline import GUARD_MS, TimelineSlot, normalize_turns, plan_timeline
 from app.providers.base import EmotionResult, SpeakerChunk, SynthesisRequest
@@ -70,6 +71,9 @@ from app.providers.registry import (
 from app.storage import get_storage
 
 logger = logging.getLogger(__name__)
+
+# Every stage task heartbeats while it runs (see liveness.py).
+liveness.connect_signals()
 
 _RETRYABLE = (Exception,)
 
@@ -355,7 +359,14 @@ def _transcribe_one(audio_path: str, segment: Segment, language: str | None = No
 
 @celery_app.task(bind=True, name="app.pipeline.tasks.transcribe", autoretry_for=_RETRYABLE, dont_autoretry_for=_PERMANENT, max_retries=3,
                   retry_backoff=True)
-def transcribe(self, project_id: str) -> str:
+def transcribe(self, project_id: str, retranscribe: bool = False) -> str:
+    """Transcribe pending segments; with `retranscribe`, also redo finished ones.
+
+    It used to always re-pick already-transcribed segments AND raise when it
+    found nothing to do. Restarting a run that failed during synthesis --
+    the dashboard's Retry -- therefore died right here ("no segments to
+    transcribe"), because every segment was already past this stage.
+    """
     bind_context(project_id=project_id)
     stage = "transcribe"
     emit_stage_started(project_id, stage)
@@ -364,8 +375,12 @@ def transcribe(self, project_id: str) -> str:
             project = _require_project(db, project_id)
             _set_stage(db, project, stage)
             language = project.source_language
-            ids = _segment_ids(db, project_id, (SegmentStatus.pending, SegmentStatus.transcribed))
-            if not ids:
+            statuses = (SegmentStatus.pending, SegmentStatus.transcribed) if retranscribe else (SegmentStatus.pending,)
+            ids = _segment_ids(db, project_id, statuses)
+            total = db.execute(
+                select(func.count(Segment.id)).where(Segment.project_id == project_id)
+            ).scalar_one()
+            if total == 0:
                 # Not a benign "nothing to do": every earlier stage completed
                 # yet no segment exists, so the run would otherwise strand in
                 # "processing" with no error. Fail loudly instead.
@@ -373,19 +388,24 @@ def transcribe(self, project_id: str) -> str:
                     "transcribe: no segments to transcribe -- diarization "
                     "produced nothing for this project."
                 )
-            audio_key = _require_audio_key(db, db.get(Segment, ids[0]).source_video_id)
+            audio_key = _require_audio_key(db, db.get(Segment, ids[0]).source_video_id) if ids else None
+            if not ids:
+                logger.info("transcribe: all %d segments already transcribed; resuming", total)
 
-        with _downloaded(get_storage(), audio_key, "audio.wav") as audio_path:
-            for i, seg_id in enumerate(ids):
-                with session_scope() as db:
-                    _transcribe_one(audio_path, db.get(Segment, seg_id), language)
-                emit_stage_progress(project_id, stage, (i + 1) / len(ids), completed=i + 1, total=len(ids))
+        if ids:
+            with _downloaded(get_storage(), audio_key, "audio.wav") as audio_path:
+                for i, seg_id in enumerate(ids):
+                    with session_scope() as db:
+                        _transcribe_one(audio_path, db.get(Segment, seg_id), language)
+                    emit_stage_progress(project_id, stage, (i + 1) / len(ids), completed=i + 1, total=len(ids))
 
         with session_scope() as db:
             project = _require_project(db, project_id)
-            if project.review_language:
+            if project.review_language and not project.source_language:
                 # Park here. The expensive half only starts once someone has
                 # confirmed the detected language via /confirm-language.
+                # (A confirmed language means it already passed the gate --
+                # a restarted run must not ask again.)
                 project.status = ProjectStatus.awaiting_language_confirmation
                 project.current_stage = None
                 logger.info("transcribe: awaiting source-language confirmation")
@@ -636,6 +656,34 @@ def _available_ms(db, segment: Segment, original_ms: int) -> int:
     return max(next_start - segment.start_ms - GUARD_MS, original_ms)
 
 
+def _speaker_voice_gender(db, storage, segment: Segment, tmp: str) -> str | None:
+    """The speaker's voice gender, estimated once from their longest line and
+    stored, when the TTS engine has voices to choose between. Without it
+    every speaker in a scene was dubbed by the same single voice."""
+    settings = get_settings()
+    if settings.tts_provider != "real" or settings.tts_engine != "syspin" or not segment.speaker_id:
+        return None
+    speaker = db.get(Speaker, segment.speaker_id)
+    if speaker is None:
+        return None
+    if speaker.voice_gender is None:
+        spoken = db.execute(
+            select(Segment).where(Segment.project_id == segment.project_id, Segment.speaker_id == speaker.id)
+        ).scalars().all()
+        longest = max((s for s in spoken if has_speech(s)), key=lambda s: s.end_ms - s.start_ms, default=segment)
+        import librosa
+
+        from app.providers.tts.common import estimate_voice_gender
+
+        full_audio = os.path.join(tmp, "gender_source.wav")
+        storage.download_file(_require_audio_key(db, segment.source_video_id), full_audio)
+        with ffmpeg_utils.extract_audio_slice(full_audio, longest.start_ms, min(longest.end_ms, longest.start_ms + 10_000)) as p:
+            audio, sr = librosa.load(p, sr=16000)
+        speaker.voice_gender = estimate_voice_gender(audio, sr) or "unknown"
+        logger.info("speaker %s voice gender: %s", speaker.label, speaker.voice_gender)
+    return speaker.voice_gender if speaker.voice_gender != "unknown" else None
+
+
 def synthesize_segment(db, storage, segment: Segment, project: Project) -> None:
     """Shared by the full-project stage task and single-segment /regenerate."""
     bind_context(segment_id=segment.id)
@@ -658,6 +706,11 @@ def synthesize_segment(db, storage, segment: Segment, project: Project) -> None:
         if project.preserve_emotion and segment.emotion_label:
             emotion = EmotionResult(label=segment.emotion_label.value, score=segment.emotion_score or 0.0)
 
+        extra = {"tts_model": project.tts_model} if project.tts_model else {}
+        gender = _speaker_voice_gender(db, storage, segment, tmp)
+        if gender:
+            extra["voice_gender"] = gender
+
         original_ms = max(segment.end_ms - segment.start_ms, 1)
         request = SynthesisRequest(
             text=text,
@@ -671,7 +724,7 @@ def synthesize_segment(db, storage, segment: Segment, project: Project) -> None:
             # to fit even when a pause followed that the mux would happily
             # have used -- measurably less intelligible speech for nothing.
             target_duration_ms=_available_ms(db, segment, original_ms),
-            extra={"tts_model": project.tts_model} if project.tts_model else {},
+            extra=extra,
         )
         result = get_tts_provider().synthesize(request)
         try:

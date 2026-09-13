@@ -80,18 +80,36 @@ mid-pipeline.
 Some real providers (`IndicTrans2Provider`, `PyannoteDiarizationProvider`)
 need a HuggingFace token accepted for gated model weights.
 
-**How TTS works.** `TTS_PROVIDER=real` speaks with **MMS-TTS**
-(`facebook/mms-tts-<lang>`, one small VITS checkpoint per target language;
-the suffix per language lives in `app/capabilities.py`). CosyVoice2 was the
-renderer until it was measured: it has never been trained on an Indic
-script, and on CPU it spent 30+ minutes on one 3-second Telugu sentence and
-returned 21 seconds of audio that Whisper large-v3 transcribed at CER 1.56
-(and detected as Korean). MMS renders the same sentence in ~5s at CER 0.09.
-Detected emotion is carried as prosody (speaking rate, energy, VITS
-variation), weighted by the classifier's confidence -- MMS has no emotion
-conditioning, and the code says so rather than pretending otherwise. There
-is deliberately no pitch shift: measured, it cost intelligibility on short
-lines (CER 0.21 -> 0.36) for an effect a listener barely notices.
+**How TTS works.** `TTS_PROVIDER=real` picks the engine with `TTS_ENGINE`
+(voices, models and licenses per language in `app/capabilities.py`,
+published in `/api/capabilities`):
+
+| `TTS_ENGINE` | Model | License | Languages |
+|---|---|---|---|
+| `syspin` (default) | `SYSPIN/tts_vits_coquiai_<Lang><Male\|Female>` (IISc/ARTPARK, VITS TorchScript) | **CC-BY-4.0**: commercial use **with attribution** | te, hi, kn, mr, bn |
+| `mms` | `facebook/mms-tts-<lang>` (VITS) | **CC-BY-NC-4.0**: non-commercial only | all 12 |
+
+`TTS_REQUIRE_COMMERCIAL_LICENSE=true` (default) offers commercial voices
+only. Under it, `TTS_ENGINE=mms` refuses to start, languages without a
+commercial voice report `tts_available=false`, and creating a project for
+one of them is a 422. Products shipping SYSPIN audio must credit "SYSPIN,
+IISc Bangalore and ARTPARK". Each diarized speaker gets the male or female
+voice matching their own median F0.
+
+CosyVoice2 was the renderer until it was measured. It has never been
+trained on an Indic script: on CPU it spent 30+ minutes on one 3-second
+Telugu sentence and returned 21 s of audio that Whisper large-v3
+transcribed at CER 1.56. Measured intelligibility per engine is in
+CONTRACTS.md #7.
+
+Detected emotion is carried as prosody, weighted by the classifier's
+confidence: speaking rate, energy, and (MMS only) VITS variation. Neither
+engine has emotion or pitch conditioning; SYSPIN's exported graph takes
+token ids only. There is deliberately no pitch shift, because measured, it
+cost intelligibility on short lines (CER 0.21 → 0.36). Engines never
+time-compress a line. `mux_export` is the single place a clip is sped up to
+fit, capped at `MAX_TEMPO`, and the QA report's `tempo` is the whole
+speed-up.
 
 Two more things sit between ASR and TTS because the real run needed them:
 numerals are spelled out before translation (`app/pipeline/text_normalize.py`;
@@ -160,7 +178,17 @@ docker compose -f docker-compose.dev.yml up -d        # Postgres :5435, Redis :6
 .\scripts\run-local.ps1 -Role api
 .\scripts\run-local.ps1 -Role worker -Offline         # every stage except synthesis
 .\scripts\run-local.ps1 -Role tts-worker -Offline     # q.synthesize, from .venv-tts
+
+# The UI, from a cold start (Node 20+), in a fifth terminal:
+cd ..\sur-frontend
+npm install
+npm run dev                                           # http://localhost:8443
 ```
+
+The UI reads `VITE_API_BASE_URL` (`sur-frontend/.env`, default
+`http://localhost:8000`); its header shows `API: online/offline` from
+`GET /healthz`, so a UI started before the API says so instead of failing on
+the first click. `:8443` is already in `API_CORS_ORIGINS`.
 
 What this needs, and why each piece exists:
 
@@ -177,8 +205,14 @@ What this needs, and why each piece exists:
 - **Solo pool.** Celery's prefork pool does not work on Windows;
   `app/celery_app.py` selects `solo` there. One task at a time per worker,
   which is also right for workers holding several GB of models.
-- **CosyVoice import path.** `COSYVOICE_SRC_DIR=.tools/CosyVoice` puts the
-  source checkout on `sys.path` from inside the provider.
+- **Voice-cloning import paths.** `OPENVOICE_SRC_DIR=.tools/OpenVoice`
+  (`git clone https://github.com/myshell-ai/OpenVoice .tools/OpenVoice` at
+  commit `74a1d14`) and, for the CosyVoice converter,
+  `COSYVOICE_SRC_DIR=.tools/CosyVoice` put the source checkouts on `sys.path`
+  from inside the providers.
+- **Migrations first.** A worker on new code against an un-migrated database
+  fails every stage with `UndefinedColumn`; run `alembic upgrade head` after
+  every pull.
 - **Startup checks** load and self-check every model the worker's queues
   need before it accepts work; the worker log shows each one
   (`/startup] ... loaded and self-checked`). Expect ~1 minute (main) and
@@ -289,6 +323,37 @@ under a retry, the API's project/segment endpoints, cross-user
 authorization on every id-bearing route, and a migration-drift check that
 fails if `app/models/` and `alembic/versions/` disagree.
 
+**Frontend contract.** The API's OpenAPI schema is committed at
+`sur-frontend/src/lib/api-contract/openapi.json`.
+`tests/test_openapi_contract_snapshot.py` fails when a schema change was not
+re-exported, and the frontend's `src/lib/api.contract.test.ts` validates every
+request `src/lib/api.ts` sends (path, method, body) and every response field
+`src/lib/types.ts` reads against that snapshot. A backend contract change
+therefore breaks a test on both sides until both are updated:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\export_openapi.py     # after changing app/schemas or routes
+cd ..\sur-frontend; npm run typecheck; npm test
+```
+
+**Browser end-to-end** (against a running stack, see *Running natively on
+Windows*). Playwright starts the Vite dev server itself, so this is also the
+cold-start check:
+
+```powershell
+cd ..\sur-frontend
+npm run test:e2e:install                                  # once: Chromium
+$env:E2E_VIDEO="C:\path\to\clip.mp4"; npm run test:e2e -- dub.spec.ts
+# Stranded-run UI check: API up, BOTH workers stopped, API started with
+# STALL_AFTER_SECONDS=45:
+$env:E2E_STALL="1"; npm run test:e2e -- stall.spec.ts
+```
+
+`dub.spec.ts` drives upload → language gate → dub → re-voice → preview →
+export through the UI and fails on any 4xx/5xx the UI provoked;
+`stall.spec.ts` asserts a run no worker picks up turns into a visible error
+with a working Restart.
+
 ## Secret scanning — run this once per clone
 
 `.pre-commit-config.yaml` runs detect-secrets on every commit, but git
@@ -325,13 +390,28 @@ make revision m="add foo column"   # generate a new one after changing app/model
 
 ## Frontend integration
 
-Point your frontend's `API_BASE_URL` at `:8000` and `WS_BASE_URL` at the
-same host for `/ws/projects/{id}`. Generate types from the live OpenAPI
-schema rather than hand-writing them:
+`sur-frontend` points `VITE_API_BASE_URL` at `:8000` and opens
+`/ws/projects/{id}` on the same host. Its hand-written types are pinned to
+the committed OpenAPI snapshot by tests (see *Testing → Frontend contract*),
+so a drifted field fails CI rather than rendering `undefined`.
 
-```bash
-npx openapi-typescript http://localhost:8000/openapi.json -o types/sur-api.ts
-```
+What the UI relies on, beyond the obvious CRUD:
+
+- `ProjectRead.stalled` / `stalled_reason` / `last_activity_at` -- a
+  queued/processing run with no worker heartbeat for `stall_after_seconds`
+  (published in `/api/capabilities`). The UI shows the reason and a Restart
+  button; `POST /process` accepts a restart only for a stalled or failed run
+  (409 otherwise, so a double click can't start two chains).
+- `ProjectRead.detected_source_language(_confidence)` -- the language gate
+  shows the backend's own majority vote, not a client-side recount.
+- `POST /confirm-language` with `force_retranscribe` re-runs ASR even when
+  the choice equals the detection.
+- `POST /segments/{id}/regenerate` takes `stages: ["synthesize"]` or
+  `["translate","synthesize"]` (anything else is 422), flips the project to
+  `processing`/`regenerate`, and re-muxes the export; a failure marks the
+  project `failed` with the reason instead of leaving the old audio silently.
+- Every 4xx `detail` is either a string or FastAPI's validation array; the
+  client renders both (`errorDetail`).
 
 CORS is open to `API_CORS_ORIGINS` (`.env`, defaults to
 `http://localhost:3000`) — add your dev origin there if it differs.

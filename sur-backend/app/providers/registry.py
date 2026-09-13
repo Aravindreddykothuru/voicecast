@@ -79,9 +79,18 @@ def get_tts_provider() -> TTSProvider:
         from app.providers.tts.mock_provider import MockTTSProvider
 
         return MockTTSProvider()
-    # MMS-TTS renders; CosyVoice2 voice conversion re-voices when cloning is
-    # enabled. See app/providers/tts/mms_provider.py for why CosyVoice2 is no
-    # longer the renderer.
+    # TTS_ENGINE picks the renderer; voice cloning (if enabled) is layered on
+    # by the provider. Licenses per engine: app/capabilities.py, CONTRACTS.md #7.
+    if settings.tts_engine == "syspin":
+        from app.providers.tts.syspin_provider import SyspinTTSProvider
+
+        return SyspinTTSProvider()
+    if settings.tts_require_commercial_license:
+        raise RuntimeError(
+            f"TTS_ENGINE={settings.tts_engine} uses non-commercially licensed weights, but "
+            "TTS_REQUIRE_COMMERCIAL_LICENSE is true. Use TTS_ENGINE=syspin, or set "
+            "TTS_REQUIRE_COMMERCIAL_LICENSE=false for research/non-commercial deployments only."
+        )
     from app.providers.tts.mms_provider import MMSTTSProvider
 
     return MMSTTSProvider()

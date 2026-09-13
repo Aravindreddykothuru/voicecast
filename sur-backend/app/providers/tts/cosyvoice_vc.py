@@ -60,7 +60,7 @@ class CosyVoiceVoiceConverter:
         self._engine = CosyVoice2(model_dir)
         self.sample_rate = self._engine.sample_rate
 
-    def convert(self, wav, sr: int, reference_path: str):
+    def convert(self, wav, sr: int, reference_path: str, voice_key: str | None = None):
         import numpy as np
         import soundfile as sf
         import torch

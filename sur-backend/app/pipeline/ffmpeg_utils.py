@@ -121,6 +121,23 @@ def extract_audio_slice(audio_path: str, start_ms: int, end_ms: int) -> Iterator
             os.remove(path)
 
 
+def time_stretch(wav, sample_rate: int, rate: float):
+    """Change speaking rate without changing pitch (ffmpeg atempo, WSOLA).
+
+    For engines with no rate input of their own. Not librosa's phase-vocoder
+    stretch: that smears transients the same way its pitch shift smeared
+    formants, which measurably cost intelligibility."""
+    import numpy as np
+    import soundfile as sf
+
+    with tempfile.TemporaryDirectory(prefix="sur-tempo-") as tmp:
+        src, dst = os.path.join(tmp, "in.wav"), os.path.join(tmp, "out.wav")
+        sf.write(src, wav, sample_rate, subtype="FLOAT")
+        _ffmpeg("-i", src, "-filter:a", f"atempo={rate:.4f}", "-c:a", "pcm_f32le", dst)
+        out, _ = sf.read(dst, dtype="float32")
+    return np.asarray(out, dtype="float32")
+
+
 def concat_audio(paths: Sequence[str], out_path: str, sample_rate: int = 16000) -> None:
     """Join audio files end to end into one mono WAV."""
     if not paths:

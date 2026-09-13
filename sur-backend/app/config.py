@@ -120,11 +120,28 @@ class Settings(BaseSettings):
     # never trained on any Indic language: on CPU it spent 30+ minutes on one
     # 3-second Telugu sentence and returned ~21s of unintelligible audio.
     tts_mms_model_prefix: str = "facebook/mms-tts-"
+    # Which TTS engine renders speech (app/providers/tts/). Voices per
+    # language and their licenses live in app/capabilities.py.
+    #   syspin -- IISc SYSPIN VITS, CC-BY-4.0: commercial use with attribution
+    #   mms    -- facebook/mms-tts, CC-BY-NC-4.0: NOT for commercial use
+    tts_engine: Literal["syspin", "mms"] = "syspin"
+    # When true, only voices whose license permits commercial use are
+    # offered (languages without one report tts_available=false) and a
+    # non-commercial engine refuses to start. Production must set this.
+    tts_require_commercial_license: bool = True
     # Voice cloning (a project's clone_voice flag): CosyVoice2 *voice
     # conversion* re-voices the MMS speech as the original speaker. VC uses
     # no text model, so the Indic-language limitation above doesn't apply.
     # Off unless enabled -- it loads CosyVoice2 (~4GB) into the TTS worker.
     tts_voice_clone: bool = False
+    # openvoice (OpenVoice V2, MIT) or cosyvoice (CosyVoice2 VC). See
+    # app/providers/tts/voice_clone.py for the budget each must pass.
+    tts_voice_clone_engine: Literal["openvoice", "cosyvoice"] = "openvoice"
+    # Conversion must run at or below this multiple of real time on the TTS
+    # worker, checked at startup. 1.0 = no slower than the audio itself.
+    tts_voice_clone_max_rtf: float = 1.0
+    # OpenVoice source checkout, put on sys.path by the converter.
+    openvoice_src_dir: str | None = None
     # CosyVoice2 checkpoint directory, used only for voice conversion.
     # Relative paths anchor at BACKEND_ROOT.
     tts_model_name: str = "cosyvoice2"
@@ -156,6 +173,12 @@ class Settings(BaseSettings):
     # --- Pipeline ---
     default_target_language: str = "te"
     sync_tolerance_pct: float = 10.0
+    # Liveness (app/pipeline/liveness.py). Workers stamp a heartbeat this
+    # often while a task runs; a queued/processing run silent for longer than
+    # stall_after_seconds is reported as stalled and may be restarted.
+    # Served via /api/capabilities so the UI never hardcodes its own timeout.
+    heartbeat_interval_seconds: int = 20
+    stall_after_seconds: int = 300
 
     # --- Upload limits ---
     # Enforced server-side (routes_projects.py), not just advisory copy in the
