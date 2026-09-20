@@ -143,7 +143,8 @@ def test_a_correct_but_inaudible_clip_is_rejected():
 
 def test_an_unsupported_language_falls_back_rather_than_passing():
     gate = _gate()
-    assert gate.ctc_reader("hi") is None
+    # Tamil has no commercially licensed voice, so it was never validated.
+    assert gate.ctc_reader("ta") is None
     assert "te" in gate.SHORT_LINE_CTC_MODELS
 
 
@@ -172,3 +173,64 @@ def test_the_ctc_reader_agrees_with_the_measurements_this_gate_was_tuned_on():
     bad = gate._cer("సరే", decode("short_line_sare_isolated.wav"))
     assert good <= gate.SHORT_LINE_MAX_CER, "380ms of good audio must read back"
     assert bad > gate.SHORT_LINE_MAX_CER, "the degraded render must not"
+
+
+# --- the same defect, and the same fix, in every covered language ----------
+# Rendered through the provider's own path: "alone" is what shipped before,
+# "carrier_excised" is the line spoken after a carrier sentence and cut back
+# out. Reference text is the pipeline's own translation of an English line.
+PER_LANGUAGE = [
+    ("hi", "नहीं", "No."),
+    ("kn", "ಏಕೆ", "Why?"),
+    ("mr", "नाही", "No."),
+    ("bn", "এখনই", "Right now."),
+]
+
+
+def test_every_language_with_a_carrier_can_also_be_read_back():
+    """A carrier changes what ships; without a reader for that language
+    nothing would check the result. The two sets must match."""
+    from app.capabilities import SUPPORTED_LANGUAGES
+
+    gate = _gate()
+    carriers = {lang.code for lang in SUPPORTED_LANGUAGES if lang.tts_carrier}
+    assert carriers == set(gate.SHORT_LINE_CTC_MODELS)
+
+
+def test_languages_without_a_reader_fall_back_rather_than_pass():
+    from app.capabilities import SUPPORTED_LANGUAGES
+
+    gate = _gate()
+    uncovered = [l.code for l in SUPPORTED_LANGUAGES if l.code not in gate.SHORT_LINE_CTC_MODELS]
+    # Tracked explicitly: these have no commercially licensed voice, so they
+    # cannot be dubbed on the default configuration and were never validated.
+    assert sorted(uncovered) == ["as", "gu", "ml", "or", "pa", "ta", "ur"]
+    for code in uncovered:
+        assert gate.ctc_reader(code) is None
+
+
+@pytest.mark.parametrize("code, ref, source", PER_LANGUAGE)
+def test_the_carrier_fix_holds_in_each_language(code, ref, source):
+    """Before: the line rendered alone. After: rendered after a carrier and
+    excised. Same synthesizer, same voice, same line."""
+    pytest.importorskip("soundfile")
+    pytest.importorskip("librosa")
+    pytest.importorskip("transformers")
+    import librosa
+    import soundfile as sf
+
+    gate = _gate()
+    read = gate.ctc_reader(code)
+    if read is None:
+        pytest.skip(f"CTC weights for {code} unavailable")
+
+    def cer_of(name):
+        wav, sr = sf.read(FIXTURES / name, dtype="float32")
+        if sr != 16000:
+            wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
+        return gate._cer(ref, read(wav))
+
+    before = cer_of(f"short_line_{code}_alone.wav")
+    after = cer_of(f"short_line_{code}_carrier_excised.wav")
+    assert after <= gate.SHORT_LINE_MAX_CER, f"{code}: the fixed render must read back ({after:.3f})"
+    assert before > gate.SHORT_LINE_MAX_CER, f"{code}: the old render must not ({before:.3f})"

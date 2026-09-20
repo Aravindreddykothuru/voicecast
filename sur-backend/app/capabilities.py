@@ -56,6 +56,13 @@ class Language:
     # tts_supported=True while the configured TTS model (CosyVoice2) could
     # not speak a single one of these languages.
     voices: tuple[Voice, ...] = ()
+    # Scaffolding, never shipped: SYSPIN renders a line that is the whole
+    # utterance as a *different word* -- 8 one-word lines measured 2/8
+    # intelligible alone against 8/8 when spoken after a carrier and cut back
+    # out (issue #5, CONTRACTS.md #7). A short line is rendered after this
+    # sentence and excised. Set only for languages where that has been
+    # measured; None leaves the line rendered on its own, as before.
+    tts_carrier: str | None = None
 
     @property
     def tts_supported(self) -> bool:
@@ -71,13 +78,18 @@ class Language:
 # TorchScript releases; its Gujarati release is a Coqui checkpoint that needs
 # the Coqui runtime and is not wired up.
 SUPPORTED_LANGUAGES: tuple[Language, ...] = (
-    Language("hi", "Hindi", "hin_Deva", (_mms("hin"), _syspin("Hindi", "male"), _syspin("Hindi", "female"))),
-    Language("te", "Telugu", "tel_Telu", (_mms("tel"), _syspin("Telugu", "male"), _syspin("Telugu", "female"))),
+    Language("hi", "Hindi", "hin_Deva", (_mms("hin"), _syspin("Hindi", "male"), _syspin("Hindi", "female")),
+             tts_carrier="यह एक भयानक खबर है।"),
+    Language("te", "Telugu", "tel_Telu", (_mms("tel"), _syspin("Telugu", "male"), _syspin("Telugu", "female")),
+             tts_carrier="అది భయంకరమైన వార్త."),
     Language("ta", "Tamil", "tam_Taml", (_mms("tam"),)),
-    Language("kn", "Kannada", "kan_Knda", (_mms("kan"), _syspin("Kannada", "male"), _syspin("Kannada", "female"))),
+    Language("kn", "Kannada", "kan_Knda", (_mms("kan"), _syspin("Kannada", "male"), _syspin("Kannada", "female")),
+             tts_carrier="ಇದು ಭಯಾನಕ ಸುದ್ದಿ."),
     Language("ml", "Malayalam", "mal_Mlym", (_mms("mal"),)),
-    Language("bn", "Bengali", "ben_Beng", (_mms("ben"), _syspin("Bengali", "male"), _syspin("Bengali", "female"))),
-    Language("mr", "Marathi", "mar_Deva", (_mms("mar"), _syspin("Marathi", "male"), _syspin("Marathi", "female"))),
+    Language("bn", "Bengali", "ben_Beng", (_mms("ben"), _syspin("Bengali", "male"), _syspin("Bengali", "female")),
+             tts_carrier="এটা একটা ভয়ংকর খবর।"),
+    Language("mr", "Marathi", "mar_Deva", (_mms("mar"), _syspin("Marathi", "male"), _syspin("Marathi", "female")),
+             tts_carrier="ही भीतीदायक बातमी आहे."),
     Language("gu", "Gujarati", "guj_Gujr", (_mms("guj"),)),
     Language("pa", "Punjabi", "pan_Guru", (_mms("pan"),)),
     Language("or", "Odia", "ory_Orya", (_mms("ory"),)),

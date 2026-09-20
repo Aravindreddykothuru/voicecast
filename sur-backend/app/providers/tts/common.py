@@ -87,17 +87,66 @@ SHORT_LINE_CHARS = 12
 SHORT_LINE_DRAWS = 3
 
 
-def render_stable(draw, text: str, sr: int):
-    """Render `text` to a trimmed clip, resampling the duration head on short
-    lines.
+def tail_after_pause(wav, sr: int, min_ms: int = 120, max_ms: int = 2000):
+    """The last utterance in a clip, cut at the pause before it, or None.
+
+    Used to recover a short line rendered after a carrier sentence. The
+    threshold is a ladder because one fixed value does not find the pause in
+    every render: at 35 dB it missed 4 of 40, at 30 dB it missed 2. A segment
+    of implausible length is rejected rather than returned, so the caller can
+    fall back instead of shipping a mis-cut clip."""
+    import librosa
+
+    for top_db in (30, 35, 40, 45, 50):
+        intervals = librosa.effects.split(wav, top_db=top_db)
+        if len(intervals) < 2:
+            continue
+        a, b = intervals[-1]
+        if min_ms <= 1000 * (b - a) / sr <= max_ms:
+            # Generous at the head: a word opening on a vowel fades in below
+            # the split threshold, and cutting 30ms tight lost the first
+            # syllable of "ఇప్పుడే" (read back as "పుడే").
+            return wav[max(a - int(0.08 * sr), 0):min(b + int(0.06 * sr), len(wav))]
+    return None
+
+
+def render_line(render, text: str, sr: int, carrier: str | None = None):
+    """One line of speech, trimmed, as the engine should have rendered it.
+
+    A line short enough to be the entire utterance is rendered *after*
+    `carrier` and cut back out, because SYSPIN renders a lone short word as a
+    different word (issue #5). Measured over 8 one-word Telugu lines, median
+    of 3 draws, CTC read-back: 2/8 intelligible rendered alone, 8/8 rendered
+    after a carrier and excised. The clip that ships is still only the line,
+    at its natural length -- the carrier is scaffolding, never heard.
+
+    `render(text, draw=i)` must be deterministic in `i`."""
+    if carrier and len(text) <= SHORT_LINE_CHARS:
+        def draw(i):
+            whole = render(f"{carrier} {text}", draw=i)
+            tail = tail_after_pause(whole, sr)
+            # No pause found: fall back to rendering the line by itself
+            # rather than shipping a mis-cut carrier.
+            return tail if tail is not None else trim_silence(render(text, draw=i), sr)
+
+        # Not trimmed again: the cut already sits on silence either side, and
+        # re-trimming it to 40 dB took the soft onset back off (8/9 -> 9/9).
+        return render_stable(draw, text, sr, trim=False)
+    return render_stable(lambda i: render(text, draw=i), text, sr)
+
+
+def render_stable(draw, text: str, sr: int, *, trim: bool = True):
+    """Render `text` to a clip, resampling the duration head on short lines.
 
     `draw(i)` renders draw number `i`. It must be deterministic in `i` -- the
     same line has to give the same clip every time, so that re-rendering one
-    unchanged segment does not change how it sounds (CONTRACTS.md #7)."""
-    first = trim_silence(draw(0), sr)
+    unchanged segment does not change how it sounds (CONTRACTS.md #7).
+    `trim=False` for draws that are already cut to their own boundaries."""
+    prep = (lambda w: trim_silence(w, sr)) if trim else (lambda w: w)
+    first = prep(draw(0))
     if len(text) > SHORT_LINE_CHARS:
         return first
-    clips = sorted([first] + [trim_silence(draw(i), sr) for i in range(1, SHORT_LINE_DRAWS)], key=len)
+    clips = sorted([first] + [prep(draw(i)) for i in range(1, SHORT_LINE_DRAWS)], key=len)
     return clips[len(clips) // 2]
 
 

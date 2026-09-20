@@ -102,6 +102,12 @@ Telugu sentence and returned 21 s of audio that Whisper large-v3
 transcribed at CER 1.56. Measured intelligibility per engine is in
 CONTRACTS.md #7.
 
+A line short enough to be the whole utterance is rendered *after* a carrier
+sentence and cut back out (`Language.tts_carrier`), because SYSPIN renders a
+lone short word as a different word -- 7/40 intelligible alone against 39/40
+spoken after a sentence. The clip that ships is still just the line. Set for
+te, hi, kn, mr and bn; other languages render as before.
+
 Detected emotion is carried as prosody, weighted by the classifier's
 confidence: speaking rate, energy, and (MMS only) VITS variation. Neither
 engine has emotion or pitch conditioning; SYSPIN's exported graph takes

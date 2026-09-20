@@ -23,7 +23,7 @@ from app.capabilities import require_language
 from app.config import get_settings
 from app.providers.base import SynthesisRequest, SynthesisResult, TTSProvider
 from app.providers.registry import ProviderNotInstalledError
-from app.providers.tts.common import fits_window, normalize, prosody_for, render_stable, trim_silence
+from app.providers.tts.common import fits_window, normalize, prosody_for, render_line, trim_silence
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +132,8 @@ class SyspinTTSProvider(TTSProvider):
             raise ValueError("TTS was asked to speak an empty string")
         prosody = prosody_for(request.emotion, self._settings.emotion_confidence_floor)
         voice = self._voice_for(request.target_lang, request.extra.get("voice_gender"))
-        wav = render_stable(lambda i: voice.render(text, draw=i), text, SAMPLE_RATE)
+        wav = render_line(voice.render, text, SAMPLE_RATE,
+                          carrier=require_language(request.target_lang).tts_carrier)
 
         # No time fitting here: mux_export (timeline.plan_timeline) is the one
         # place a clip is sped up to its window, within one MAX_TEMPO budget.

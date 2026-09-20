@@ -173,3 +173,69 @@ def test_the_same_line_always_renders_the_same_way():
     assert np.array_equal(first, voice.render("abc")), "same text must re-render identically"
     assert not np.array_equal(first, voice.render("abc", draw=1)), "each draw must be its own sample"
     assert not np.array_equal(first, voice.render("cba")), "different text, different render"
+
+
+# --- a short line is spoken after a carrier and cut back out ----------------
+def _carrier_render(sr=22050):
+    """A fake engine: a carrier utterance, a pause, then the line."""
+    calls = []
+
+    def render(text, draw=0):
+        calls.append(text)
+        if text.startswith("CARRIER"):
+            return np.concatenate([_tone(0.9, sr), np.zeros(int(0.30 * sr), dtype="float32"),
+                                   _tone(0.40, sr)])
+        return _tone(0.40, sr)
+
+    return render, calls
+
+
+def test_a_short_line_is_rendered_after_the_carrier_and_excised():
+    """SYSPIN renders a lone short word as a different word (issue #5): 8 of 8
+    one-word lines were misread rendered alone, 8 of 8 read back correctly
+    rendered after a carrier and cut out. The line must therefore never be
+    rendered on its own when a carrier exists for the language."""
+    from app.providers.tts.common import render_line
+
+    sr = 22050
+    render, calls = _carrier_render(sr)
+    out = render_line(render, "abc", sr, carrier="CARRIER SENTENCE")
+    assert calls, "nothing was rendered"
+    assert all(c.startswith("CARRIER") for c in calls), f"line rendered bare: {calls}"
+    # The clip that ships is the line, not the carrier with it.
+    assert 0.30 < len(out) / sr < 0.70, f"expected just the line, got {len(out)/sr:.2f}s"
+
+
+def test_a_long_line_is_not_given_a_carrier():
+    """Long lines never had the defect and are the expensive ones."""
+    from app.providers.tts.common import render_line
+
+    sr = 22050
+    render, calls = _carrier_render(sr)
+    render_line(render, "a line comfortably past the short-line threshold", sr, carrier="CARRIER")
+    assert calls == ["a line comfortably past the short-line threshold"]
+
+
+def test_a_language_with_no_carrier_renders_the_line_as_before():
+    from app.providers.tts.common import render_line
+
+    sr = 22050
+    render, calls = _carrier_render(sr)
+    render_line(render, "abc", sr, carrier=None)
+    assert calls == ["abc", "abc", "abc"], calls  # three draws, none scaffolded
+
+
+def test_a_carrier_render_with_no_pause_falls_back_to_the_bare_line():
+    """Better the old behaviour than a mis-cut clip."""
+    from app.providers.tts.common import render_line
+
+    sr = 22050
+    calls = []
+
+    def render(text, draw=0):
+        calls.append(text)
+        return _tone(1.4, sr)  # one continuous utterance: no pause to cut at
+
+    out = render_line(render, "abc", sr, carrier="CARRIER")
+    assert any(not c.startswith("CARRIER") for c in calls), "never fell back"
+    assert len(out) / sr < 1.5

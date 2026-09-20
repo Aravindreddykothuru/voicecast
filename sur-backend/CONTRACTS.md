@@ -304,17 +304,30 @@ max tempo fell to 1.0, and a two-word line that had scored CER 0.50 scored
 recognises, and scoring it inside the surrounding dub does not rescue it when
 the line has silence on both sides.
 
-**That is the recogniser. There is also a real defect underneath it, and the
-first read of this was wrong.** A carrier-sentence control appeared to show
-the voice was fine -- the same word read back correctly inside a sentence --
-but that control rendered the word *as part of* the sentence, which is not
-the audio the dub ships. Cutting the word back out of the carrier and
-decoding those samples entirely alone settles it: eight short words, 0 of 8
-standalone renders decode correctly, 7 of 8 excised clips do, five of them at
-a *shorter* duration than the standalone they are compared against. SYSPIN
-renders a one-word utterance as a different word (`సరే.` -> `క(్)వే` from both
-Whisper and a Telugu CTC model), and that is issue #5, not a measurement
-artifact.
+**That is the recogniser. There was also a real defect underneath it.**
+SYSPIN renders a line that is the *entire utterance* as a different word.
+Measured over 8 words x 5 draws x 4 layouts, CTC read-back:
+
+| the line is | median CER | intelligible |
+|---|---|---|
+| the whole utterance | 0.775 | 7/40 |
+| first, with a sentence after it | 0.000 | 35/40 |
+| last, after a sentence | 0.000 | 39/40 |
+| in the middle of a sentence | 0.000 | 37/40 |
+
+Not tokenization (the ids for the word are identical in every layout), not
+`trim_silence` (the untrimmed render fails too), not the emotion rate, and
+not duration -- a 380 ms word inside a carrier reads back while a 360 ms one
+alone does not. Any carrier fixes it.
+
+**So a short line is spoken after a carrier sentence and cut back out**
+(`common.render_line`, `Language.tts_carrier`). The clip that ships is still
+only the line at its natural length; the carrier is scaffolding and is never
+heard. On lines the pipeline's own translator produced from real short source
+lines, median of 3 draws: te 5/9 -> 9/9, kn 5/8 -> 8/8, hi 1/8 -> 6/8,
+mr 2/8 -> 6/8, bn 0/8 -> 5/8. Lengthening or padding a render to clear the
+bar remains forbidden -- this changes *how* the engine is driven, not how
+long the output is.
 
 **So the gate stops asking Whisper, and asks something that can answer.**
 Fifteen clips padded with silence exactly as the dub places a line, scored
@@ -328,7 +341,13 @@ Whisper is autoregressive and needs an utterance to condition on; below
 `ASR_FLOOR_MS` (1200 ms) it is not asked. A frame-synchronous CTC recogniser
 has no length prior and reads complete words of 360-1060 ms alone, exact on 7
 of 8, so that is what scores a short line -- against the same 0.35 bar, and
-only for a language with a model in `SHORT_LINE_CTC_MODELS`. Level is checked
+only for a language with a model in `SHORT_LINE_CTC_MODELS`. Five of the
+twelve languages have one (te, hi, kn, mr, bn), each validated by decoding
+known-good long renders in that language first (median CER 0.00-0.12). The
+other seven have no commercially licensed voice, so they cannot be dubbed on
+the default configuration and there is no shipping audio to validate a reader
+against; they stay on the presence check and the gap is asserted in
+`tests/test_short_line_gate.py` rather than assumed closed. Level is checked
 alongside it, because wav2vec2 normalises its input and a clip at -50 dBFS
 decodes perfectly. Where there is no reader, the line falls back to a
 presence check (audible and *pitched*: voiced fraction >= 0.30, against 0.00

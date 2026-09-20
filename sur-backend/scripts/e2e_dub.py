@@ -189,7 +189,19 @@ PRESENCE_MIN_VOICED = 0.30
 # One model per language, because this is a per-language recogniser -- a
 # language with no entry (and a run with no network or no weights) falls back
 # to the presence check and says so in the report rather than passing quietly.
-SHORT_LINE_CTC_MODELS = {"te": "Harveenchadha/vakyansh-wav2vec2-telugu-tem-100"}
+# Validated 2026-09-21 by decoding known-good long SYSPIN renders in each
+# language (median CER: te 0.02, kn 0.00, hi 0.09, mr 0.09, bn 0.12) before
+# trusting the model's verdict on short ones. The seven languages not listed
+# have no commercially licensed voice, so they cannot be dubbed on the default
+# configuration at all and there is no shipping audio to validate a reader
+# against -- they stay on the presence check. See CONTRACTS.md #7.
+SHORT_LINE_CTC_MODELS = {
+    "te": "Harveenchadha/vakyansh-wav2vec2-telugu-tem-100",
+    "hi": "Harveenchadha/vakyansh-wav2vec2-hindi-him-4200",
+    "kn": "Harveenchadha/vakyansh-wav2vec2-kannada-knm-560",
+    "mr": "Harveenchadha/vakyansh-wav2vec2-marathi-mrm-100",
+    "bn": "Harveenchadha/vakyansh-wav2vec2-bengali-bnm-200",
+}
 # The same intelligibility bar every other line is held to.
 SHORT_LINE_MAX_CER = 0.35
 
