@@ -125,13 +125,14 @@ To reproduce an end-to-end run and its checks against a running stack:
 ```
 
 `--asr-check` scores every line of 1.2s or longer against Whisper large-v3
-(corpus CER <= 0.25, each line <= 0.35). Shorter lines are not transcribed:
-measured over fifteen correctly-rendered clips, ten of the twelve under 1.1s
-scored *worse* than the bar on audio that is right, so below `ASR_FLOOR_MS`
-the gate checks the clip is there and is speech (level plus voiced fraction)
-rather than what it says. The report counts those lines and the corpus figure
-names how many lines it covers. It loads ~3.5 GB resident and takes about 45
-minutes on CPU for a 30-second clip. Both workers hold their own models the
+(corpus CER <= 0.25, each line <= 0.35). Whisper cannot read a clip much
+shorter than that -- ten of twelve measured clips under 1.1s scored past the
+bar -- so a shorter line is read by a per-language CTC recogniser instead
+(`SHORT_LINE_CTC_MODELS`; Telugu today), held to the same 0.35 bar plus a
+level check. A language with no reader falls back to a presence check and the
+report says so. Whisper loads ~3.5 GB resident and the whole check takes
+about 45 minutes on CPU for a 30-second clip; the CTC model adds ~1.2 GB on
+first run. Both workers hold their own models the
 whole time they are up, so on a 16 GB box run the check with the workers
 stopped -- the run itself is already finished by then, and it is the second
 form above. Started alongside them, it is killed partway through and the

@@ -1,18 +1,28 @@
-"""The intelligibility gate must not fail a dub for a clip too short to score.
+"""Short lines are verified for *what* was said, not just that sound exists.
 
-`scripts/e2e_dub.py --asr-check` used to hold every line to a CER bar,
-including one-word interjections. On the 2026-09-20 run that failed the dub
-on line 7, "సరే." (*okay*) -- 327ms with silence on both sides -- which
-Whisper transcribed as "క్వే".
+Whisper cannot read a clip much under 1.2s: across fifteen clips, ten of the
+twelve under 1100ms scored past the 0.35 bar. So below ASR_FLOOR_MS the gate
+does not ask Whisper. It asks a frame-synchronous CTC recogniser, which has
+no length prior -- on complete Telugu words decoded entirely alone, 360-1060ms,
+it was exact on 7 of 8, and it rejects silence, noise, a click and a
+substituted word.
 
-The audio was fine. The proof is the pair of fixtures here: the same word,
-same voice, same renderer, read back correctly as "సరే" when it sits inside a
-carrier sentence and as nonsense when it stands alone. Measured across fifteen
-correctly-rendered clips, ten of the twelve under 1100ms failed the 0.35 bar
-while every clip from 1207ms up passed -- so below ASR_FLOOR_MS a line is
-checked for presence instead of transcribed, and above it nothing changes.
+The three fixtures here are the experiment that settled what "too short"
+means, and they are kept because the answer was counter-intuitive:
 
-These tests exist so that floor cannot quietly drop back down.
+  short_line_sare_isolated.wav        the dub's own line 7, 327ms, the
+                                      pipeline's standalone one-word render
+  short_line_sare_excised_from_carrier.wav
+                                      the SAME word cut out of a carrier
+                                      sentence, 380ms, no context around it
+  short_line_sare_in_carrier.wav      that carrier sentence, 1997ms
+
+Both recognisers read the excised 380ms clip correctly and both misread the
+327ms standalone render as "క(్)వే". Same word, same voice, same length,
+opposite results -- so the standalone *render* is degraded, and the clip
+length was never the reason. A gate that waves short lines through on
+"there is speech here" would pass that defect, which is why the CTC check
+exists and why the presence check is only the fallback.
 """
 from __future__ import annotations
 
@@ -27,6 +37,9 @@ SARE_ISOLATED_MS = 327
 SARE_IN_CARRIER_MS = 1997
 SARE_RMS_DB = -18.7
 SARE_VOICED_FRACTION = 0.86
+# CTC CER measured on each fixture against the reference "సరే".
+SARE_ISOLATED_CTC_CER = 0.667      # decoded "కవే" -- the degraded render
+SARE_EXCISED_CTC_CER = 0.0         # decoded "సరే" -- good audio, 380ms
 
 
 def _gate():
@@ -102,3 +115,60 @@ def test_silence_the_same_length_as_the_clip_does_not_pass():
     sr = 22050
     silence = np.zeros(int(sr * SARE_ISOLATED_MS / 1000), dtype="float32")
     assert not gate.presence_verdict(**gate.measure_presence(silence, sr))
+
+
+# --- below the Whisper floor the gate reads the words, not just the level ---
+def test_a_degraded_short_render_is_rejected_even_though_speech_is_present():
+    """The failure this whole check exists for: line 7 measures as perfectly
+    ordinary speech (-18.7 dBFS, voiced 0.86) and is still the wrong word."""
+    gate = _gate()
+    assert gate.presence_verdict(SARE_RMS_DB, SARE_VOICED_FRACTION), "it is audible speech"
+    assert not gate.short_line_verdict(SARE_ISOLATED_CTC_CER, SARE_RMS_DB), "but not the right speech"
+
+
+def test_good_short_audio_passes_below_the_floor():
+    """380ms, well under ASR_FLOOR_MS, read back exactly. Short is not the
+    problem, so short must not be an automatic failure either."""
+    gate = _gate()
+    assert not gate.scores_by_asr(380)
+    assert gate.short_line_verdict(SARE_EXCISED_CTC_CER, -20.0)
+
+
+def test_a_correct_but_inaudible_clip_is_rejected():
+    """wav2vec2 normalises its input, so a clip at -50 dBFS decodes
+    perfectly (measured CER 0.000). Level has to be checked separately."""
+    gate = _gate()
+    assert not gate.short_line_verdict(0.0, -50.0)
+
+
+def test_an_unsupported_language_falls_back_rather_than_passing():
+    gate = _gate()
+    assert gate.ctc_reader("hi") is None
+    assert "te" in gate.SHORT_LINE_CTC_MODELS
+
+
+def test_the_ctc_reader_agrees_with_the_measurements_this_gate_was_tuned_on():
+    """The end-to-end proof, on the committed audio. Needs the CTC weights,
+    so it is skipped where they are not available -- the pure-logic tests
+    above still pin the thresholds."""
+    pytest.importorskip("soundfile")
+    pytest.importorskip("librosa")
+    pytest.importorskip("transformers")
+    import librosa
+    import soundfile as sf
+
+    gate = _gate()
+    read = gate.ctc_reader("te")
+    if read is None:
+        pytest.skip("CTC weights unavailable")
+
+    def decode(name):
+        wav, sr = sf.read(FIXTURES / name, dtype="float32")
+        if sr != 16000:
+            wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
+        return read(wav)
+
+    good = gate._cer("సరే", decode("short_line_sare_excised_from_carrier.wav"))
+    bad = gate._cer("సరే", decode("short_line_sare_isolated.wav"))
+    assert good <= gate.SHORT_LINE_MAX_CER, "380ms of good audio must read back"
+    assert bad > gate.SHORT_LINE_MAX_CER, "the degraded render must not"

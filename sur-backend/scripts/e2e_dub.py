@@ -177,6 +177,50 @@ PRESENCE_MIN_RMS_DB = -45.0
 PRESENCE_MIN_VOICED = 0.30
 
 
+# Below the Whisper floor a frame-synchronous CTC recogniser still reads the
+# line, so the gate asks *what* was said rather than only whether something
+# was. Whisper is autoregressive and needs an utterance to condition on; CTC
+# labels frames and has no length prior, which is exactly the difference that
+# matters here. Measured 2026-09-20 on complete Telugu words decoded entirely
+# alone, 360-1060ms: 7 of 8 exact, the eighth at CER 0.286. The same model
+# rejects silence, white noise and a click (empty decode, CER 1.0) and a
+# substituted word (1.33).
+#
+# One model per language, because this is a per-language recogniser -- a
+# language with no entry (and a run with no network or no weights) falls back
+# to the presence check and says so in the report rather than passing quietly.
+SHORT_LINE_CTC_MODELS = {"te": "Harveenchadha/vakyansh-wav2vec2-telugu-tem-100"}
+# The same intelligibility bar every other line is held to.
+SHORT_LINE_MAX_CER = 0.35
+
+
+def ctc_reader(target: str):
+    """A callable(wav16k) -> text for `target`, or None if unavailable.
+
+    Unavailable is a real outcome, not an error: the check degrades to
+    presence and the report records which lines that happened to."""
+    model_id = SHORT_LINE_CTC_MODELS.get(target)
+    if not model_id:
+        return None
+    try:
+        import torch
+        from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+
+        proc = Wav2Vec2Processor.from_pretrained(model_id)
+        model = Wav2Vec2ForCTC.from_pretrained(model_id).eval()
+    except Exception as e:  # noqa: BLE001 -- no weights, no network, no torch
+        print(f"   (short-line CTC reader unavailable: {e})", flush=True)
+        return None
+
+    def read(wav) -> str:
+        x = proc(wav, sampling_rate=16000, return_tensors="pt").input_values
+        with torch.inference_mode():
+            ids = model(x).logits.argmax(-1)
+        return proc.batch_decode(ids)[0].replace("<s>", "").strip()
+
+    return read
+
+
 def scores_by_asr(fitted_ms: int) -> bool:
     """Whether this clip is long enough for its CER to mean anything."""
     return fitted_ms >= ASR_FLOOR_MS
@@ -185,6 +229,13 @@ def scores_by_asr(fitted_ms: int) -> bool:
 def presence_verdict(rms_db: float, voiced_fraction: float) -> bool:
     """Speech is here: audible, and pitched rather than merely audible."""
     return rms_db > PRESENCE_MIN_RMS_DB and voiced_fraction >= PRESENCE_MIN_VOICED
+
+
+def short_line_verdict(cer: float, rms_db: float) -> bool:
+    """A short line passes on *both* counts: the recogniser read the words
+    back, and the clip is loud enough to hear. Both are needed -- wav2vec2
+    normalises its input, so a clip at -50 dBFS decodes perfectly."""
+    return rms_db > PRESENCE_MIN_RMS_DB and cer <= SHORT_LINE_MAX_CER
 
 
 def measure_presence(wav, sr: int) -> dict:
@@ -248,6 +299,7 @@ def verify(result: dict, out: str, source_duration_s: float | None, asr_check: b
 
         target = result["project"]["target_languages"][0]
         model = WhisperModel("large-v3", device="cpu", compute_type="int8")
+        read_short = ctc_reader(target)
         with tempfile.TemporaryDirectory() as tmp:
             wav = os.path.join(tmp, "dub16k.wav")
             subprocess.run([ffmpeg, "-y", "-v", "error", "-i", dub, "-ac", "1", "-ar", "16000", wav], check=True)
@@ -260,25 +312,42 @@ def verify(result: dict, out: str, source_duration_s: float | None, asr_check: b
         lines, dist, chars = [], 0.0, 0
         for i, s in enumerate(placed):
             ref = s["translated_text"]
+            # The source had a numeral only if the pipeline spelled one out.
+            score = _cer_spoken_numerals if any(ch.isdigit() for ch in (s["source_text"] or "")) else _cer
             fitted_ms = fits[s["id"]]["fitted_ms"]
             start_ms, end_ms = s["start_ms"], s["start_ms"] + fitted_ms
             if not scores_by_asr(fitted_ms):
-                # Too short to transcribe meaningfully -- check it is there.
+                # Whisper cannot read a clip this short. A CTC recogniser can,
+                # so ask it what was said; fall back to presence only when
+                # there is no reader for this language.
                 clip = audio[int(start_ms / 1000 * sr):min(int(end_ms / 1000 * sr), len(audio))]
-                row = {"index": s["index"], "words": len(ref.split()), "scored": "presence",
+                row = {"index": s["index"], "words": len(ref.split()),
                        "fitted_ms": fitted_ms, "ref": ref, **measure_presence(clip, sr)}
-                row["ok"] = presence_verdict(row["rms_db"], row["voiced_fraction"])
+                # Level is checked either way: wav2vec2 normalises its input,
+                # so a clip at -50 dBFS still decodes perfectly. CTC answers
+                # "the right words", RMS answers "loud enough to hear".
+                hyp = read_short(clip) if read_short else None
+                if hyp is None:
+                    row["scored"] = "presence"
+                    row["ok"] = presence_verdict(row["rms_db"], row["voiced_fraction"])
+                    detail = (f"presence only: {row['rms_db']} dBFS, "
+                              f"voiced {row['voiced_fraction']:.2f}")
+                else:
+                    row["scored"] = "ctc"
+                    row["hyp"] = hyp
+                    row["cer"] = round(score(ref, hyp), 3)
+                    row["ok"] = short_line_verdict(row["cer"], row["rms_db"])
+                    detail = f"CTC CER {row['cer']:.3f}, {row['rms_db']} dBFS"
                 lines.append(row)
-                print(f"   line {s['index']} {fitted_ms}ms < {ASR_FLOOR_MS}ms floor -- presence check "
-                      f"{'ok' if row['ok'] else 'FAILED'}: {row['rms_db']} dBFS, "
-                      f"voiced {row['voiced_fraction']:.2f}", flush=True)
+                print(f"   line {s['index']} {fitted_ms}ms < {ASR_FLOOR_MS}ms Whisper floor -- "
+                      f"{'ok' if row['ok'] else 'FAILED'} ({detail})", flush=True)
                 print(f"     ref: {ref}", flush=True)
+                if hyp is not None:
+                    print(f"     hyp: {hyp}", flush=True)
                 continue
             a = max(int((start_ms - 300) / 1000 * sr), 0)
             b = int((end_ms + 300) / 1000 * sr)
             hyp = " ".join(x.text.strip() for x in model.transcribe(audio[a:b], language=target, beam_size=5)[0])
-            # The source had a numeral only if the pipeline spelled one out.
-            score = _cer_spoken_numerals if any(ch.isdigit() for ch in (s["source_text"] or "")) else _cer
             cer, n = score(ref, hyp), len(_norm(ref))
             dist, chars = dist + cer * n, chars + n
             row = {"index": s["index"], "words": len(ref.split()), "scored": "asr",
@@ -311,6 +380,7 @@ def verify(result: dict, out: str, source_duration_s: float | None, asr_check: b
             print(f"   line {s['index']} CER {cer:.3f}" + (f" (in context {row['context_cer']:.3f})" if "context_cer" in row else "")
                   + f"\n     ref: {ref}\n     hyp: {hyp}", flush=True)
         scored = [r for r in lines if r["scored"] == "asr"]
+        by_ctc = [r for r in lines if r["scored"] == "ctc"]
         by_presence = [r for r in lines if r["scored"] == "presence"]
         check("dub_intelligible", dist / max(chars, 1) <= 0.25,
               f"corpus CER {dist / max(chars, 1):.3f} over {len(scored)} of {len(lines)} lines")
@@ -318,8 +388,11 @@ def verify(result: dict, out: str, source_duration_s: float | None, asr_check: b
               [(r["index"], r["cer"]) for r in scored if r["words"] >= 3])
         check("short_lines_intelligible", all(r["context_cer"] <= 0.35 for r in scored if r["words"] < 3),
               [(r["index"], r["cer"], r["context_cer"]) for r in scored if r["words"] < 3])
-        # Lines below the floor are held to presence, and counted, so that
-        # "not scored" can never quietly become "not checked".
+        # Below the Whisper floor: read by CTC where a reader exists, and
+        # counted either way, so "not scored by Whisper" cannot quietly
+        # become "not checked".
+        check("short_clips_intelligible", all(r["ok"] for r in by_ctc),
+              [(r["index"], r["fitted_ms"], r["cer"], r["rms_db"]) for r in by_ctc])
         check("short_clips_present", all(r["ok"] for r in by_presence),
               [(r["index"], r["fitted_ms"], r["rms_db"], r["voiced_fraction"]) for r in by_presence])
         report["lines"] = lines

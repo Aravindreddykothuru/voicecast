@@ -302,30 +302,49 @@ keeping the median removed both: that line renders at 0.33-0.44 s, the run's
 max tempo fell to 1.0, and a two-word line that had scored CER 0.50 scored
 0.083. A 0.33 s interjection still sits below what Whisper
 recognises, and scoring it inside the surrounding dub does not rescue it when
-the line has silence on both sides -- there is no adjacent speech inside its
-own window to anchor on. Controlled on the 2026-09-20 run: the voice renders
-"సరే." (*okay*) at 0.37 s and Whisper reads it as "వే", but the same word from
-the same voice inside a carrier sentence ("సరే. అది భయంకరమైన వార్త.") is read
-back correctly as "సరే". The clip in the dub is present, deterministic, at
--18.7 dBFS and never time-compressed.
+the line has silence on both sides.
 
-**So the gate stops asking.** Fifteen correctly-rendered clips, each padded
-with silence exactly as the dub places a line, scored the way the gate scores
-a short line:
+**That is the recogniser. There is also a real defect underneath it, and the
+first read of this was wrong.** A carrier-sentence control appeared to show
+the voice was fine -- the same word read back correctly inside a sentence --
+but that control rendered the word *as part of* the sentence, which is not
+the audio the dub ships. Cutting the word back out of the carrier and
+decoding those samples entirely alone settles it: eight short words, 0 of 8
+standalone renders decode correctly, 7 of 8 excised clips do, five of them at
+a *shorter* duration than the standalone they are compared against. SYSPIN
+renders a one-word utterance as a different word (`సరే.` -> `క(్)వే` from both
+Whisper and a Telugu CTC model), and that is issue #5, not a measurement
+artifact.
+
+**So the gate stops asking Whisper, and asks something that can answer.**
+Fifteen clips padded with silence exactly as the dub places a line, scored
+the way the gate scores a short line:
 
 | ms | 372 | 418 | 511 | 534 | 627 | 673 | 766 | 789 | 998 | 1022 | 1022 | 1091 | 1207 | 1231 | 1602 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | CER | 1.00 | 0.50 | 0.25 | 1.33 | 0.43 | 0.83 | 0.80 | 0.50 | 0.17 | 0.40 | 0.86 | 0.75 | **0.08** | **0.25** | **0.31** |
 
-Ten of the twelve under 1100 ms fail the 0.35 bar on audio that is correct;
-everything from 1207 ms up passes. Below `ASR_FLOOR_MS` (1200 ms) a line is
-therefore not transcribed at all -- it is held to a presence check instead
-(audible, and *pitched*: voiced fraction ≥ 0.30, where real speech measures
-0.44-0.92 and silence, white noise and a click all measure 0.00). Lines below
-the floor are counted in the report, and the corpus CER says how many of the
-run's lines it covers, so "not scored" cannot quietly become "not checked".
-Lengthening a render to clear the bar instead would be fitting the voice to
-Whisper, and is not allowed.
+Whisper is autoregressive and needs an utterance to condition on; below
+`ASR_FLOOR_MS` (1200 ms) it is not asked. A frame-synchronous CTC recogniser
+has no length prior and reads complete words of 360-1060 ms alone, exact on 7
+of 8, so that is what scores a short line -- against the same 0.35 bar, and
+only for a language with a model in `SHORT_LINE_CTC_MODELS`. Level is checked
+alongside it, because wav2vec2 normalises its input and a clip at -50 dBFS
+decodes perfectly. Where there is no reader, the line falls back to a
+presence check (audible and *pitched*: voiced fraction >= 0.30, against 0.00
+for silence, white noise and a click) and the report records that it was not
+read.
+
+Two Whisper-side alternatives were measured and rejected. `initial_prompt`
+biasing leaks: a wrong prompt against a degraded clip produced the prompt's
+own words (`ఆగు` -> `తెలియదు`), which would manufacture passes. `avg_logprob`
+and `no_speech_prob` do not separate -- a bad clip scored -0.218 against a
+good one at -0.272, and a good clip's `no_speech_prob` was 0.65 against a bad
+one's 0.38.
+
+Lengthening a render to clear the bar remains not allowed; rendering a short
+line in a carrier and excising it (#5) is a different thing, because the clip
+that ships is still the line at its natural length.
 
 **Enforced by.**
 - `tests/test_run_lifecycle.py`: license filtering, registry refusal,
