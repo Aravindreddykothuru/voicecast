@@ -74,6 +74,33 @@ def trim_silence(wav, sr: int, top_db: float = 40.0):
     return trimmed if len(trimmed) > pad else wav
 
 
+# VITS predicts each token's duration stochastically, and the relative spread
+# explodes as a line gets shorter: ten draws of the one-word Telugu line
+# "sare" measured 0.33-0.84s (x2.6), while a 19-character line stayed within
+# x1.18. The end-to-end run drew 0.21s for that word and Whisper read it back
+# as a different word entirely (CER 1.33) -- the rushed tail of the
+# distribution is unintelligible, not merely brisk. Short lines are therefore
+# drawn a few times and the median kept: milliseconds on the cheapest lines in
+# a run, and it drops the rushed draw without chasing the drawn-out one. Long
+# lines are left alone -- they are stable, and they are the expensive ones.
+SHORT_LINE_CHARS = 12
+SHORT_LINE_DRAWS = 3
+
+
+def render_stable(draw, text: str, sr: int):
+    """Render `text` to a trimmed clip, resampling the duration head on short
+    lines.
+
+    `draw(i)` renders draw number `i`. It must be deterministic in `i` -- the
+    same line has to give the same clip every time, so that re-rendering one
+    unchanged segment does not change how it sounds (CONTRACTS.md #7)."""
+    first = trim_silence(draw(0), sr)
+    if len(text) > SHORT_LINE_CHARS:
+        return first
+    clips = sorted([first] + [trim_silence(draw(i), sr) for i in range(1, SHORT_LINE_DRAWS)], key=len)
+    return clips[len(clips) // 2]
+
+
 def normalize(wav, gain_db: float):
     """Consistent loudness across segments (and across voices, after voice
     conversion), then the emotion's relative gain, with a peak limit."""

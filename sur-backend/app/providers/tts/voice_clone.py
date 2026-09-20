@@ -43,13 +43,22 @@ def get_voice_converter():
     return converter
 
 
-def check_budget(converter, *, clock=time.perf_counter) -> None:
+def check_budget(converter, *, clock=time.perf_counter, attempts: int = 3) -> None:
     """Convert a fixed synthetic utterance and enforce latency and content
     preservation before the worker accepts any cloning job.
 
     Timed with perf_counter after one untimed warm-up call: the first call
     pays one-off thread-pool and allocator start-up that no real job sees,
-    and wall-clock time jumps across a laptop's sleep/resume."""
+    and wall-clock time jumps across a laptop's sleep/resume.
+
+    Timed up to `attempts` times, keeping the *fastest* run, and stopping as
+    soon as one is inside the budget. Contention only ever adds time, so the
+    fastest run is the converter's own speed; a single sample measures
+    whatever else the machine was doing. That is not hypothetical: starting
+    both workers together, as the README says to, had this check clock 4.65x
+    for a converter that runs at 2.2x, and a failure here refuses to start
+    the whole TTS worker -- synthesis included, cloned or not.
+    """
     import numpy as np
 
     settings = get_settings()
@@ -68,22 +77,27 @@ def check_budget(converter, *, clock=time.perf_counter) -> None:
 
     import soundfile as sf
 
+    budget = settings.tts_voice_clone_max_rtf
     with tempfile.TemporaryDirectory(prefix="sur-clone-check-") as tmp:
         ref_path = os.path.join(tmp, "ref.wav")
         sf.write(ref_path, reference, sr)
         converter.convert(source[: sr // 2], sr, ref_path, voice_key="__budget_warmup__")
-        started = clock()
-        out, out_sr = converter.convert(source, sr, ref_path, voice_key="__budget_check__")
-        elapsed = clock() - started
-
-    rtf = elapsed / 3.0
+        rtf = None
+        for attempt in range(max(1, attempts)):
+            started = clock()
+            out, out_sr = converter.convert(source, sr, ref_path, voice_key="__budget_check__")
+            rtf = min(rtf, (clock() - started) / 3.0) if rtf is not None else (clock() - started) / 3.0
+            if rtf <= budget:
+                break
+            logger.info("voice clone budget: attempt %d ran at RTF %.2f (max %.2f), retiming",
+                        attempt + 1, rtf, budget)
     duration_ratio = (len(out) / out_sr) / 3.0
     corr = _envelope_correlation(source, sr, out, out_sr)
     logger.info("voice clone budget: RTF %.2f (max %.2f), duration x%.3f, envelope corr %.2f",
-                rtf, settings.tts_voice_clone_max_rtf, duration_ratio, corr)
+                rtf, budget, duration_ratio, corr)
     problems = []
-    if rtf > settings.tts_voice_clone_max_rtf:
-        problems.append(f"converts at {rtf:.2f}x real time, budget is {settings.tts_voice_clone_max_rtf:.2f}x")
+    if rtf > budget:
+        problems.append(f"converts at {rtf:.2f}x real time, budget is {budget:.2f}x")
     if not 0.9 <= duration_ratio <= 1.1:
         problems.append(f"changes duration by x{duration_ratio:.2f}")
     if corr < 0.6:

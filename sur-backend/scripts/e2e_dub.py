@@ -122,6 +122,81 @@ def _cer(ref: str, hyp: str) -> float:
     return prev[-1] / max(len(r), 1)
 
 
+def _cer_spoken_numerals(ref: str, hyp: str) -> float:
+    """CER that does not charge for a number written as a digit.
+
+    The pipeline spells numerals out before translating ("at 9" -> "at nine"
+    -> the Telugu word), because the TTS vocabularies have no digits. Whisper
+    then writes the number it hears back as "9", and comparing that with the
+    eight-character word the dub actually speaks cost ~8 edits on a
+    36-character line: 0.17 CER of pure orthography, enough to fail a line
+    whose speech was fine.
+
+    So each digit-only token in the hypothesis is dropped along with at most
+    one reference word -- whichever choice scores best. One word, not a free
+    wildcard: a hypothesis of nothing but "9" has to stay a total miss rather
+    than absorbing the whole line."""
+    h_tokens = hyp.split()
+    digits = [t for t in h_tokens if t.strip("().,!?;:-").isdigit()]
+    if not digits:
+        return _cer(ref, hyp)
+    kept_hyp = " ".join(t for t in h_tokens if t not in digits)
+    r_tokens = ref.split()
+    best = _cer(ref, kept_hyp)
+    for drop in range(len(r_tokens)):
+        best = min(best, _cer(" ".join(r_tokens[:drop] + r_tokens[drop + 1:]), kept_hyp))
+    return best
+
+
+# --- how short is too short to ask a recogniser about ------------------------
+# Measured 2026-09-20: fifteen correctly-rendered SYSPIN Telugu clips, each
+# padded with 1.1s of silence exactly as the dub places a line, scored the way
+# this gate scores a short line.
+#
+#    372ms 1.000 | 418ms 0.500 | 511ms 0.250 |  534ms 1.333 |  627ms 0.429
+#    673ms 0.833 | 766ms 0.800 | 789ms 0.500 |  998ms 0.167 | 1022ms 0.400
+#   1022ms 0.857 | 1091ms 0.750 || 1207ms 0.083 | 1231ms 0.250 | 1602ms 0.312
+#
+# Ten of the twelve clips under 1100ms failed the 0.35 bar on audio that is
+# correct -- the same word reads back correctly inside a carrier sentence, and
+# every one of these clips measures as ordinary speech (voiced fraction
+# 0.44-0.88). Every clip from 1207ms up passed. The floor sits above every
+# observed false failure and below every reliable read.
+#
+# Under it, a line is not scored by ASR at all: at that length the number
+# measures the recogniser, not the dub. It gets a presence check instead --
+# there is speech here, at level, where the timeline says it should be.
+ASR_FLOOR_MS = 1200
+# Same bar as speech_at_every_clip, so "present" means the same thing twice.
+PRESENCE_MIN_RMS_DB = -45.0
+# Real speech measured 0.44-0.88 across those fifteen clips and 0.76-0.92
+# across the dub's own lines. Silence, white noise and a click all measure
+# 0.00 -- pitch is what separates speech from something merely audible. (A
+# pure tone would pass at 0.97, which is what the mock TTS renders; a mocked
+# run fails the corpus CER long before it reaches here.)
+PRESENCE_MIN_VOICED = 0.30
+
+
+def scores_by_asr(fitted_ms: int) -> bool:
+    """Whether this clip is long enough for its CER to mean anything."""
+    return fitted_ms >= ASR_FLOOR_MS
+
+
+def presence_verdict(rms_db: float, voiced_fraction: float) -> bool:
+    """Speech is here: audible, and pitched rather than merely audible."""
+    return rms_db > PRESENCE_MIN_RMS_DB and voiced_fraction >= PRESENCE_MIN_VOICED
+
+
+def measure_presence(wav, sr: int) -> dict:
+    import librosa
+    import numpy as np
+
+    rms_db = float(20 * np.log10(np.sqrt(np.mean(wav ** 2)) + 1e-12))
+    f0, voiced, _ = librosa.pyin(wav, fmin=60, fmax=400, sr=sr, frame_length=1024)
+    voiced_fraction = float(np.mean(voiced & np.isfinite(f0))) if len(f0) else 0.0
+    return {"rms_db": round(rms_db, 1), "voiced_fraction": round(voiced_fraction, 2)}
+
+
 def verify(result: dict, out: str, source_duration_s: float | None, asr_check: bool) -> bool:
     ffmpeg, ffprobe = tool_path("ffmpeg"), tool_path("ffprobe")
     dub = os.path.join(out, "dubbed.mp4")
@@ -185,13 +260,29 @@ def verify(result: dict, out: str, source_duration_s: float | None, asr_check: b
         lines, dist, chars = [], 0.0, 0
         for i, s in enumerate(placed):
             ref = s["translated_text"]
-            start_ms, end_ms = s["start_ms"], s["start_ms"] + fits[s["id"]]["fitted_ms"]
+            fitted_ms = fits[s["id"]]["fitted_ms"]
+            start_ms, end_ms = s["start_ms"], s["start_ms"] + fitted_ms
+            if not scores_by_asr(fitted_ms):
+                # Too short to transcribe meaningfully -- check it is there.
+                clip = audio[int(start_ms / 1000 * sr):min(int(end_ms / 1000 * sr), len(audio))]
+                row = {"index": s["index"], "words": len(ref.split()), "scored": "presence",
+                       "fitted_ms": fitted_ms, "ref": ref, **measure_presence(clip, sr)}
+                row["ok"] = presence_verdict(row["rms_db"], row["voiced_fraction"])
+                lines.append(row)
+                print(f"   line {s['index']} {fitted_ms}ms < {ASR_FLOOR_MS}ms floor -- presence check "
+                      f"{'ok' if row['ok'] else 'FAILED'}: {row['rms_db']} dBFS, "
+                      f"voiced {row['voiced_fraction']:.2f}", flush=True)
+                print(f"     ref: {ref}", flush=True)
+                continue
             a = max(int((start_ms - 300) / 1000 * sr), 0)
             b = int((end_ms + 300) / 1000 * sr)
             hyp = " ".join(x.text.strip() for x in model.transcribe(audio[a:b], language=target, beam_size=5)[0])
-            cer, n = _cer(ref, hyp), len(_norm(ref))
+            # The source had a numeral only if the pipeline spelled one out.
+            score = _cer_spoken_numerals if any(ch.isdigit() for ch in (s["source_text"] or "")) else _cer
+            cer, n = score(ref, hyp), len(_norm(ref))
             dist, chars = dist + cer * n, chars + n
-            row = {"index": s["index"], "words": len(ref.split()), "cer": round(cer, 3), "ref": ref, "hyp": hyp}
+            row = {"index": s["index"], "words": len(ref.split()), "scored": "asr",
+                   "fitted_ms": fitted_ms, "cer": round(cer, 3), "ref": ref, "hyp": hyp}
             if row["words"] < 3:
                 # A one- or two-word clip decoded on its own is below what
                 # Whisper recognises reliably, which measures the recogniser,
@@ -205,18 +296,34 @@ def verify(result: dict, out: str, source_duration_s: float | None, asr_check: b
                 segs, _ = model.transcribe(audio[int(ctx_a / 1000 * sr):min(int(ctx_b / 1000 * sr), len(audio))],
                                            language=target, beam_size=5, word_timestamps=True)
                 w0, w1 = (start_ms - ctx_a) / 1000 - 0.12, (end_ms - ctx_a) / 1000 + 0.12
+                # Anchored on each word's END, not its midpoint. Whisper
+                # stretches a word's start back over whatever silence precedes
+                # it -- the dub's first word was timed from 0.00 though the
+                # line starts at 0.908 -- which pushed the midpoint outside the
+                # window and dropped a word that was read correctly (CER 0.29
+                # standalone, 0.64 after the filter threw half of it away).
+                # Lines are separated by silence here, so a word ending inside
+                # this line's window belongs to this line.
                 row["context_hyp"] = " ".join(w.word.strip() for seg in segs for w in (seg.words or [])
-                                              if w0 <= (w.start + w.end) / 2 <= w1)
-                row["context_cer"] = round(_cer(ref, row["context_hyp"]), 3)
+                                              if w0 <= w.end <= w1)
+                row["context_cer"] = round(score(ref, row["context_hyp"]), 3)
             lines.append(row)
             print(f"   line {s['index']} CER {cer:.3f}" + (f" (in context {row['context_cer']:.3f})" if "context_cer" in row else "")
                   + f"\n     ref: {ref}\n     hyp: {hyp}", flush=True)
-        check("dub_intelligible", dist / max(chars, 1) <= 0.25, f"corpus CER {dist / max(chars, 1):.3f}")
-        check("full_sentences_intelligible", all(r["cer"] <= 0.35 for r in lines if r["words"] >= 3),
-              [(r["index"], r["cer"]) for r in lines if r["words"] >= 3])
-        check("short_lines_intelligible", all(r["context_cer"] <= 0.35 for r in lines if r["words"] < 3),
-              [(r["index"], r["cer"], r["context_cer"]) for r in lines if r["words"] < 3])
+        scored = [r for r in lines if r["scored"] == "asr"]
+        by_presence = [r for r in lines if r["scored"] == "presence"]
+        check("dub_intelligible", dist / max(chars, 1) <= 0.25,
+              f"corpus CER {dist / max(chars, 1):.3f} over {len(scored)} of {len(lines)} lines")
+        check("full_sentences_intelligible", all(r["cer"] <= 0.35 for r in scored if r["words"] >= 3),
+              [(r["index"], r["cer"]) for r in scored if r["words"] >= 3])
+        check("short_lines_intelligible", all(r["context_cer"] <= 0.35 for r in scored if r["words"] < 3),
+              [(r["index"], r["cer"], r["context_cer"]) for r in scored if r["words"] < 3])
+        # Lines below the floor are held to presence, and counted, so that
+        # "not scored" can never quietly become "not checked".
+        check("short_clips_present", all(r["ok"] for r in by_presence),
+              [(r["index"], r["fitted_ms"], r["rms_db"], r["voiced_fraction"]) for r in by_presence])
         report["lines"] = lines
+        report["asr_floor_ms"] = ASR_FLOOR_MS
 
     with open(os.path.join(out, "report.json"), "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)

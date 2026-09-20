@@ -17,6 +17,7 @@ import pytest
 from app.config import get_settings
 from app.pipeline.timeline import MAX_TEMPO, TimelineSlot, plan_timeline
 from app.providers.base import EmotionResult, SynthesisRequest
+from app.providers.tts.common import render_stable
 
 
 def _tone(seconds: float, sr: int) -> np.ndarray:
@@ -34,7 +35,7 @@ def _duration_ms(result) -> int:
 class _FakeSyspinVoice:
     repo_id = "fake/syspin"
 
-    def render(self, text: str) -> np.ndarray:
+    def render(self, text: str, draw: int = 0) -> np.ndarray:
         return _tone(1.0, 22050)
 
 
@@ -122,3 +123,53 @@ def test_the_mux_tempo_is_the_whole_speed_up(syspin):
     [planned] = plan_timeline([TimelineSlot("s", 0, 400, clip_ms)], 560)
     assert planned.tempo == MAX_TEMPO
     assert planned.fitted_ms == pytest.approx(clip_ms / MAX_TEMPO, abs=1)
+
+
+# --- short lines: the duration head is sampled, not trusted once -------------
+def test_a_short_line_takes_the_median_of_several_draws():
+    """VITS draws each token's duration, and on a one-word line the draws
+    spread 2.6x. The run that drew 0.21s for a word that averages 0.45s was
+    read back as a different word (CONTRACTS.md #7), so short lines are drawn
+    a few times and the middle one kept."""
+    from app.providers.tts.common import trim_silence
+
+    drawn = [0.21, 0.45, 0.83]
+
+    def draw(i):
+        return _tone(drawn[i], 22050)
+
+    out = render_stable(draw, "abc", 22050)
+    assert abs(len(out) / 22050 - len(trim_silence(_tone(0.45, 22050), 22050)) / 22050) < 1e-6
+
+
+def test_a_long_line_is_rendered_once():
+    """Long lines are stable draw to draw and are the expensive ones."""
+    calls = []
+
+    def draw(i):
+        calls.append(i)
+        return _tone(3.0, 22050)
+
+    render_stable(draw, "a line well past the short-line threshold", 22050)
+    assert calls == [0]
+
+
+def test_the_same_line_always_renders_the_same_way():
+    """/regenerate re-renders one unchanged segment; it must not come back
+    sounding different, and each draw of a short line must be a *different*
+    sample. MMS seeded per text -- SYSPIN did not, until it did."""
+    import torch
+
+    from app.providers.tts.syspin_provider import SyspinVoice
+
+    voice = SyspinVoice.__new__(SyspinVoice)
+    voice.repo_id = "fake/syspin"
+    voice.letters = set("abc ")
+    voice.tokenizer = type("T", (), {"text_to_ids": staticmethod(lambda t: [1, 2, 3])})()
+    # Draws its output from the global RNG, so the seed decides the waveform.
+    voice.net = lambda ids: torch.randn(1, 1, 2048)
+
+    first = voice.render("abc")
+    assert np.array_equal(first, voice.render("abc")), "same text must re-render identically"
+    assert not np.array_equal(first, voice.render("abc", draw=1)), "each draw must be its own sample"
+    assert not np.array_equal(first, voice.render("cba")), "different text, different render"

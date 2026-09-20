@@ -124,24 +124,46 @@ To reproduce an end-to-end run and its checks against a running stack:
 .\.venv\Scripts\python.exe scripts\e2e_dub.py --project <id> --asr-check   # verify an existing run
 ```
 
-**Voice cloning** (`clone_voice`, enabled with `TTS_VOICE_CLONE=true`) keeps
-CosyVoice2, for the part it can do: *voice conversion*. It re-voices the MMS
-speech as the original speaker. The reference is built once per speaker from
+`--asr-check` scores every line of 1.2s or longer against Whisper large-v3
+(corpus CER <= 0.25, each line <= 0.35). Shorter lines are not transcribed:
+measured over fifteen correctly-rendered clips, ten of the twelve under 1.1s
+scored *worse* than the bar on audio that is right, so below `ASR_FLOOR_MS`
+the gate checks the clip is there and is speech (level plus voiced fraction)
+rather than what it says. The report counts those lines and the corpus figure
+names how many lines it covers. It loads ~3.5 GB resident and takes about 45
+minutes on CPU for a 30-second clip. Both workers hold their own models the
+whole time they are up, so on a 16 GB box run the check with the workers
+stopped -- the run itself is already finished by then, and it is the second
+form above. Started alongside them, it is killed partway through and the
+script dies without a verdict.
+
+**Voice cloning** (`clone_voice`, enabled with `TTS_VOICE_CLONE=true`) is
+*voice conversion*: the rendered speech is re-voiced as the original speaker,
+leaving the words to the TTS engine. `TTS_VOICE_CLONE_ENGINE` picks the
+converter -- `openvoice` (OpenVoice V2, MIT) by default, `cosyvoice`
+(CosyVoice2 VC) for comparison. The reference is built once per speaker from
 their longest lines (~12s) and stored on the speaker row, so every line a
 speaker says converts toward the same voice -- per-segment slices (0.5s for a
 one-word line) measurably hurt intelligibility. VC has no text model, so the
-language limitation doesn't apply, but it is not free: on the end-to-end test
-clip the same Telugu dub read back at corpus CER 0.16 unconverted and 0.24
-cloned, with the worst 3-word line at 0.44. It is also roughly 10x slower than
-real time on CPU (12.5 minutes for 30 seconds of speech). Offer it as the
-opt-in it is. `/api/capabilities` publishes `voice_clone_available`, and
+language limitation doesn't apply, but it is not free. Measured on the
+end-to-end clip with the older MMS + CosyVoice2 pair, the same Telugu dub read
+back at corpus CER 0.16 unconverted and 0.24 cloned, worst 3-word line 0.44;
+the current SYSPIN + OpenVoice pair has not been scored cloned. Converter
+speed is the part that is bounded in code: OpenVoice V2 converts at 1.9-3.3x
+real time on an 8-core CPU, CosyVoice2 VC at roughly 25x (12.5 minutes for 30
+seconds of speech). `TTS_VOICE_CLONE_MAX_RTF` (default 4.0) is checked at
+worker startup against the converter actually configured, and a converter
+outside it refuses to start the TTS worker -- so keep it above what your
+hardware does, or cloning takes plain synthesis down with it. Offer cloning as
+the opt-in it is. `/api/capabilities` publishes `voice_clone_available`, and
 `/process` refuses `clone_voice` when it's off.
 
 **TTS runs in its own worker, deliberately.** CosyVoice2 is installed from
 source and pins `torch==2.3.1`; every other real provider above pins
 `torch==2.4.1`. The two cannot share a venv or a Docker image without one
 silently breaking the other (this is not theoretical -- it's why the split
-exists). MMS-TTS runs in the TTS venv too. Locally, install
+exists). SYSPIN, MMS-TTS and the OpenVoice converter run in the TTS venv too.
+Locally, install
 `requirements-ml.txt` into `.venv` and `requirements-tts.txt` + CosyVoice
 into a second, separate `.venv-tts`, and run the TTS worker from that
 interpreter consuming only `q.synthesize`:
@@ -156,16 +178,21 @@ builds Matcha-TTS's Cython extension, and consumes only `q.synthesize`,
 while `worker-gpu` handles every other GPU-bound stage. Model weights are
 not baked into either image; download them once into the `models-data`
 volume with `.tools/download_cosyvoice.py` (or `huggingface-cli download
-FunAudioLLM/CosyVoice2-0.5B`) before setting `TTS_PROVIDER=real`. See
+FunAudioLLM/CosyVoice2-0.5B`) before setting `TTS_PROVIDER=real`. The
+SYSPIN voices and the OpenVoice V2 converter are ungated and fetched from
+the Hub on first load (`SYSPIN/tts_vits_coquiai_*`, `myshell-ai/OpenVoiceV2`
+`converter/*`); after that, `-Offline` loads them from the cache. See
 CONTRACTS.md #1.
 
+**Licensing.** The default engine, SYSPIN (CC-BY-4.0), may be used
+commercially **with attribution**. MMS-TTS (CC-BY-NC-4.0) may not, and is
+refused while `TTS_REQUIRE_COMMERCIAL_LICENSE=true`. The OpenVoice V2
+converter is MIT. `ai4bharat/indic-parler-tts` and IndicF5 were evaluated
+as replacements but are gated on the Hub and could not be loaded here.
+
 **Before shipping voice cloning or any cloned-voice output to real users**,
-read the PRD's risk list — consent capture, audio watermarking, and
-confirming commercial-use licensing on the TTS models are explicit
-open items, not implementation details to skip. **MMS-TTS weights are
-CC-BY-NC-4.0 (non-commercial).** A commercial deployment needs a
-differently-licensed Indic TTS behind the same `TTSProvider` interface
-(e.g. `ai4bharat/indic-parler-tts`, Apache-2.0, gated on the Hub).
+read the PRD's risk list. Consent capture and audio watermarking are
+explicit open items, not implementation details to skip.
 
 ## Running natively on Windows (CPU)
 
@@ -173,7 +200,7 @@ Docker runs only the infrastructure; the API and workers run from the two
 virtualenvs. Each command below is its own long-running terminal.
 
 ```powershell
-docker compose -f docker-compose.dev.yml up -d        # Postgres :5435, Redis :6380
+docker compose -f docker-compose.dev.yml up -d        # Postgres :5435, Redis :6381
 .\.venv\Scripts\python.exe -m alembic upgrade head
 .\scripts\run-local.ps1 -Role api
 .\scripts\run-local.ps1 -Role worker -Offline         # every stage except synthesis
@@ -192,8 +219,8 @@ the first click. `:8443` is already in `API_CORS_ORIGINS`.
 
 What this needs, and why each piece exists:
 
-- **Own ports.** `docker-compose.dev.yml` uses 5435/6380 because other local
-  projects' containers hold 5432-5434/6379, and a shared Redis means shared
+- **Own ports.** `docker-compose.dev.yml` uses 5435/6381 because other local
+  projects' containers hold 5432-5434/6379-6380, and a shared Redis means shared
   Celery broker databases. `docker-compose.test.yml` is tmpfs and TRUNCATEd
   by pytest -- never put dev data in it.
 - **ffmpeg paths.** Set `FFMPEG_BINARY`/`FFPROBE_BINARY` in `.env` when

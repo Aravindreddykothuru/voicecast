@@ -12,6 +12,7 @@ the emotion hook is limited to rate and energy -- see CONTRACTS.md #7.
 """
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import logging
 import os
@@ -22,7 +23,7 @@ from app.capabilities import require_language
 from app.config import get_settings
 from app.providers.base import SynthesisRequest, SynthesisResult, TTSProvider
 from app.providers.registry import ProviderNotInstalledError
-from app.providers.tts.common import fits_window, normalize, prosody_for, trim_silence
+from app.providers.tts.common import fits_window, normalize, prosody_for, render_stable, trim_silence
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ class SyspinVoice:
         self.net = torch.jit.load(os.path.join(folder, weights[0]), map_location="cpu").eval()
         self.repo_id = repo_id
 
-    def render(self, text: str):
+    def render(self, text: str, draw: int = 0):
         import numpy as np
         import torch
 
@@ -68,6 +69,12 @@ class SyspinVoice:
         ids = self.tokenizer.text_to_ids(normalized)
         if not any(c in self.letters and unicodedata.category(c)[0] in "LM" for c in normalized):
             raise ValueError(f"{self.repo_id} cannot pronounce any character of {text!r}")
+        # Deterministic per text and draw, as the MMS engine already is: the
+        # exported graph samples durations and noise from the global RNG, so
+        # the seed is the only handle the TorchScript signature leaves. Without
+        # it, re-rendering an unchanged line returns a different clip of a
+        # different length -- which is exactly what /regenerate does.
+        torch.manual_seed(int(hashlib.sha256(f"{draw}:{normalized}".encode()).hexdigest()[:8], 16))
         with torch.inference_mode():
             return self.net(torch.from_numpy(np.array(ids)).unsqueeze(0)).squeeze().cpu().numpy().astype("float32")
 
@@ -125,7 +132,7 @@ class SyspinTTSProvider(TTSProvider):
             raise ValueError("TTS was asked to speak an empty string")
         prosody = prosody_for(request.emotion, self._settings.emotion_confidence_floor)
         voice = self._voice_for(request.target_lang, request.extra.get("voice_gender"))
-        wav = trim_silence(voice.render(text), SAMPLE_RATE)
+        wav = render_stable(lambda i: voice.render(text, draw=i), text, SAMPLE_RATE)
 
         # No time fitting here: mux_export (timeline.plan_timeline) is the one
         # place a clip is sped up to its window, within one MAX_TEMPO budget.

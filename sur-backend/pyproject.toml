@@ -10,7 +10,6 @@ markers = [
 ]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-env = []
 
 [tool.ruff]
 line-length = 100

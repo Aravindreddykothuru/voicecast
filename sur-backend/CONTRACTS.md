@@ -240,9 +240,23 @@ still running it.
   whole compression and the QA report shows it. An engine applies an
   emotion's rate only when the line fits its window, and renders at neutral
   rate otherwise.
+- **A line always renders the same way, and short lines are drawn more than
+  once.** Every engine seeds its sampler from the text, so re-rendering one
+  unchanged segment (`/regenerate`) returns the same clip rather than a new
+  one of a different length. MMS seeded per text from the start; SYSPIN did
+  not, and drew a 0.21 s word in a real run.
+  On top of that, a line at or below `SHORT_LINE_CHARS` is drawn
+  `SHORT_LINE_DRAWS` times and the median by duration kept
+  (`common.render_stable`): the duration head's spread explodes on short
+  input and the rushed tail of it is unintelligible (see *Measured*). Wired
+  into SYSPIN, the default; MMS still renders once per line, and is refused
+  outright while `TTS_REQUIRE_COMMERCIAL_LICENSE` is on.
 - **Voice cloning must pass a budget before the TTS worker accepts work.**
   `voice_clone.check_budget` converts a fixed probe and checks:
-  - real-time factor ≤ `TTS_VOICE_CLONE_MAX_RTF`
+  - real-time factor ≤ `TTS_VOICE_CLONE_MAX_RTF`, taken as the fastest of up
+    to three timed draws (contention only ever adds time, and a single sample
+    measured 4.65x for a converter that runs at 2.2x -- which refused to start
+    a worker that also serves plain, uncloned synthesis)
   - duration within 10%
   - speech envelope preserved (correlation ≥ 0.6)
 
@@ -258,14 +272,74 @@ still running it.
 
 **Measured** (Whisper large-v3 CER, Telugu, forced language):
 
-<<MEASURED: engine bake-off, cloning CER/similarity/RTF, short-line results>>
+All on the same 32.56 s two-speaker English clip (9 lines) dubbed to Telugu,
+read back with `scripts/e2e_dub.py --asr-check` on an 8-core CPU box.
+
+| Engine / path | Corpus CER | Notes |
+|---|---|---|
+| SYSPIN VITS (default, CC-BY-4.0) | **0.194** | full sentences 0.11-0.25; 2026-09-20 |
+| MMS-TTS (CC-BY-NC-4.0) | 0.160 | 2026-09-13, before SYSPIN was the default |
+| MMS + CosyVoice2 VC (cloned) | 0.240 | worst 3-word line 0.44; 2026-09-13 |
+| CosyVoice2 as the *renderer* | 1.56 | never trained on an Indic script; 30+ CPU-minutes for one 3 s line |
+
+Converter speed, 3 s probe, real-time factor (`check_budget`):
+
+| Converter | RTF | |
+|---|---|---|
+| OpenVoice V2 (default, MIT) | 1.9-3.3 | 4.65 measured while another worker was loading a model, which is why the check keeps the fastest of a few draws |
+| CosyVoice2 VC | ~25 | 12.5 CPU-minutes for 30 s of speech |
+
+Cloned CER for the current default pair (SYSPIN + OpenVoice V2) has not been
+measured; the 0.240 above is the older MMS + CosyVoice2 pair.
+
+**Short lines are where this engine fails.** VITS samples each token's
+duration, and the relative spread grows as the line shortens: ten draws of a
+one-word Telugu line ("సరే.", *okay*) spanned 0.325-0.836 s (x2.57), against
+x1.18 for a 19-character line. A run that drew 0.21 s for that word produced
+audio Whisper read as a different word entirely, and the clip was time-
+compressed on top (mux tempo 1.115). Drawing short lines three times and
+keeping the median removed both: that line renders at 0.33-0.44 s, the run's
+max tempo fell to 1.0, and a two-word line that had scored CER 0.50 scored
+0.083. A 0.33 s interjection still sits below what Whisper
+recognises, and scoring it inside the surrounding dub does not rescue it when
+the line has silence on both sides -- there is no adjacent speech inside its
+own window to anchor on. Controlled on the 2026-09-20 run: the voice renders
+"సరే." (*okay*) at 0.37 s and Whisper reads it as "వే", but the same word from
+the same voice inside a carrier sentence ("సరే. అది భయంకరమైన వార్త.") is read
+back correctly as "సరే". The clip in the dub is present, deterministic, at
+-18.7 dBFS and never time-compressed.
+
+**So the gate stops asking.** Fifteen correctly-rendered clips, each padded
+with silence exactly as the dub places a line, scored the way the gate scores
+a short line:
+
+| ms | 372 | 418 | 511 | 534 | 627 | 673 | 766 | 789 | 998 | 1022 | 1022 | 1091 | 1207 | 1231 | 1602 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| CER | 1.00 | 0.50 | 0.25 | 1.33 | 0.43 | 0.83 | 0.80 | 0.50 | 0.17 | 0.40 | 0.86 | 0.75 | **0.08** | **0.25** | **0.31** |
+
+Ten of the twelve under 1100 ms fail the 0.35 bar on audio that is correct;
+everything from 1207 ms up passes. Below `ASR_FLOOR_MS` (1200 ms) a line is
+therefore not transcribed at all -- it is held to a presence check instead
+(audible, and *pitched*: voiced fraction ≥ 0.30, where real speech measures
+0.44-0.92 and silence, white noise and a click all measure 0.00). Lines below
+the floor are counted in the report, and the corpus CER says how many of the
+run's lines it covers, so "not scored" cannot quietly become "not checked".
+Lengthening a render to clear the bar instead would be fitting the voice to
+Whisper, and is not allowed.
 
 **Enforced by.**
 - `tests/test_run_lifecycle.py`: license filtering, registry refusal,
   create-project 422, capabilities fields.
 - `tests/test_tts_time_budget.py`: engines don't fit; the mux tempo is the
   whole speed-up.
-- `tests/test_voice_clone_budget.py`.
+- `tests/test_voice_clone_budget.py`: the budget, and that one slow draw is
+  retimed rather than refused.
+- `tests/test_tts_time_budget.py`: short lines take the median of several
+  draws, long lines are rendered once, and the same text always renders
+  identically.
+- `tests/test_short_line_gate.py`: the ASR floor and the presence check that
+  replaces transcription below it, against the "సరే." clip from the run and
+  its carrier-sentence control.
 - `tests/test_pipeline_hardening.py`: no pitch in prosody; one voice
   reference per speaker.
 

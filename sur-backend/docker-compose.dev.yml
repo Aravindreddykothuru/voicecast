@@ -36,8 +36,16 @@ services:
 
   redis:
     image: redis:7-alpine
+    # No persistence. The redis image declares an anonymous volume on /data
+    # and keeps RDB save points on by default, and compose carries that
+    # volume across `up` and a recreate -- so a queue outlives the container
+    # that held it. A run enqueued days ago then gets delivered to the next
+    # worker that starts, against today's database: two September 13 projects
+    # whose S3 objects were long gone were replayed and marked failed that
+    # way. A dev broker should start empty.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     ports:
-      - "6380:6379"
+      - "6381:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s

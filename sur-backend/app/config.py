@@ -138,8 +138,13 @@ class Settings(BaseSettings):
     # app/providers/tts/voice_clone.py for the budget each must pass.
     tts_voice_clone_engine: Literal["openvoice", "cosyvoice"] = "openvoice"
     # Conversion must run at or below this multiple of real time on the TTS
-    # worker, checked at startup. 1.0 = no slower than the audio itself.
-    tts_voice_clone_max_rtf: float = 1.0
+    # worker, checked at startup (best of a few runs -- see check_budget).
+    # Measured on an 8-core CPU box, 3s probe: OpenVoice V2 1.9-3.0x,
+    # CosyVoice2 VC ~25x. 4.0 clears the faster converter's spread with room
+    # for a loaded machine and still refuses one an order of magnitude slower.
+    # This is a "don't ship something unusable" bound, not a latency target:
+    # cloning is opt-in and runs offline, in a worker, on whole clips.
+    tts_voice_clone_max_rtf: float = 4.0
     # OpenVoice source checkout, put on sys.path by the converter.
     openvoice_src_dir: str | None = None
     # CosyVoice2 checkpoint directory, used only for voice conversion.

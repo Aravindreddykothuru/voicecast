@@ -60,6 +60,37 @@ def test_a_converter_slower_than_the_rtf_budget_is_refused(monkeypatch):
         get_settings.cache_clear()
 
 
+def test_a_transient_slow_run_is_retimed_rather_than_refused(monkeypatch):
+    """Contention only ever adds time, so the fastest run is the converter's
+    speed. One slow sample must not refuse the worker (it did: the check read
+    4.65x for a 2.2x converter when both workers booted together)."""
+    monkeypatch.setenv("TTS_VOICE_CLONE_MAX_RTF", "4.0")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    # 30s for the first timed run (RTF 10), 3s for the second (RTF 1.0).
+    steps = iter([0.0, 30.0, 30.0, 33.0])
+    try:
+        check_budget(_Identity(), clock=lambda: next(steps))
+    finally:
+        get_settings.cache_clear()
+
+
+def test_a_converter_slow_on_every_attempt_is_still_refused(monkeypatch):
+    monkeypatch.setenv("TTS_VOICE_CLONE_MAX_RTF", "4.0")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    converter = _Identity()
+    try:
+        with pytest.raises(VoiceCloneBudgetError, match=r"converts at 10\.00x real time"):
+            check_budget(converter, clock=_fake_clock(30.0))
+    finally:
+        get_settings.cache_clear()
+    # Warm-up plus one timed run per attempt -- it does not retry forever.
+    assert len(converter.calls) == 4
+
+
 def test_a_converter_that_changes_timing_is_refused():
     with pytest.raises(VoiceCloneBudgetError, match="changes duration"):
         check_budget(_Stretching(), clock=_fake_clock(0.1))
