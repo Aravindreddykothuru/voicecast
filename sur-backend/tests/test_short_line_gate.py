@@ -180,21 +180,29 @@ def test_the_ctc_reader_agrees_with_the_measurements_this_gate_was_tuned_on():
 # "carrier_excised" is the line spoken after a carrier sentence and cut back
 # out. Reference text is the pipeline's own translation of an English line.
 PER_LANGUAGE = [
-    ("hi", "नहीं", "No."),
     ("kn", "ಏಕೆ", "Why?"),
-    ("mr", "नाही", "No."),
-    ("bn", "এখনই", "Right now."),
 ]
+# hi/mr/bn fixtures are kept in tests/fixtures and their before/after numbers
+# are in CONTRACTS.md #7, but they are not asserted here: those languages have
+# no reader in the gate, so there is nothing to assert them with.
 
 
-def test_every_language_with_a_carrier_can_also_be_read_back():
-    """A carrier changes what ships; without a reader for that language
-    nothing would check the result. The two sets must match."""
+def test_a_language_is_only_read_back_if_it_is_also_carrier_rendered():
+    """Readers are a subset of carriers, not a match for them.
+
+    A carrier improves the audio in every language measured, so it is set
+    wherever it was measured. A reader only earns its place by passing
+    *correct* short lines: hi, mr and bn have carriers but no reader, because
+    their readers failed 2-3 of 8 correct lines. Reading a language the
+    carrier never touched would be the other way round and is a mistake."""
     from app.capabilities import SUPPORTED_LANGUAGES
 
     gate = _gate()
     carriers = {lang.code for lang in SUPPORTED_LANGUAGES if lang.tts_carrier}
-    assert carriers == set(gate.SHORT_LINE_CTC_MODELS)
+    readers = set(gate.SHORT_LINE_CTC_MODELS)
+    assert readers <= carriers, f"reader without a carrier: {readers - carriers}"
+    assert readers == {"te", "kn"}
+    assert carriers == {"te", "hi", "kn", "mr", "bn"}
 
 
 def test_languages_without_a_reader_fall_back_rather_than_pass():
@@ -202,9 +210,12 @@ def test_languages_without_a_reader_fall_back_rather_than_pass():
 
     gate = _gate()
     uncovered = [l.code for l in SUPPORTED_LANGUAGES if l.code not in gate.SHORT_LINE_CTC_MODELS]
-    # Tracked explicitly: these have no commercially licensed voice, so they
-    # cannot be dubbed on the default configuration and were never validated.
-    assert sorted(uncovered) == ["as", "gu", "ml", "or", "pa", "ta", "ur"]
+    # Tracked explicitly. as/gu/ml/or/pa/ta/ur have no commercially licensed
+    # voice, so they cannot be dubbed on the default configuration and there
+    # is no shipping audio to validate a reader against. hi/mr/bn can be
+    # dubbed, and their readers were measured and rejected -- they failed
+    # 2-3 of 8 correct short lines each.
+    assert sorted(uncovered) == ["as", "bn", "gu", "hi", "ml", "mr", "or", "pa", "ta", "ur"]
     for code in uncovered:
         assert gate.ctc_reader(code) is None
 
@@ -234,3 +245,19 @@ def test_the_carrier_fix_holds_in_each_language(code, ref, source):
     after = cer_of(f"short_line_{code}_carrier_excised.wav")
     assert after <= gate.SHORT_LINE_MAX_CER, f"{code}: the fixed render must read back ({after:.3f})"
     assert before > gate.SHORT_LINE_MAX_CER, f"{code}: the old render must not ({before:.3f})"
+
+
+def test_every_carrier_records_who_checked_it():
+    """A carrier is machine-translated text that drives the engine. It is
+    never heard, but it must not be assumed good either -- each one carries
+    its review state, and today none has been read by a fluent speaker."""
+    from app.capabilities import SUPPORTED_LANGUAGES
+
+    carried = [l for l in SUPPORTED_LANGUAGES if l.tts_carrier]
+    assert carried, "no carriers configured"
+    for lang in carried:
+        assert lang.tts_carrier_review, f"{lang.code} carrier has no review state"
+    human = [l.code for l in carried if not l.tts_carrier_review.startswith("machine:")]
+    # Update this when a fluent speaker signs one off -- the assertion is
+    # here so that "reviewed" cannot quietly become the assumed default.
+    assert human == [], f"human-reviewed carriers now exist, update the docs: {human}"

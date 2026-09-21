@@ -324,10 +324,28 @@ alone does not. Any carrier fixes it.
 (`common.render_line`, `Language.tts_carrier`). The clip that ships is still
 only the line at its natural length; the carrier is scaffolding and is never
 heard. On lines the pipeline's own translator produced from real short source
-lines, median of 3 draws: te 5/9 -> 9/9, kn 5/8 -> 8/8, hi 1/8 -> 6/8,
-mr 2/8 -> 6/8, bn 0/8 -> 5/8. Lengthening or padding a render to clear the
-bar remains forbidden -- this changes *how* the engine is driven, not how
-long the output is.
+lines, median of 3 draws, short lines passing the 0.35 bar:
+
+| | te | hi | kn | mr | bn |
+|---|---|---|---|---|---|
+| rendered alone | 5/9 | 1/8 | 5/8 | 2/8 | 1/8 |
+| **after a carrier, excised** | **9/9** | **6/8** | **8/8** | **6/8** | **7/8** |
+
+Lengthening or padding a render to clear the bar remains forbidden -- this
+changes *how* the engine is driven, not how long the output is.
+
+What is left over is not a second boundary bug. Of the seven lines still
+failing across hi/mr/bn, only two (`रुकिए`, `क्यों`) read back correctly from
+best-case audio, so only those are the cut's fault; the rest are misread even
+spoken mid-sentence and extracted by forced alignment. Four excision variants
+were measured against the current one -- wider head and tail pads, three
+gentler re-trim thresholds, and cutting at the midpoint of the pause instead
+of a fixed pad -- and all landed within the run-to-run spread (19-21 of 50
+clips passing). None was adopted: there is no evidence any of them is better.
+
+Each carrier is machine-translated and back-translates through an independent
+model to the intended meaning, which is all `Language.tts_carrier_review`
+claims. None has been read by a fluent speaker.
 
 **So the gate stops asking Whisper, and asks something that can answer.**
 Fifteen clips padded with silence exactly as the dub places a line, scored
@@ -341,13 +359,20 @@ Whisper is autoregressive and needs an utterance to condition on; below
 `ASR_FLOOR_MS` (1200 ms) it is not asked. A frame-synchronous CTC recogniser
 has no length prior and reads complete words of 360-1060 ms alone, exact on 7
 of 8, so that is what scores a short line -- against the same 0.35 bar, and
-only for a language with a model in `SHORT_LINE_CTC_MODELS`. Five of the
-twelve languages have one (te, hi, kn, mr, bn), each validated by decoding
-known-good long renders in that language first (median CER 0.00-0.12). The
-other seven have no commercially licensed voice, so they cannot be dubbed on
-the default configuration and there is no shipping audio to validate a reader
-against; they stay on the presence check and the gap is asserted in
-`tests/test_short_line_gate.py` rather than assumed closed. Level is checked
+only for a language with a model in `SHORT_LINE_CTC_MODELS`.
+
+**A reader earns its place by passing correct lines, not by reading long ones
+well.** te and hi/kn/mr/bn were all listed at first, on the strength of their
+accuracy on long renders (median CER 0.02-0.12). That was the wrong test: on
+the short lines the gate actually scores, the readers for hi, mr and bn fail
+2-3 of 8 lines whose audio is right, and a gate that red-flags a quarter of
+correct output is not a gate. Only **te (9/9) and kn (8/8)** are listed. The
+other three keep the carrier -- it improves their audio either way -- and fall
+back to the presence check, which is honest about checking less. The remaining
+seven languages have no commercially licensed voice, cannot be dubbed on the
+default configuration, and so have no shipping audio to validate a reader
+against. `tests/test_short_line_gate.py` asserts exactly which languages are
+in which group, so the gap cannot quietly close. Level is checked
 alongside it, because wav2vec2 normalises its input and a clip at -50 dBFS
 decodes perfectly. Where there is no reader, the line falls back to a
 presence check (audible and *pitched*: voiced fraction >= 0.30, against 0.00

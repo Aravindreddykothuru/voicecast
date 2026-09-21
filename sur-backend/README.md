@@ -106,7 +106,14 @@ A line short enough to be the whole utterance is rendered *after* a carrier
 sentence and cut back out (`Language.tts_carrier`), because SYSPIN renders a
 lone short word as a different word -- 7/40 intelligible alone against 39/40
 spoken after a sentence. The clip that ships is still just the line. Set for
-te, hi, kn, mr and bn; other languages render as before.
+te, hi, kn, mr and bn; other languages render as before. The carrier itself
+is machine-translated and only back-translation-checked -- see
+`Language.tts_carrier_review`.
+
+Every SYSPIN voice the licence policy offers is loaded and spoken at TTS
+worker startup, not just the default language's: which voice a job needs is
+decided by the speaker's estimated pitch, so a voice that cannot load is a
+mid-job crash otherwise. That is ~80s of startup on a warm cache.
 
 Detected emotion is carried as prosody, weighted by the classifier's
 confidence: speaking rate, energy, and (MMS only) VITS variation. Neither
@@ -134,8 +141,10 @@ To reproduce an end-to-end run and its checks against a running stack:
 (corpus CER <= 0.25, each line <= 0.35). Whisper cannot read a clip much
 shorter than that -- ten of twelve measured clips under 1.1s scored past the
 bar -- so a shorter line is read by a per-language CTC recogniser instead
-(`SHORT_LINE_CTC_MODELS`; Telugu today), held to the same 0.35 bar plus a
-level check. A language with no reader falls back to a presence check and the
+(`SHORT_LINE_CTC_MODELS`; Telugu and Kannada today), held to the same 0.35
+bar plus a level check. A language is listed only where the reader passes
+*correct* short lines -- hi, mr and bn readers failed 2-3 of 8 and are
+deliberately not listed. A language with no reader falls back to a presence check and the
 report says so. Whisper loads ~3.5 GB resident and the whole check takes
 about 45 minutes on CPU for a 30-second clip; the CTC model adds ~1.2 GB on
 first run. Both workers hold their own models the

@@ -63,6 +63,15 @@ class Language:
     # sentence and excised. Set only for languages where that has been
     # measured; None leaves the line rendered on its own, as before.
     tts_carrier: str | None = None
+    # Who checked that the carrier is natural, idiomatic text in this
+    # language. "machine" means only a round-trip check was done -- the
+    # phrase is machine-translated and back-translates to the intended
+    # meaning, and nothing more than that is claimed. A carrier is never
+    # heard by a viewer, so an awkward one is not a product defect, but it
+    # does drive the engine, and an ungrammatical phrase would render
+    # oddly into the line it scaffolds. Set to a person and a date when a
+    # fluent speaker has actually read it.
+    tts_carrier_review: str = "machine: back-translated, no human review"
 
     @property
     def tts_supported(self) -> bool:

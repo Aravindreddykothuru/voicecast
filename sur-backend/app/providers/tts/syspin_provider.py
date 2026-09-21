@@ -31,13 +31,52 @@ SAMPLE_RATE = 22050
 _PUNCTUATION = "!¡'(),-.:;¿? "
 
 
+# extra.py is the Coqui tokenizer/config code SYSPIN ships beside each voice.
+# It is byte-identical in every release (one sha256 across six repos): the
+# language-specific parts are chars.txt and the weights. BengaliFemale was
+# published without it, which made a Bengali dub crash at synthesis for any
+# speaker whose estimated F0 chose the female voice. Borrowing the file from
+# another release is therefore exact, not an approximation -- but it is
+# logged, because a missing file is still a broken upload.
+_BULLET = chr(10) + "  - "
+_EXTRA_DONORS = (
+    "SYSPIN/tts_vits_coquiai_TeluguFemale",
+    "SYSPIN/tts_vits_coquiai_HindiFemale",
+    "SYSPIN/tts_vits_coquiai_BengaliMale",
+)
+
+
+def _extra_py(folder: str, repo_id: str) -> str:
+    """The path to this voice's extra.py, or an identical one from a sibling."""
+    own = os.path.join(folder, "extra.py")
+    if os.path.exists(own):
+        return own
+    from huggingface_hub import hf_hub_download
+
+    for donor in _EXTRA_DONORS:
+        if donor == repo_id:
+            continue
+        try:
+            path = hf_hub_download(donor, "extra.py")
+        except Exception:  # noqa: BLE001 -- not cached, or no network
+            continue
+        logger.warning("%s ships no extra.py; using the identical file from %s", repo_id, donor)
+        return path
+    raise ProviderNotInstalledError(
+        "SyspinTTSProvider",
+        f"extra.py for {repo_id} (absent from the release, and no sibling release is available "
+        f"to borrow the identical file from -- tried {', '.join(_EXTRA_DONORS)})",
+    )
+
+
 class SyspinVoice:
     def __init__(self, repo_id: str) -> None:
         import torch
         from huggingface_hub import snapshot_download
 
         folder = snapshot_download(repo_id)
-        spec = importlib.util.spec_from_file_location(f"syspin_extra_{abs(hash(repo_id))}", os.path.join(folder, "extra.py"))
+        spec = importlib.util.spec_from_file_location(
+            f"syspin_extra_{abs(hash(repo_id))}", _extra_py(folder, repo_id))
         if spec is None or spec.loader is None:
             raise ProviderNotInstalledError("SyspinTTSProvider", f"a loadable extra.py in {folder}")
         extra = importlib.util.module_from_spec(spec)
@@ -94,7 +133,7 @@ class SyspinTTSProvider(TTSProvider):
             from app.providers.tts.voice_clone import get_voice_converter
 
             self._converter = get_voice_converter()
-        self._self_check(self._settings.default_target_language)
+        self._self_check_every_voice()
 
     def _voice_for(self, lang_code: str, gender: str | None) -> SyspinVoice:
         from app.capabilities import tts_voices
@@ -109,12 +148,47 @@ class SyspinTTSProvider(TTSProvider):
             logger.info("TTS: loaded %s (%s, %s)", voice.model, voice.gender, voice.license)
         return self._voices[voice.model]
 
-    def _self_check(self, lang_code: str) -> None:
+    def _self_check_every_voice(self) -> None:
+        """Load and speak with every voice this deployment could select.
+
+        Checking only the default language's first voice left a hole a
+        release fell straight through: SYSPIN published BengaliFemale without
+        its extra.py, so a Bengali dub crashed at synthesize for any speaker
+        whose estimated F0 chose the female voice, while the worker had
+        started clean. Which voice a job needs is decided by the speaker, not
+        by configuration, so every voice the policy offers is loaded here --
+        the cost is paid once at startup instead of once per customer."""
+        from app.capabilities import SUPPORTED_LANGUAGES, tts_voices
+
+        checked, failures = [], []
+        for lang in SUPPORTED_LANGUAGES:
+            for voice in tts_voices(lang):
+                if voice.engine != "syspin":
+                    continue
+                try:
+                    self._self_check(lang.code, voice.model)
+                    checked.append(voice.model)
+                except Exception as e:  # noqa: BLE001 -- report them all, not the first
+                    failures.append(f"{lang.code}/{voice.gender or '?'} ({voice.model}): {e}")
+        if failures:
+            from app.providers.loading import ModelLoadError
+
+            raise ModelLoadError(
+                "SYSPIN voice(s) this deployment offers cannot speak:" + _BULLET
+                + _BULLET.join(failures))
+        logger.info("TTS self-check passed for %d voice(s): %s", len(checked), ", ".join(checked))
+
+    def _self_check(self, lang_code: str, model: str | None = None) -> None:
         import numpy as np
 
         from app.providers.loading import ModelLoadError
 
-        voice = self._voice_for(lang_code, None)
+        if model is None:
+            voice = self._voice_for(lang_code, None)
+        else:
+            if model not in self._voices:
+                self._voices[model] = SyspinVoice(model)
+            voice = self._voices[model]
         letters = [c for c in voice.letters if unicodedata.category(c)[0] == "L"][:16]
         wav = voice.render(" ".join("".join(letters[i:i + 4]) for i in range(0, len(letters), 4)))
         rms_db = 20 * np.log10(float(np.sqrt(np.mean(wav ** 2))) + 1e-12)

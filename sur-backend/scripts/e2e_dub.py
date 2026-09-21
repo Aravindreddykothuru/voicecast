@@ -189,18 +189,23 @@ PRESENCE_MIN_VOICED = 0.30
 # One model per language, because this is a per-language recogniser -- a
 # language with no entry (and a run with no network or no weights) falls back
 # to the presence check and says so in the report rather than passing quietly.
-# Validated 2026-09-21 by decoding known-good long SYSPIN renders in each
-# language (median CER: te 0.02, kn 0.00, hi 0.09, mr 0.09, bn 0.12) before
-# trusting the model's verdict on short ones. The seven languages not listed
-# have no commercially licensed voice, so they cannot be dubbed on the default
-# configuration at all and there is no shipping audio to validate a reader
-# against -- they stay on the presence check. See CONTRACTS.md #7.
+# A reader is listed only where it passes *correct* short lines. Measured on
+# the production path (carrier render, excised, median of 3 draws) over 8-9
+# short lines per language that the pipeline's own translator produced:
+#
+#     te 9/9    kn 8/8    hi 6/8    mr 6/8    bn 5/8
+#
+# hi, mr and bn are deliberately absent. Long-line accuracy said they were
+# fine (median CER 0.09-0.12) and they were listed on that basis, which was
+# wrong: long-line accuracy does not predict short-word accuracy, and a gate
+# that fails a quarter of correct lines is not a gate. The audio for those
+# languages still gets the carrier fix -- that is measured separately and
+# helps regardless -- they just fall back to the presence check, which is
+# honest about checking less. Raising them needs a reader that passes correct
+# short lines, not a looser bar.
 SHORT_LINE_CTC_MODELS = {
     "te": "Harveenchadha/vakyansh-wav2vec2-telugu-tem-100",
-    "hi": "Harveenchadha/vakyansh-wav2vec2-hindi-him-4200",
     "kn": "Harveenchadha/vakyansh-wav2vec2-kannada-knm-560",
-    "mr": "Harveenchadha/vakyansh-wav2vec2-marathi-mrm-100",
-    "bn": "Harveenchadha/vakyansh-wav2vec2-bengali-bnm-200",
 }
 # The same intelligibility bar every other line is held to.
 SHORT_LINE_MAX_CER = 0.35
