@@ -87,14 +87,33 @@ SHORT_LINE_CHARS = 12
 SHORT_LINE_DRAWS = 3
 
 
-def tail_after_pause(wav, sr: int, min_ms: int = 120, max_ms: int = 2000):
+# A silence inside a word -- the closure of a stop consonant, as in the "ত্"
+# of "সত্যিই" -- looks exactly like the pause before the line to a silence
+# splitter, and the cut used to land on it: in 92 of 814 renders the clip
+# began mid-word, and "সত্যিই" (read back as "তি") passed in 0 of 440. Measured
+# against forced-alignment ground truth over 814 renders: within-word gaps
+# are at most 116 ms and the fragment before one at most 279 ms, while the
+# carrier's final segment is a median 1068 ms. So a gap under CLOSURE_GAP_MS
+# preceded by speech under CLOSURE_FRAG_MS is taken to be inside the line.
+CLOSURE_GAP_MS = 140
+CLOSURE_FRAG_MS = 300
+
+
+def tail_after_pause(wav, sr: int, min_ms: int = 120, max_ms: int = 2000, merge_closures: bool = False):
     """The last utterance in a clip, cut at the pause before it, or None.
 
     Used to recover a short line rendered after a carrier sentence. The
     threshold is a ladder because one fixed value does not find the pause in
     every render: at 35 dB it missed 4 of 40, at 30 dB it missed 2. A segment
     of implausible length is rejected rather than returned, so the caller can
-    fall back instead of shipping a mis-cut clip."""
+    fall back instead of shipping a mis-cut clip.
+
+    `merge_closures` walks back across within-word silences (see
+    CLOSURE_GAP_MS) so the cut starts at the real boundary. Off by default:
+    for a carrier whose last word is short and sometimes followed by a short
+    pause (Telugu's), the same rule reaches into the carrier and ships its
+    last word -- 13 of 407 held-out Telugu renders. Enabled per language
+    (Language.tts_carrier_merge_closures), where it has been measured safe."""
     import librosa
 
     for top_db in (30, 35, 40, 45, 50):
@@ -103,6 +122,14 @@ def tail_after_pause(wav, sr: int, min_ms: int = 120, max_ms: int = 2000):
             continue
         a, b = intervals[-1]
         if min_ms <= 1000 * (b - a) / sr <= max_ms:
+            if merge_closures:
+                j = len(intervals) - 1
+                while (j > 1
+                       and 1000 * (intervals[j][0] - intervals[j - 1][1]) / sr < CLOSURE_GAP_MS
+                       and 1000 * (intervals[j - 1][1] - intervals[j - 1][0]) / sr < CLOSURE_FRAG_MS):
+                    j -= 1
+                if min_ms <= 1000 * (b - intervals[j][0]) / sr <= max_ms:
+                    a = intervals[j][0]
             # Generous at the head: a word opening on a vowel fades in below
             # the split threshold, and cutting 30ms tight lost the first
             # syllable of "ఇప్పుడే" (read back as "పుడే").
@@ -110,7 +137,8 @@ def tail_after_pause(wav, sr: int, min_ms: int = 120, max_ms: int = 2000):
     return None
 
 
-def render_line(render, text: str, sr: int, carrier: str | None = None):
+def render_line(render, text: str, sr: int, carrier: str | None = None,
+                merge_closures: bool = False):
     """One line of speech, trimmed, as the engine should have rendered it.
 
     A line short enough to be the entire utterance is rendered *after*
@@ -124,7 +152,7 @@ def render_line(render, text: str, sr: int, carrier: str | None = None):
     if carrier and len(text) <= SHORT_LINE_CHARS:
         def draw(i):
             whole = render(f"{carrier} {text}", draw=i)
-            tail = tail_after_pause(whole, sr)
+            tail = tail_after_pause(whole, sr, merge_closures=merge_closures)
             # No pause found: fall back to rendering the line by itself
             # rather than shipping a mis-cut carrier.
             return tail if tail is not None else trim_silence(render(text, draw=i), sr)

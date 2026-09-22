@@ -72,6 +72,13 @@ class Language:
     # oddly into the line it scaffolds. Set to a person and a date when a
     # fluent speaker has actually read it.
     tts_carrier_review: str = "machine: back-translated, no human review"
+    # Whether the carrier cut may walk back across a within-word silence (a
+    # stop closure) rather than start the line mid-word -- common.
+    # tail_after_pause. Measured per carrier against forced-alignment ground
+    # truth: safe for hi, kn, mr and bn (no carrier leak in 814 renders);
+    # unsafe for te, whose carrier ends on a short word that the merge swept
+    # into the clip in 13 of 407 held-out renders.
+    tts_carrier_merge_closures: bool = False
 
     @property
     def tts_supported(self) -> bool:
@@ -88,17 +95,17 @@ class Language:
 # the Coqui runtime and is not wired up.
 SUPPORTED_LANGUAGES: tuple[Language, ...] = (
     Language("hi", "Hindi", "hin_Deva", (_mms("hin"), _syspin("Hindi", "male"), _syspin("Hindi", "female")),
-             tts_carrier="यह एक भयानक खबर है।"),
+             tts_carrier="यह एक भयानक खबर है।", tts_carrier_merge_closures=True),
     Language("te", "Telugu", "tel_Telu", (_mms("tel"), _syspin("Telugu", "male"), _syspin("Telugu", "female")),
              tts_carrier="అది భయంకరమైన వార్త."),
     Language("ta", "Tamil", "tam_Taml", (_mms("tam"),)),
     Language("kn", "Kannada", "kan_Knda", (_mms("kan"), _syspin("Kannada", "male"), _syspin("Kannada", "female")),
-             tts_carrier="ಇದು ಭಯಾನಕ ಸುದ್ದಿ."),
+             tts_carrier="ಇದು ಭಯಾನಕ ಸುದ್ದಿ.", tts_carrier_merge_closures=True),
     Language("ml", "Malayalam", "mal_Mlym", (_mms("mal"),)),
     Language("bn", "Bengali", "ben_Beng", (_mms("ben"), _syspin("Bengali", "male"), _syspin("Bengali", "female")),
-             tts_carrier="এটা একটা ভয়ংকর খবর।"),
+             tts_carrier="এটা একটা ভয়ংকর খবর।", tts_carrier_merge_closures=True),
     Language("mr", "Marathi", "mar_Deva", (_mms("mar"), _syspin("Marathi", "male"), _syspin("Marathi", "female")),
-             tts_carrier="ही भीतीदायक बातमी आहे."),
+             tts_carrier="ही भीतीदायक बातमी आहे.", tts_carrier_merge_closures=True),
     Language("gu", "Gujarati", "guj_Gujr", (_mms("guj"),)),
     Language("pa", "Punjabi", "pan_Guru", (_mms("pan"),)),
     Language("or", "Odia", "ory_Orya", (_mms("ory"),)),

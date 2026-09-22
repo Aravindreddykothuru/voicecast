@@ -90,6 +90,14 @@
             "title": "Tts Licenses",
             "type": "array"
           },
+          "tts_voice_warnings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Tts Voice Warnings",
+            "type": "array"
+          },
           "voice_clone_available": {
             "title": "Voice Clone Available",
             "type": "boolean"

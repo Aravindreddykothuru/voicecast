@@ -31,41 +31,57 @@ SAMPLE_RATE = 22050
 _PUNCTUATION = "!¡'(),-.:;¿? "
 
 
-# extra.py is the Coqui tokenizer/config code SYSPIN ships beside each voice.
-# It is byte-identical in every release (one sha256 across six repos): the
-# language-specific parts are chars.txt and the weights. BengaliFemale was
-# published without it, which made a Bengali dub crash at synthesis for any
-# speaker whose estimated F0 chose the female voice. Borrowing the file from
-# another release is therefore exact, not an approximation -- but it is
-# logged, because a missing file is still a broken upload.
 _BULLET = chr(10) + "  - "
-_EXTRA_DONORS = (
-    "SYSPIN/tts_vits_coquiai_TeluguFemale",
-    "SYSPIN/tts_vits_coquiai_HindiFemale",
-    "SYSPIN/tts_vits_coquiai_BengaliMale",
-)
 
 
-def _extra_py(folder: str, repo_id: str) -> str:
-    """The path to this voice's extra.py, or an identical one from a sibling."""
-    own = os.path.join(folder, "extra.py")
-    if os.path.exists(own):
-        return own
+def _sha256(path: str) -> str:
+    import hashlib
+
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _verified(path: str, want: str, what: str) -> str:
+    """`path`, after checking it is byte-for-byte the pinned file."""
+    from app.providers.loading import ModelLoadError
+
+    got = _sha256(path)
+    if got != want:
+        raise ModelLoadError(f"{what}: sha256 {got[:16]} does not match the pinned {want[:16]} "
+                             f"(app/providers/tts/syspin_manifest.py). Refusing to load a changed release.")
+    return path
+
+
+def _pinned_extra_py(folder: str, repo_id: str, pin) -> str:
+    """This voice's extra.py, or the byte-identical one borrowed from a sibling
+    release when the voice was published without it (issue #6)."""
+    from app.providers.tts.syspin_manifest import EXTRA_PY_DONORS, EXTRA_PY_SHA256, pin_for
+
+    if pin.ships_extra_py:
+        return _verified(os.path.join(folder, "extra.py"), EXTRA_PY_SHA256, f"{repo_id}/extra.py")
     from huggingface_hub import hf_hub_download
 
-    for donor in _EXTRA_DONORS:
+    tried = []
+    for donor in EXTRA_PY_DONORS:
         if donor == repo_id:
             continue
         try:
-            path = hf_hub_download(donor, "extra.py")
-        except Exception:  # noqa: BLE001 -- not cached, or no network
+            path = hf_hub_download(donor, "extra.py", revision=pin_for(donor).revision)
+        except Exception as e:  # noqa: BLE001 -- not cached, or no network
+            tried.append(f"{donor} ({type(e).__name__})")
             continue
-        logger.warning("%s ships no extra.py; using the identical file from %s", repo_id, donor)
+        _verified(path, EXTRA_PY_SHA256, f"{donor}/extra.py (borrowed for {repo_id})")
+        logger.warning("SUPPLY CHAIN: %s was published without extra.py; loading the byte-identical file "
+                       "from %s@%s instead. Surfaced in /api/capabilities as tts_voice_warnings.",
+                       repo_id, donor, pin_for(donor).revision[:12])
         return path
     raise ProviderNotInstalledError(
         "SyspinTTSProvider",
-        f"extra.py for {repo_id} (absent from the release, and no sibling release is available "
-        f"to borrow the identical file from -- tried {', '.join(_EXTRA_DONORS)})",
+        f"extra.py for {repo_id}: absent from the release, and no pinned sibling to borrow it from "
+        f"(tried {', '.join(tried) or 'none'})",
     )
 
 
@@ -74,9 +90,21 @@ class SyspinVoice:
         import torch
         from huggingface_hub import snapshot_download
 
-        folder = snapshot_download(repo_id)
+        from app.providers.tts.syspin_manifest import pin_for
+
+        from app.providers.loading import ModelLoadError
+
+        try:
+            pin = pin_for(repo_id)
+        except KeyError as e:
+            # Not a missing dependency -- an unpinned artifact. Say which.
+            raise ModelLoadError(str(e.args[0])) from None
+        wanted = list(pin.files) + (["extra.py"] if pin.ships_extra_py else [])
+        folder = snapshot_download(repo_id, revision=pin.revision, allow_patterns=wanted)
+        for name, digest in pin.files.items():
+            _verified(os.path.join(folder, name), digest, f"{repo_id}@{pin.revision[:12]}/{name}")
         spec = importlib.util.spec_from_file_location(
-            f"syspin_extra_{abs(hash(repo_id))}", _extra_py(folder, repo_id))
+            f"syspin_extra_{abs(hash(repo_id))}", _pinned_extra_py(folder, repo_id, pin))
         if spec is None or spec.loader is None:
             raise ProviderNotInstalledError("SyspinTTSProvider", f"a loadable extra.py in {folder}")
         extra = importlib.util.module_from_spec(spec)
@@ -91,9 +119,9 @@ class SyspinVoice:
         )
         self.tokenizer, _ = extra.TTSTokenizer.init_from_config(config)
         self.letters = set(letters) | set(_PUNCTUATION)
-        weights = [f for f in os.listdir(folder) if f.endswith(".pt")]
+        weights = [f for f in pin.files if f.endswith(".pt")]
         if len(weights) != 1:
-            raise ProviderNotInstalledError("SyspinTTSProvider", f"one TorchScript .pt in {folder}, found {weights}")
+            raise ProviderNotInstalledError("SyspinTTSProvider", f"one pinned TorchScript .pt for {repo_id}, found {weights}")
         self.net = torch.jit.load(os.path.join(folder, weights[0]), map_location="cpu").eval()
         self.repo_id = repo_id
 
@@ -176,7 +204,12 @@ class SyspinTTSProvider(TTSProvider):
             raise ModelLoadError(
                 "SYSPIN voice(s) this deployment offers cannot speak:" + _BULLET
                 + _BULLET.join(failures))
-        logger.info("TTS self-check passed for %d voice(s): %s", len(checked), ", ".join(checked))
+        logger.info("TTS self-check passed for %d voice(s), each verified against its pinned revision and "
+                    "sha256: %s", len(checked), ", ".join(checked))
+        from app.providers.tts.syspin_manifest import supply_chain_warnings
+
+        for warning in supply_chain_warnings(checked):
+            logger.warning("SUPPLY CHAIN: %s", warning)
 
     def _self_check(self, lang_code: str, model: str | None = None) -> None:
         import numpy as np
@@ -206,8 +239,9 @@ class SyspinTTSProvider(TTSProvider):
             raise ValueError("TTS was asked to speak an empty string")
         prosody = prosody_for(request.emotion, self._settings.emotion_confidence_floor)
         voice = self._voice_for(request.target_lang, request.extra.get("voice_gender"))
-        wav = render_line(voice.render, text, SAMPLE_RATE,
-                          carrier=require_language(request.target_lang).tts_carrier)
+        lang = require_language(request.target_lang)
+        wav = render_line(voice.render, text, SAMPLE_RATE, carrier=lang.tts_carrier,
+                          merge_closures=lang.tts_carrier_merge_closures)
 
         # No time fitting here: mux_export (timeline.plan_timeline) is the one
         # place a clip is sped up to its window, within one MAX_TEMPO budget.

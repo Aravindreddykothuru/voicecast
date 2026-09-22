@@ -181,7 +181,8 @@ const EXPORT_READ: Record<keyof ExportRead, true> = {
 const CAPABILITIES: Record<keyof Capabilities, true> = {
   languages: true, source_languages: true, emotions: true, providers: true, emotion_confidence_floor: true,
   asr_autodetect: true, device: true, voice_clone_available: true, stall_after_seconds: true, tts_engine: true,
-  tts_licenses: true, tts_commercial_use: true, max_upload_mb: true, accepted_formats: true,
+  tts_licenses: true, tts_commercial_use: true, tts_voice_warnings: true, max_upload_mb: true,
+  accepted_formats: true,
 };
 const UPLOAD_URL: Record<keyof UploadUrlResponse, true> = {
   source_video_id: true, upload_url: true, storage_key: true, method: true, expires_in: true,

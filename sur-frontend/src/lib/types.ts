@@ -255,6 +255,10 @@ export interface Capabilities {
   tts_licenses: string[];
   /** True only when every usable voice's license permits commercial use. */
   tts_commercial_use: boolean;
+  /** Known problems with the pinned voice releases, e.g. a release that
+   *  shipped without a file and runs on a verified copy from a sibling.
+   *  Empty when there are none (always, for the mock engine). */
+  tts_voice_warnings: string[];
   max_upload_mb: number;
   accepted_formats: string[];
 }

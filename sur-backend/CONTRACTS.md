@@ -44,9 +44,25 @@ alerted. The only symptom was that the emotion labels were meaningless.
   is treated as a failure to boot, whatever its cause.
 - Workers run these checks at startup (`app/startup_checks.py`) so a bad
   deployment dies immediately instead of failing customer jobs one at a time.
+- **SYSPIN voices load only at a pinned commit, and every file they use is
+  hashed first** (`app/providers/tts/syspin_manifest.py`). Unpinned: a
+  `ModelLoadError` naming the manifest. One changed byte: a `ModelLoadError`
+  naming the voice, revision, file and both hashes. A release that moves
+  upstream therefore cannot change the dub's speech without a code change.
+  `SYSPIN/tts_vits_coquiai_BengaliFemale` was published without `extra.py`
+  (issue #6); that file is byte-identical across the nine releases that ship
+  it, so the voice borrows the pinned copy from a sibling release, verifies
+  its hash, logs `SUPPLY CHAIN` at WARNING on every load, and is listed in
+  `/api/capabilities` under `tts_voice_warnings` -- worked around, never
+  hidden. An upstream report is drafted in
+  `docs/upstream/syspin-bengalifemale-missing-extra-py.md`.
 
 **Enforced by.** `tests/test_model_loading_is_fail_loud.py`,
-`tests/test_startup_checks.py`. The first test is the exact ehcalabres key
+`tests/test_startup_checks.py`, `tests/test_voice_supply_chain.py` (every
+advertised voice pinned, well-formed pins, unpinned and tampered loads
+refused with a precise message, the borrowed file fetched at a pinned
+commit, verified and logged, the Bengali gap reported). The first test is
+the exact ehcalabres key
 signature; the second asserts the good model (which reports the benign pair
 as missing) still loads, so the fix can't be "reject everything".
 
@@ -329,23 +345,72 @@ lines, median of 3 draws, short lines passing the 0.35 bar:
 | | te | hi | kn | mr | bn |
 |---|---|---|---|---|---|
 | rendered alone | 5/9 | 1/8 | 5/8 | 2/8 | 1/8 |
-| **after a carrier, excised** | **9/9** | **6/8** | **8/8** | **6/8** | **7/8** |
+| after a carrier, excised | 9/9 | 6/8 | 8/8 | 6/8 | 7/8 |
+| same, re-measured 2026-09-22 (merge off) | 9/9 | 7/8 | 8/8 | 6/8 | 7/8 |
+| **+ closure merge (below)** | **9/9** | **7/8** | **8/8** | **6/8** | **8/8** |
+
+The last two rows cut the *same* renders, so they differ only by the merge:
+no line got worse, and `সত্যিই` moved from CER 0.667 (`তি`) to 0.333 -- a
+pass, but a narrow one. Hindi's 6/8 -> 7/8 between the first two rows is not
+this change; it is the code between that measurement and this one.
 
 Lengthening or padding a render to clear the bar remains forbidden -- this
 changes *how* the engine is driven, not how long the output is.
 
-What is left over is not a second boundary bug. Of the seven lines still
-failing across hi/mr/bn, only two (`रुकिए`, `क्यों`) read back correctly from
-best-case audio, so only those are the cut's fault; the rest are misread even
-spoken mid-sentence and extracted by forced alignment. Four excision variants
-were measured against the current one -- wider head and tail pads, three
-gentler re-trim thresholds, and cutting at the midpoint of the pause instead
-of a fixed pad -- and all landed within the run-to-run spread (19-21 of 50
-clips passing). None was adopted: there is no evidence any of them is better.
+**Where the cut loses words, measured at N = 200 per line in two sets.** An
+earlier reading blamed the cut for `रुकिए` and `क्यों`. Scoring each line
+*in place* -- the whole carrier render read by CTC and aligned to the
+expected text, with no cut at all -- against the shipped clip, over 200 fresh
+draws in each of two independent sets, says otherwise. `रुकिए` reads the same
+either way (in place 54.5% / 58.5%, shipped 55.5% / 58.0%): the cut loses
+nothing there; the render itself is misheard about 40% of the time. `क्यों`
+has at most ~8 points of headroom (75.0% / 68.0% against 67.0% / 70.0%), and
+none in the second set.
+
+Acoustic boundary snapping (extend the tail until the energy stays under the
+measured noise floor for 30 ms, move the head to the preceding energy
+minimum, cut on zero crossings, 5 ms fades) made both focus lines worse --
+`रुकिए` 55.5 -> 44.0% and 58.0 -> 47.0% (exact McNemar p = 0.0001, 0.0007),
+`क्यों` unchanged (p = 0.44, 0.28) -- and regressed three other lines
+(`হ্যাঁ` 65 -> 27.5%, `का` 82.5 -> 62.5%, `ఇప్పుడే` 95 -> 60%, N = 40 each).
+Ablated, the snapped head does the damage and the snapped tail is neutral.
+Not shipped.
+
+The losses the cut does cause are elsewhere. Forced-alignment ground truth
+over 814 renders showed the silence splitter taking a stop consonant's
+closure *inside* the line for the pause before it (the `ত্` of `সত্যিই`),
+so the clip began mid-word in 92 of 814 renders (11%), and `সত্যিই` -- read
+back as `তি` -- passed in 0 of the 440 draws measured. Such gaps are at most
+116 ms with at most 279 ms of speech before them; the carrier's last segment
+is a median 1068 ms. So the cut now walks back across a gap under 140 ms
+that follows under 300 ms of speech
+(`common.CLOSURE_GAP_MS`, `Language.tts_carrier_merge_closures`). Confirmed on
+fresh draws, 200 per line per set, pass = CER <= 0.35:
+
+| line | set | before | after | paired: better / worse |
+|---|---|---|---|---|
+| `সত্যিই` | A' | 0.0% [0.0, 1.9] | 59.0% [52.1, 65.6] | 118 / 0 |
+| `সত্যিই` | B' | 0.0% [0.0, 1.9] | 67.5% [60.7, 73.6] | 135 / 0 |
+| `এখনই` | A' | 54.0% [47.1, 60.8] | 86.0% [80.5, 90.1] | 64 / 0 |
+| `এখনই` | B' | 56.5% [49.6, 63.2] | 88.0% [82.8, 91.8] | 63 / 0 |
+
+Over all 1000 paired held-out clips on hi/kn/mr/bn (every line; N = 20 each,
+200 for `क्यों` and `रुकिए`) no clip got worse and 30 got better (p = 2e-9).
+`क्यों` is unchanged (140/200 both ways) and `रुकिए` moved 116 -> 120 (p =
+0.13) -- as the in-place numbers predicted, the cut was not what failed
+them. It is off for Telugu: its carrier ends on a short word followed by a
+short pause, and the rule swept that word into the clip in 13 of 407
+held-out renders.
 
 Each carrier is machine-translated and back-translates through an independent
 model to the intended meaning, which is all `Language.tts_carrier_review`
-claims. None has been read by a fluent speaker.
+claims. None has been read by a fluent speaker. A one-page sheet per language
+-- the carrier, its NLLB back-translation, the carrier spoken, and a short
+line as it ships -- is in `docs/carrier-review/review-packet.html` for one to
+fill in (built by nothing in the pipeline; regenerate it by hand if a carrier
+changes). Marathi is first: its carrier back-translates as "frightening
+news", not "terrible news". `tts_carrier_review` changes only when a signed
+sheet comes back.
 
 **So the gate stops asking Whisper, and asks something that can answer.**
 Fifteen clips padded with silence exactly as the dub places a line, scored
@@ -379,6 +444,55 @@ presence check (audible and *pitched*: voiced fraction >= 0.30, against 0.00
 for silence, white noise and a click) and the report records that it was not
 read.
 
+**Scoring by forced alignment instead of free decoding was measured and
+rejected.** The idea: score the per-token Viterbi log-likelihood of the
+*expected* text (torchaudio `forced_align`), so the reader only has to
+confirm, not transcribe. First, the blank: these Vakyansh models emit `<s>`
+(id 0) as the CTC blank, not their configured `<pad>`, and aligning with
+`<pad>` scores every clip as garbage -- the blank has to be read off the
+model (argmax on silence), and the measurement checked that before scoring
+anything. With that right, on production clips (median of 3 draws; 8 lines
+x 6 clips in each of two draw sets per language, each clip also scored
+against the 7 other lines as a wrong-word case) it separates correct clips
+from wrong-word clips well -- AUC 0.978-0.998 for hi/mr/bn in both sets,
+lower 95% bound >= 0.957 -- and false-rejects 4-10% of correct clips at a
+threshold calibrated on the other set. By the rule set
+before looking, Hindi passed and Marathi and Bengali did not (noise passed
+the threshold: bn rejected only 59-60 of 96 silence/noise clips).
+
+It then failed the test that matters. Cut 100-150 ms off the head or tail of
+a correct clip and it still passes: Hindi 94-100% of such clips, Bengali
+100%. Of the real cut defects in these renders (the word truncated, CTC
+reading `তি` for `সত্যিই`, `খুনি` for `এখনই`), it passed 4 of 7 in Marathi
+and 12 of 14 in Bengali. A likelihood averaged over tokens is carried by the
+tokens that are there; scoring the worst single token instead did not fix
+it (Hindi still passed 100% of 150 ms head cuts; Bengali AUC fell to
+0.925-0.945). A check that passes a truncated word is not a wrong-word
+check, so it is not used anywhere.
+
+**A bigger reader does not rescue them either.** `facebook/mms-1b-all` with
+each language's adapter was scored against the current reader on the same
+480 production clips (one render each, cut as shipped; 78-80 complete clips
+per language per set), by a rule fixed first: false-reject <= 1/8, >= 80% of
+150 ms head and tail truncations caught, no real mid-word clip passed, <= 5%
+wrong-word acceptance, every silence/noise clip rejected -- in both sets. It
+failed the first two for every language, in both sets:
+
+| | hi | mr | bn |
+|---|---|---|---|
+| false-reject, MMS (sets A / B) | 67.5% / 67.5% | 19.2% / 15.2% | 20.0% / 22.5% |
+| false-reject, Vakyansh | 25.0% / 31.2% | 24.4% / 26.6% | 17.5% / 17.5% |
+| head / tail truncation caught, MMS | 50-62% / 73% | 49-60% / 28-38% | 47-55% / 44-55% |
+
+Both readers rejected every real mid-word clip, every null, and never
+accepted another line's text. (These are single renders; the gate reads the
+median of three, which is why its per-line numbers above are better. The
+comparison between readers is like for like.) IndicConformer is gated on
+Hugging Face and was not evaluated -- no token is available on this machine;
+IndicWhisper covers Hindi only and is autoregressive, the property that made
+Whisper unusable on short clips in the first place. So hi, mr and bn stay on
+the presence check, and the report keeps saying so.
+
 Two Whisper-side alternatives were measured and rejected. `initial_prompt`
 biasing leaks: a wrong prompt against a degraded clip produced the prompt's
 own words (`ఆగు` -> `తెలియదు`), which would manufacture passes. `avg_logprob`
@@ -399,7 +513,9 @@ that ships is still the line at its natural length.
   retimed rather than refused.
 - `tests/test_tts_time_budget.py`: short lines take the median of several
   draws, long lines are rendered once, and the same text always renders
-  identically.
+  identically; the carrier cut steps back over a stop closure to keep the
+  whole word (a real Bengali render is the fixture) but never walks into the
+  carrier, the merge is off for Telugu, and `render_line` passes the flag.
 - `tests/test_short_line_gate.py`: the ASR floor and the presence check that
   replaces transcription below it, against the "సరే." clip from the run and
   its carrier-sentence control.

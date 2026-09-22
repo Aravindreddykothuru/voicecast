@@ -10,6 +10,7 @@ call faked, so no weights are needed.
 from __future__ import annotations
 
 import os
+import pathlib
 
 import numpy as np
 import pytest
@@ -18,6 +19,8 @@ from app.config import get_settings
 from app.pipeline.timeline import MAX_TEMPO, TimelineSlot, plan_timeline
 from app.providers.base import EmotionResult, SynthesisRequest
 from app.providers.tts.common import render_stable
+
+FIXTURES_DIR = pathlib.Path(__file__).parent / "fixtures"
 
 
 def _tone(seconds: float, sr: int) -> np.ndarray:
@@ -76,6 +79,25 @@ def test_syspin_applies_the_emotion_rate_only_when_the_line_fits(syspin):
     sad = EmotionResult("sadness", 1.0)  # 0.90x would make an overrun worse
     provider.synthesize(SynthesisRequest(text="x", target_lang="te", emotion=sad, target_duration_ms=600))
     assert stretches == []
+
+
+def test_syspin_cuts_each_language_with_its_own_carrier_and_merge_flag(syspin, monkeypatch):
+    """The closure merge only helps if the provider actually asks for it --
+    per language, since it is unsafe for Telugu's carrier."""
+    from app.capabilities import require_language
+    from app.providers.tts import syspin_provider
+
+    provider, _ = syspin
+    seen = []
+
+    def fake_render_line(render, text, sr, carrier=None, merge_closures=False):
+        seen.append((carrier, merge_closures))
+        return _tone(0.5, sr)
+
+    monkeypatch.setattr(syspin_provider, "render_line", fake_render_line)
+    for code in ("bn", "te"):
+        provider.synthesize(SynthesisRequest(text="x", target_lang=code, target_duration_ms=5000))
+    assert seen == [(require_language("bn").tts_carrier, True), (require_language("te").tts_carrier, False)]
 
 
 @pytest.fixture
@@ -239,3 +261,97 @@ def test_a_carrier_render_with_no_pause_falls_back_to_the_bare_line():
     out = render_line(render, "abc", sr, carrier="CARRIER")
     assert any(not c.startswith("CARRIER") for c in calls), "never fell back"
     assert len(out) / sr < 1.5
+
+
+# --- the cut must not start mid-word at a stop closure ----------------------
+def _closure_signal(sr=22050, frag1_s=0.20, closure_s=0.16, frag2_s=0.23, carrier_s=1.0, pause_s=0.30):
+    """carrier | pause | word part | stop-closure silence | word part."""
+    rng = np.random.default_rng(0)
+    noise = lambda s: (10 ** (-70 / 20)) * rng.standard_normal(int(s * sr))  # noqa: E731
+    return np.concatenate([_tone(carrier_s, sr), noise(pause_s), _tone(frag1_s, sr), noise(closure_s),
+                           _tone(frag2_s, sr), noise(0.15)]).astype("float32")
+
+
+def test_the_cut_keeps_the_whole_word_across_a_stop_closure():
+    """A stop consonant's closure is a silence inside the word. The cut used
+    to take it for the pause before the line: 92 of 814 renders began
+    mid-word, and "সত্যিই" (read back as "তি") passed in 0 of 440 draws."""
+    from app.providers.tts.common import tail_after_pause
+
+    sr = 22050
+    sig = _closure_signal(sr)
+    old = tail_after_pause(sig, sr)
+    new = tail_after_pause(sig, sr, merge_closures=True)
+    word_s = 0.20 + 0.16 + 0.23
+    assert len(old) / sr < word_s, "precondition: the old cut is shorter than the word it should hold"
+    assert len(new) - len(old) > int(0.25 * sr), "the merged cut must add the first part back"
+    assert len(new) / sr < 0.95, "and must not reach into the 1.0 s carrier"
+
+
+def test_the_merge_stops_at_the_carrier_even_after_a_short_pause():
+    """The guard: a short gap is only a closure if the speech before it is a
+    word fragment. Here the carrier is two segments and its final one
+    (0.5 s) sits right before a short pause -- without the fragment guard the
+    walk back would take the carrier's last words into the clip."""
+    from app.providers.tts.common import tail_after_pause
+
+    sr = 22050
+    rng = np.random.default_rng(1)
+    noise = lambda s: (10 ** (-70 / 20)) * rng.standard_normal(int(s * sr))  # noqa: E731
+    sig = np.concatenate([_tone(0.8, sr), noise(0.25), _tone(0.5, sr), noise(0.16),
+                          _tone(0.3, sr), noise(0.15)]).astype("float32")
+    import librosa
+    iv = librosa.effects.split(sig, top_db=30)
+    assert len(iv) == 3, f"precondition: three segments, got {len(iv)}"
+    gap_ms = 1000 * (iv[2][0] - iv[1][1]) / sr
+    assert gap_ms < 140, f"precondition: the pause before the line reads as short ({gap_ms:.0f} ms)"
+    new = tail_after_pause(sig, sr, merge_closures=True)
+    assert new is not None and len(new) / sr < 0.6, f"carrier leaked into the clip ({len(new) / sr:.2f}s)"
+
+
+def test_the_real_satyii_render_is_cut_at_the_boundary_not_the_closure():
+    """Committed render of "<carrier> সত্যিই?" (draw 0). Its silences are
+    [209, 116, 395, 93] ms; the 395 ms one is the boundary, the 93 ms one is
+    the closure of "ত্". The old cut kept 335 ms ("তিই"); the whole word is
+    232 + 93 + 232 ms."""
+    sf = pytest.importorskip("soundfile")
+    from app.providers.tts.common import tail_after_pause
+
+    wav, sr = sf.read(FIXTURES_DIR / "closure_bn_satyii_carrier_render.wav", dtype="float32")
+    old = tail_after_pause(wav, sr)
+    new = tail_after_pause(wav, sr, merge_closures=True)
+    assert abs(len(old) / sr - 0.335) < 0.02, "fixture no longer reproduces the mid-word cut"
+    assert 0.60 <= len(new) / sr <= 0.72, f"expected the whole word plus pads, got {len(new) / sr:.3f}s"
+
+
+def test_merge_off_is_exactly_the_old_cut():
+    from app.providers.tts.common import tail_after_pause
+
+    sr = 22050
+    sig = _closure_signal(sr)
+    assert np.array_equal(tail_after_pause(sig, sr), tail_after_pause(sig, sr, merge_closures=False))
+
+
+def test_the_merge_is_on_only_where_it_was_measured_safe():
+    """Measured per carrier against forced-alignment ground truth, 814
+    renders: no carrier leak for hi, kn, mr, bn; Telugu's carrier ends on a
+    short word the merge swept into the clip 13 times in 407."""
+    from app.capabilities import SUPPORTED_LANGUAGES
+
+    flags = {lang.code: lang.tts_carrier_merge_closures for lang in SUPPORTED_LANGUAGES if lang.tts_carrier}
+    assert flags == {"te": False, "hi": True, "kn": True, "mr": True, "bn": True}
+    assert not any(lang.tts_carrier_merge_closures for lang in SUPPORTED_LANGUAGES if not lang.tts_carrier)
+
+
+def test_render_line_passes_the_merge_through():
+    from app.providers.tts.common import render_line
+
+    sr = 22050
+    sig = _closure_signal(sr)
+
+    def render(text, draw=0):
+        return sig if text.startswith("CARRIER") else _tone(0.4, sr)
+
+    off = render_line(render, "abc", sr, carrier="CARRIER")
+    on = render_line(render, "abc", sr, carrier="CARRIER", merge_closures=True)
+    assert len(on) > len(off) + int(0.25 * sr)

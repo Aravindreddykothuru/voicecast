@@ -193,7 +193,14 @@ PRESENCE_MIN_VOICED = 0.30
 # the production path (carrier render, excised, median of 3 draws) over 8-9
 # short lines per language that the pipeline's own translator produced:
 #
-#     te 9/9    kn 8/8    hi 6/8    mr 6/8    bn 5/8
+#     te 9/9    kn 8/8    hi 7/8    mr 6/8    bn 8/8     (re-measured 2026-09-22)
+#
+# On single renders rather than medians the hi/mr/bn readers false-reject
+# 17-31% of complete clips. Two replacements were measured against a rule
+# fixed beforehand (false-reject <= 1/8, truncation caught, both draw sets)
+# and neither is listed: forced-alignment scoring of the expected text still
+# passed 94-100% of clips with 150 ms cut off, and facebook/mms-1b-all
+# false-rejected 15-68% (CONTRACTS.md #7).
 #
 # hi, mr and bn are deliberately absent. Long-line accuracy said they were
 # fine (median CER 0.09-0.12) and they were listed on that basis, which was

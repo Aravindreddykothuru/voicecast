@@ -106,14 +106,26 @@ A line short enough to be the whole utterance is rendered *after* a carrier
 sentence and cut back out (`Language.tts_carrier`), because SYSPIN renders a
 lone short word as a different word -- 7/40 intelligible alone against 39/40
 spoken after a sentence. The clip that ships is still just the line. Set for
-te, hi, kn, mr and bn; other languages render as before. The carrier itself
-is machine-translated and only back-translation-checked -- see
-`Language.tts_carrier_review`.
+te, hi, kn, mr and bn; other languages render as before. For hi, kn, mr and
+bn the cut also steps back over a stop consonant's closure rather than start
+the line mid-word (`Language.tts_carrier_merge_closures`; Bengali `সত্যিই`
+went from 0% to 59-68% intelligible, N = 200 x 2); Telugu's carrier makes that
+unsafe, so it is off there. The carrier itself is machine-translated and only
+back-translation-checked -- see `Language.tts_carrier_review` and the review
+packet in `docs/carrier-review/`.
 
 Every SYSPIN voice the licence policy offers is loaded and spoken at TTS
 worker startup, not just the default language's: which voice a job needs is
 decided by the speaker's estimated pitch, so a voice that cannot load is a
 mid-job crash otherwise. That is ~80s of startup on a warm cache.
+
+SYSPIN voices are pinned: `app/providers/tts/syspin_manifest.py` holds each
+voice's commit and the sha256 of every file it uses, and a voice that is
+unpinned or whose files do not match refuses to load. To add or bump a voice,
+pin its new revision and hashes there. `GET /api/capabilities` lists known
+problems with the pinned releases in `tts_voice_warnings` -- today one:
+BengaliFemale ships without `extra.py` and runs on the byte-identical copy
+from a sibling release (issue #6, upstream draft in `docs/upstream/`).
 
 Detected emotion is carried as prosody, weighted by the classifier's
 confidence: speaking rate, energy, and (MMS only) VITS variation. Neither

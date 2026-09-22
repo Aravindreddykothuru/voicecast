@@ -21,6 +21,7 @@ from app.capabilities import (
     tts_voices,
 )
 from app.config import get_settings
+from app.providers.tts.syspin_manifest import supply_chain_warnings
 from app.providers.registry import get_emotion_provider
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,12 @@ class CapabilitiesOut(BaseModel):
     tts_engine: str
     tts_licenses: list[str]
     tts_commercial_use: bool
+    # Known problems with the pinned releases of the voices this deployment
+    # can use -- e.g. a voice published without a file it needs, running on a
+    # byte-identical copy borrowed from a sibling release. Empty when clean.
+    # Static facts about the pinned artifacts, so the API reports them
+    # without asking a worker (app/providers/tts/syspin_manifest.py).
+    tts_voice_warnings: list[str] = []
     max_upload_mb: int
     accepted_formats: list[str]
 
@@ -132,6 +139,9 @@ def get_capabilities() -> CapabilitiesOut:
         tts_licenses=sorted({v.license for lang in SUPPORTED_LANGUAGES for v in tts_voices(lang)}),
         tts_commercial_use=settings.tts_provider != "mock" and all(
             v.commercial for lang in SUPPORTED_LANGUAGES for v in tts_voices(lang)
+        ),
+        tts_voice_warnings=[] if settings.tts_provider == "mock" else supply_chain_warnings(
+            v.model for lang in SUPPORTED_LANGUAGES for v in tts_voices(lang) if v.engine == "syspin"
         ),
         max_upload_mb=settings.max_upload_mb,
         accepted_formats=settings.accepted_video_format_list,
