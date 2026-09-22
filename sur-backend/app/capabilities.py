@@ -75,9 +75,10 @@ class Language:
     # Whether the carrier cut may walk back across a within-word silence (a
     # stop closure) rather than start the line mid-word -- common.
     # tail_after_pause. Measured per carrier against forced-alignment ground
-    # truth: safe for hi, kn, mr and bn (no carrier leak in 814 renders);
-    # unsafe for te, whose carrier ends on a short word that the merge swept
-    # into the clip in 13 of 407 held-out renders.
+    # truth: safe for hi, kn, mr and bn (over 640 renders it added no carrier
+    # leak, moved no cut that was already at the boundary, and took mid-word
+    # cuts from 69 to 1); unsafe for te, whose carrier ends on a short word
+    # that the merge swept into the clip in 13 of 407 held-out renders.
     tts_carrier_merge_closures: bool = False
 
     @property

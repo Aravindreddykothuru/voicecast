@@ -333,9 +333,9 @@ def test_merge_off_is_exactly_the_old_cut():
 
 
 def test_the_merge_is_on_only_where_it_was_measured_safe():
-    """Measured per carrier against forced-alignment ground truth, 814
-    renders: no carrier leak for hi, kn, mr, bn; Telugu's carrier ends on a
-    short word the merge swept into the clip 13 times in 407."""
+    """Measured per carrier against forced-alignment ground truth: over 640
+    hi/kn/mr/bn renders the merge added no carrier leak; Telugu's carrier
+    ends on a short word the merge swept into the clip 13 times in 407."""
     from app.capabilities import SUPPORTED_LANGUAGES
 
     flags = {lang.code: lang.tts_carrier_merge_closures for lang in SUPPORTED_LANGUAGES if lang.tts_carrier}
