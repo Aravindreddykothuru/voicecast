@@ -15,7 +15,20 @@ chains:
   kn: [syspin, indic_parler, indicf5]
   default: [indic_parler, indicf5]   # languages with no SYSPIN voice
 
-timeouts: { synth_s: 60, check_s: 30 }
+# Per-model synthesis timeouts, from measurement on this CPU-only box.
+#   syspin: a sentence takes 6.1-7.2 s and a short line 10.6-14.1 s (three
+#     draws of carrier+word), so 60 s is ~4x the worst case (docs/tts-benchmark.md).
+#   indic_parler / indicf5: parler-tts-tiny-v1 needs ~45 s per 2 s of audio
+#     here, and the Indic model is larger, so a 10 s sentence can approach
+#     several minutes; at 60 s every sentence died as a timeout and the
+#     benchmark measured nothing. 600 s is the bound on a CPU host -- lower it
+#     on a GPU host, where these run in seconds.
+timeouts:
+  synth_s: 60               # default, and what SYSPIN gets
+  check_s: 30               # reader decode
+  per_model:
+    indic_parler: 600
+    indicf5: 600
 retries: { per_model: 1, network_backoff: [2, 4, 8, 16, 32, 60, 120, 300] }  # seconds, capped
 
 # A model is disabled for a language when it fails more than fail_ratio of its

@@ -18,6 +18,7 @@ import logging
 import os
 import tempfile
 import unicodedata
+from typing import Protocol
 
 from app.capabilities import require_language
 from app.config import get_settings
@@ -26,6 +27,15 @@ from app.providers.registry import ProviderNotInstalledError
 from app.providers.tts.common import fits_window, normalize, prosody_for, render_line, trim_silence
 
 logger = logging.getLogger(__name__)
+
+
+class VoiceHandle(Protocol):
+    """What `synthesize()` needs of a voice: which checkpoint it is. This
+    provider hands it a fully loaded `SyspinVoice`; the runtime-backed
+    subclass hands it a bare reference, because there the weights live in a
+    worker subprocess rather than in this process."""
+
+    repo_id: str
 
 SAMPLE_RATE = 22050
 _PUNCTUATION = "!¡'(),-.:;¿? "
@@ -90,9 +100,8 @@ class SyspinVoice:
         import torch
         from huggingface_hub import snapshot_download
 
-        from app.providers.tts.syspin_manifest import pin_for
-
         from app.providers.loading import ModelLoadError
+        from app.providers.tts.syspin_manifest import pin_for
 
         try:
             pin = pin_for(repo_id)
@@ -163,7 +172,7 @@ class SyspinTTSProvider(TTSProvider):
             self._converter = get_voice_converter()
         self._self_check_every_voice()
 
-    def _voice_for(self, lang_code: str, gender: str | None) -> SyspinVoice:
+    def _voice_for(self, lang_code: str, gender: str | None) -> VoiceHandle:
         from app.capabilities import tts_voices
 
         lang = require_language(lang_code)
@@ -240,8 +249,7 @@ class SyspinTTSProvider(TTSProvider):
         prosody = prosody_for(request.emotion, self._settings.emotion_confidence_floor)
         voice = self._voice_for(request.target_lang, request.extra.get("voice_gender"))
         lang = require_language(request.target_lang)
-        wav = render_line(voice.render, text, SAMPLE_RATE, carrier=lang.tts_carrier,
-                          merge_closures=lang.tts_carrier_merge_closures)
+        wav = self._render_raw(voice, text, lang, request.extra.get("voice_gender"))
 
         # No time fitting here: mux_export (timeline.plan_timeline) is the one
         # place a clip is sped up to its window, within one MAX_TEMPO budget.
@@ -267,3 +275,16 @@ class SyspinTTSProvider(TTSProvider):
         os.close(fd)
         sf.write(path, wav, sr, subtype="PCM_16")
         return SynthesisResult(local_audio_path=path, duration_ms=int(1000 * len(wav) / sr), sample_rate=sr)
+
+    def _render_raw(self, voice: VoiceHandle, text: str, lang, gender: str | None):
+        """The raw SYSPIN render for `text`: carrier-and-cut, median of three
+        draws, before prosody rate, time-fit, voice cloning or loudness
+        normalization -- all of which stay in `synthesize()` regardless of how
+        the raw wav was produced. This is the seam `RuntimeSyspinTTSProvider`
+        (app/providers/tts/runtime_syspin_provider.py) overrides to render in
+        an isolated subprocess via app.tts_runtime instead of in-process, so
+        that a crash or hang in the render cannot take the whole worker down.
+        `gender` is unused here (already baked into `voice`); the runtime
+        override needs it to pick its own voice."""
+        return render_line(voice.render, text, SAMPLE_RATE, carrier=lang.tts_carrier,
+                           merge_closures=lang.tts_carrier_merge_closures)

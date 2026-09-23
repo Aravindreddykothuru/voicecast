@@ -53,7 +53,22 @@ def cmd_setup(a) -> int:
                 timeout_s=a.timeout)
     print(json.dumps(rep, indent=1, ensure_ascii=False))
     failed = [t for t, v in rep["tasks"].items() if v["state"] == "FAILED"]
-    return 1 if failed else 0
+    # A model named in a chain but left unprovisioned is a half-set-up
+    # deployment, not a success: every line for it would be skipped at render
+    # time. Say which one and why, and exit non-zero -- never "continue
+    # silently with the one model that happened to work".
+    unprovisioned = {m: v["skipped_gated"] for m, v in rep["models"].items()
+                     if isinstance(v, dict) and v.get("skipped_gated")}
+    if unprovisioned or failed:
+        for model, repos in unprovisioned.items():
+            print(f"tts setup: {model} NOT provisioned -- {', '.join(repos)} is gated and HF_TOKEN is "
+                  f"{'not set' if not rep['token'] else 'set but was refused'}. Accept the licence on "
+                  f"huggingface.co, export HF_TOKEN, and re-run: it resumes from what is already downloaded.",
+                  file=sys.stderr)
+        for t in failed:
+            print(f"tts setup: task {t} FAILED -- {rep['tasks'][t]['error']}", file=sys.stderr)
+        return 1
+    return 0
 
 
 def cmd_warmup(a) -> int:

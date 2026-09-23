@@ -2,8 +2,8 @@
 
 `app/tts_runtime/` renders lines through a chain of models per language and
 keeps going when a model, the network, the disk or the process fails. It is
-a library plus a `tts` command; it does not replace the pipeline's TTS stage
-yet (see "Not wired into the pipeline" below).
+a library plus a `tts` command. The pipeline's TTS stage renders through it
+when `TTS_USE_RUNTIME=true` (see "Wired into the pipeline" below).
 
 ```
 make setup-tts                     # venvs, verified downloads, warm-up (idempotent)
@@ -83,7 +83,7 @@ models are resident.
 
 Every check above has a mutation test: `python scripts/mutate_tts_runtime.py`
 breaks each one on purpose and confirms the named test fails, then restores
-the file. 40 of 40 caught.
+the file. 43 of 43 caught.
 
 Windows note: `kill -9` is `TerminateProcess` (what the tests use); SIGTERM
 cannot be caught there, so graceful stop is Ctrl+C / CTRL_BREAK. On Linux
@@ -145,9 +145,48 @@ Setup and background tasks only:
 4. The connectivity probe (`HEAD https://huggingface.co`, `offline_mode: auto` only).
 5. IndicF5's public source downloads its Vocos vocoder at load with no pinned revision; the adapter serves it from the verified local copy. Its gated `model.py` is unread, so this is unverified.
 
-## Not wired into the pipeline
+## Wired into the pipeline (feature-flagged, off by default)
 
-The Celery synthesize stage still calls `SyspinTTSProvider` directly. The
-runtime renders byte-identical SYSPIN audio, so switching the stage over
-changes nothing for SYSPIN languages; it matters once a second model is
-provisioned. That switch is a separate change.
+`TTS_USE_RUNTIME=true` makes the Celery synthesize stage render SYSPIN in an
+isolated subprocess instead of in-process:
+`app/providers/tts/runtime_syspin_provider.py` subclasses
+`SyspinTTSProvider` and overrides one method, `_render_raw`, to call
+`ModelPool.synth("syspin", ..., draw=0)`. Everything else -- prosody rate,
+time-fit, voice cloning, loudness normalize -- is the inherited code,
+unchanged. **One-line rollback:** set `TTS_USE_RUNTIME=false` (the default)
+and restart the worker.
+
+What it buys: a crash, a hang, or a runaway TorchScript call in the render
+kills only the worker subprocess. The pool applies SYSPIN's own timeout
+(`timeouts.per_model`, 60 s) and the OOM ladder, and every
+`app.tts_runtime.pool.WorkerError` is a plain `RuntimeError`, so Celery's
+existing `autoretry_for=(Exception,)` retries it with backoff rather than
+failing the segment permanently (`_PERMANENT` is `ValueError`/`LookupError`/
+`TypeError` only).
+
+What it does **not** change: the audio. Proven byte-for-byte on a fixed
+sample set spanning both languages' short lines and sentences, both
+genders, with and without emotion -- 5 of 5 sha256 equal
+(`tests/test_runtime_syspin_provider.py::test_full_synthesize_output_is_byte_identical`).
+This holds because the runtime's `SyspinAdapter` maps `draw=0` to base
+offset 0 and then calls the same `common.render_line`, and production only
+ever asks for draw 0; a *retry* inside the runtime would use a different
+draw, which is why the pipeline path never retries at the pool level.
+
+Measured on a real job (`scripts/verify_wired_tts_byte_identity.py`, project
+fc117803, 9 translated Telugu segments, the pipeline's own
+`synthesize_segment` with real storage and DB): **9 of 9 lines byte-identical**
+between the two paths, with the provider class recorded per pass so the
+report cannot claim a path it did not take
+(`docs/tts-pipeline-wiring-run.json`). Wall clock was 68.4 s in-process
+against 163.1 s through the runtime, but those are not comparable: the
+in-process provider had already loaded every voice during its startup
+self-check, outside the measured window, while the worker loads lazily
+inside it. The steady-state per-line overhead (IPC plus a WAV round trip)
+was not isolated.
+
+Not yet routed through the runtime: the failover chain itself. Production
+still renders SYSPIN or fails; it does not fall through to Indic Parler or
+IndicF5, because neither is provisioned (both gated) and neither has been
+benchmarked against the pre-registered rule. Turning that on is a config
+change (`chains:`) plus a benchmark, not a code change.

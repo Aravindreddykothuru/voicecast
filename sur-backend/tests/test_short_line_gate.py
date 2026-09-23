@@ -210,12 +210,12 @@ def test_languages_without_a_reader_fall_back_rather_than_pass():
 
     gate = _gate()
     uncovered = [l.code for l in SUPPORTED_LANGUAGES if l.code not in gate.SHORT_LINE_CTC_MODELS]
-    # Tracked explicitly. as/gu/ml/or/pa/ta/ur have no commercially licensed
+    # Tracked explicitly. as/gu/ml/or/pa/ta have no commercially licensed
     # voice, so they cannot be dubbed on the default configuration and there
     # is no shipping audio to validate a reader against. hi/mr/bn can be
     # dubbed, and their readers were measured and rejected -- they failed
     # 2-3 of 8 correct short lines each.
-    assert sorted(uncovered) == ["as", "bn", "gu", "hi", "ml", "mr", "or", "pa", "ta", "ur"]
+    assert sorted(uncovered) == ["as", "bn", "gu", "hi", "ml", "mr", "or", "pa", "ta"]
     for code in uncovered:
         assert gate.ctc_reader(code) is None
 

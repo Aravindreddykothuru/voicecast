@@ -125,6 +125,15 @@ class Settings(BaseSettings):
     #   syspin -- IISc SYSPIN VITS, CC-BY-4.0: commercial use with attribution
     #   mms    -- facebook/mms-tts, CC-BY-NC-4.0: NOT for commercial use
     tts_engine: Literal["syspin", "mms"] = "syspin"
+    # Feature flag, off by default: when true and tts_engine=syspin, the raw
+    # SYSPIN render happens in an isolated subprocess (app/tts_runtime) rather
+    # than in-process, so a crash, hang or runaway TorchScript call in the
+    # render can no longer take the whole Celery worker down with it. Every
+    # other step (prosody, time-fit, voice cloning, loudness normalize) is
+    # unchanged, and the two paths are proven byte-identical on a fixed sample
+    # set: tests/test_runtime_syspin_provider.py. One-line rollback: set this
+    # back to false (or unset TTS_USE_RUNTIME).
+    tts_use_runtime: bool = False
     # When true, only voices whose license permits commercial use are
     # offered (languages without one report tts_available=false) and a
     # non-commercial engine refuses to start. Production must set this.

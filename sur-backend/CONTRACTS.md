@@ -596,11 +596,27 @@ that ships is still the line at its natural length.
   event and appears in the run report. Nothing falls back silently.
 - Thresholds come from measurement, never by hand: `calibration.json` is
   derived by `tts benchmark` on draw set A and evaluated on held-out set B.
+- A line no model in its chain could ever speak is refused at `submit()`,
+  not queued and flagged forever. That is the static `supports()` claim, not
+  availability: an unprovisioned model is a logged, recoverable skip, while
+  Urdu (dropped 2026-09-23) has no model that speaks it at all and was
+  removed from `SUPPORTED_LANGUAGES` outright.
+- The Hugging Face token is read from the environment, never from `.env`,
+  and never leaves the parent process: `WorkerHandle.worker_env()` strips it
+  before spawning a model worker, which never authenticates.
+- `TTS_USE_RUNTIME=true` renders the pipeline's SYSPIN audio in the runtime's
+  isolated subprocess. It is byte-identical to the in-process path (5 of 5
+  sha256 equal on a fixed sample set), so the flag changes resilience, never
+  output. One-line rollback: set it back to false.
 
 **Enforced by.** `tests/test_tts_runtime_units.py`,
 `tests/test_tts_runtime_failover.py`, `tests/test_tts_runtime_chaos.py`
 (network cut mid-download and mid-batch, kill -9, supervisor, signals, disk
 low/full, corrupted model file), `tests/test_tts_runtime_real.py` (SYSPIN
-byte-identical to production; offline rendering with sockets blocked).
+byte-identical to production; offline rendering with sockets blocked),
+`tests/test_tts_runtime_secrets_and_scope.py` (the token never reaches a
+worker, a log, the store or a report; Urdu refused at every door; per-model
+timeouts), `tests/test_runtime_syspin_provider.py` (the flag routes, defaults
+off, and the wired path is byte-identical).
 Every check has a mutation test: `python scripts/mutate_tts_runtime.py`
-breaks each one and confirms the named test fails -- 40 of 40 caught.
+breaks each one and confirms the named test fails -- 43 of 43 caught.

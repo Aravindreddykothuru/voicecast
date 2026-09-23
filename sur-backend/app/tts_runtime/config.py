@@ -53,6 +53,7 @@ class RuntimeConfig:
     default_chain: tuple[str, ...]
     synth_timeout_s: float = 60.0
     check_timeout_s: float = 30.0
+    synth_timeout_per_model: dict[str, float] = field(default_factory=dict)
     retries_per_model: int = 1
     network_backoff_s: tuple[float, ...] = (2, 4, 8, 16, 32, 60, 120, 300)
     breaker: BreakerConfig = field(default_factory=BreakerConfig)
@@ -66,6 +67,11 @@ class RuntimeConfig:
     interpreters: dict[str, str] = field(default_factory=dict)
     allow_test_models: bool = False
     source: str = ""
+
+    def synth_timeout_for(self, model_id: str) -> float:
+        """A model's own synthesis timeout. One bound for every model would be
+        either far too tight for the slow ones or useless for the fast ones."""
+        return self.synth_timeout_per_model.get(adapter_name(model_id), self.synth_timeout_s)
 
     def chain_for(self, lang: str) -> tuple[str, ...]:
         return self.chains.get(lang, self.default_chain)
@@ -130,7 +136,13 @@ def parse(data: dict, *, source: str = "<dict>", allow_test_models: bool | None 
         chains[str(lang)] = tuple(chain)
     default_chain = chains.pop("default")
 
-    t = _only(data.get("timeouts", {}), {"synth_s", "check_s"}, f"{source}: timeouts")
+    t = _only(data.get("timeouts", {}), {"synth_s", "check_s", "per_model"}, f"{source}: timeouts")
+    per_model_raw = _only(t.get("per_model", {}) or {}, set(licenses.ALLOWLIST), f"{source}: timeouts.per_model")
+    per_model = {}
+    for name, v in per_model_raw.items():
+        if not isinstance(v, int | float) or v <= 0:
+            raise ConfigError(f"{source}: timeouts.per_model.{name} must be a positive number of seconds")
+        per_model[str(name)] = float(v)
     r = _only(data.get("retries", {}), {"per_model", "network_backoff"}, f"{source}: retries")
     b = _only(data.get("circuit_breaker", {}), {"window", "fail_ratio", "cooldown_s", "min_samples"},
               f"{source}: circuit_breaker")
@@ -168,6 +180,7 @@ def parse(data: dict, *, source: str = "<dict>", allow_test_models: bool | None 
     cfg = RuntimeConfig(
         chains=chains, default_chain=default_chain,
         synth_timeout_s=float(t.get("synth_s", 60)), check_timeout_s=float(t.get("check_s", 30)),
+        synth_timeout_per_model=per_model,
         retries_per_model=int(r.get("per_model", 1)), network_backoff_s=backoff,
         breaker=BreakerConfig(int(b.get("window", 20)), ratio, float(b.get("cooldown_s", 600)),
                               int(b.get("min_samples", 10))),

@@ -274,7 +274,7 @@ def latency_of(r: dict, timeout_s: float) -> float | None:
     return None if s is None or s > timeout_s else s
 
 
-def summarize(rows: list[dict], cal: Calibration, timeout_s: float = 60.0) -> list[dict]:
+def summarize(rows: list[dict], cal: Calibration, timeout_for=lambda m: 60.0) -> list[dict]:
     import soundfile as sf
 
     table = []
@@ -300,9 +300,10 @@ def summarize(rows: list[dict], cal: Calibration, timeout_s: float = 60.0) -> li
                 line_cer = [float(np.mean(v)) for v in by_line.values()]
                 cer_m, cer_lo, cer_hi = boot_mean_ci(line_cer)
                 passes = [int(c <= 0.35) for v in by_line.values() for c in v]
-                timed = [r for r in ok if latency_of(r, timeout_s) is not None]
-                lat = boot_mean_ci([latency_of(r, timeout_s) for r in timed])
-                rtf = boot_mean_ci([latency_of(r, timeout_s) / r["audio_s"] for r in timed if r.get("audio_s")])
+                t_s = timeout_for(model)
+                timed = [r for r in ok if latency_of(r, t_s) is not None]
+                lat = boot_mean_ci([latency_of(r, t_s) for r in timed])
+                rtf = boot_mean_ci([latency_of(r, t_s) / r["audio_s"] for r in timed if r.get("audio_s")])
                 table.append({
                     "model": model, "lang": lang, "kind": kind, "set": s, "renders": len(R),
                     "errors": len(R) - len(ok), "lines": len({r["text"] for r in R}),
@@ -396,7 +397,7 @@ def run(runner, models: list[str], langs: list[str], write_calibration: bool = T
     cal_path.write_text(json.dumps(cal_dict, indent=1), encoding="utf-8")
     cal = Calibration.load(cal_path)
     ev = evaluate_calibration(rows, cal)
-    table = summarize(rows, cal, runner.cfg.synth_timeout_s)
+    table = summarize(rows, cal, runner.cfg.synth_timeout_for)
     res = {"created": time.strftime("%Y-%m-%d %H:%M"), "host": f"{platform.system()} {platform.machine()}, CPU only",
            "harness": harness, "calibration": cal_dict, "calibration_eval": ev, "table": table,
            "chain_order": chain_order(table, runner.cfg), "seconds": round(time.time() - t0)}

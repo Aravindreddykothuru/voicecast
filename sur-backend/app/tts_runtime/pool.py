@@ -83,9 +83,14 @@ class WorkerHandle:
         self.load_info: dict = {}
         self._q: queue.Queue = queue.Queue()
 
-    def start(self) -> None:
-        self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        env = dict(os.environ)
+    # Downloads happen in the parent; a model worker never authenticates, so
+    # the Hugging Face token is removed from its environment. It cannot leak
+    # through a worker's crash dump, a library that logs its own config, or a
+    # subprocess the model library spawns.
+    SECRET_ENV = ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACE_TOKEN", "HF_API_TOKEN")
+
+    def worker_env(self) -> dict:
+        env = {k: v for k, v in os.environ.items() if k not in self.SECRET_ENV}
         env.update({
             "TTS_WORKER_SPEC": json.dumps({"model_id": self.model_id, "options": self.options,
                                            "allow_test_models": self.allow_test_models}),
@@ -93,6 +98,11 @@ class WorkerHandle:
             "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1",
         })
         env.update(self.env_extra)
+        return env
+
+    def start(self) -> None:
+        self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        env = self.worker_env()
         self._log = open(self.log_path, "ab")
         # Own process group / session: a Ctrl+C aimed at the runner must not
         # kill the worker mid-line -- the runner finishes the line, then stops.
@@ -277,14 +287,14 @@ class ModelPool:
 
     def _req(self, h: WorkerHandle, model_id: str, req: dict) -> dict:
         try:
-            return h.request(req, self.cfg.synth_timeout_s)
+            return h.request(req, self.cfg.synth_timeout_for(model_id))
         except (WorkerTimeout, WorkerCrashed):
             self._workers.pop(model_id, None)
             raise
 
     def health(self, model_id: str) -> dict:
         try:
-            r = self._get_with_oom_ladder(model_id).request({"op": "health"}, self.cfg.synth_timeout_s)
+            r = self._get_with_oom_ladder(model_id).request({"op": "health"}, self.cfg.synth_timeout_for(model_id))
         except WorkerError as e:
             self._workers.pop(model_id, None)
             return {"ok": False, "kind": e.kind, "detail": f"{e.kind}: {e.detail}",

@@ -90,8 +90,10 @@ class Language:
 # UI would offer and the pipeline would then fail on. tests/test_capabilities.py
 # enforces that, so adding a row without a mapping fails the build.
 # MMS suffixes verified to exist on the Hub, none requiring uroman
-# pre-processing (tokenizer_config.is_uroman == false). Urdu's checkpoint is
-# script-qualified; plain "urd" does not exist. SYSPIN voices are the
+# pre-processing (tokenizer_config.is_uroman == false). Urdu was dropped from
+# scope on 2026-09-23: no TTS model the licence policy allows speaks it (SYSPIN
+# has no Urdu voice; Indic Parler-TTS and IndicF5 both exclude it), so it could
+# only ever have been offered and then failed. SYSPIN voices are the
 # TorchScript releases; its Gujarati release is a Coqui checkpoint that needs
 # the Coqui runtime and is not wired up.
 SUPPORTED_LANGUAGES: tuple[Language, ...] = (
@@ -111,7 +113,6 @@ SUPPORTED_LANGUAGES: tuple[Language, ...] = (
     Language("pa", "Punjabi", "pan_Guru", (_mms("pan"),)),
     Language("or", "Odia", "ory_Orya", (_mms("ory"),)),
     Language("as", "Assamese", "asm_Beng", (_mms("asm"),)),
-    Language("ur", "Urdu", "urd_Arab", (_mms("urd-script_arabic"),)),
 )
 
 

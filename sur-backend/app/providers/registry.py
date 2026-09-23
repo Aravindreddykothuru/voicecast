@@ -82,6 +82,14 @@ def get_tts_provider() -> TTSProvider:
     # TTS_ENGINE picks the renderer; voice cloning (if enabled) is layered on
     # by the provider. Licenses per engine: app/capabilities.py, CONTRACTS.md #7.
     if settings.tts_engine == "syspin":
+        # TTS_USE_RUNTIME=true swaps only the raw-render step to an isolated
+        # subprocess (app/tts_runtime); everything else about SyspinTTSProvider
+        # is unchanged. One-line rollback: set it back to false. See
+        # app/providers/tts/runtime_syspin_provider.py and CONTRACTS.md #9.
+        if settings.tts_use_runtime:
+            from app.providers.tts.runtime_syspin_provider import RuntimeSyspinTTSProvider
+
+            return RuntimeSyspinTTSProvider()
         from app.providers.tts.syspin_provider import SyspinTTSProvider
 
         return SyspinTTSProvider()

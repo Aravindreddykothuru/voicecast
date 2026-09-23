@@ -21,8 +21,21 @@ U = "tests/test_tts_runtime_units.py::"
 F = "tests/test_tts_runtime_failover.py::"
 C = "tests/test_tts_runtime_chaos.py::"
 X = "tests/test_tts_runtime_real.py::"
+S = "tests/test_tts_runtime_secrets_and_scope.py::"
 
 MUTANTS = [
+    ("secrets: the token is handed to workers", R + "pool.py",
+     "        env = {k: v for k, v in os.environ.items() if k not in self.SECRET_ENV}",
+     "        env = dict(os.environ)",
+     [S + "test_a_worker_never_receives_the_token"]),
+    ("scope: a line no model can speak is queued anyway", R + "runner.py",
+     "            if not any(adapter_class(m).supports(lang) for m in chain):",
+     "            if False:",
+     [S + "test_urdu_cannot_enter_the_queue"]),
+    ("timeouts: every model gets the global bound", R + "config.py",
+     "        return self.synth_timeout_per_model.get(adapter_name(model_id), self.synth_timeout_s)",
+     "        return self.synth_timeout_s",
+     [S + "test_each_model_gets_its_own_measured_timeout", S + "test_the_pool_uses_the_per_model_timeout"]),
     ("allowlist: forbidden list ignored", R + "licenses.py",
      "    for pattern, why in FORBIDDEN:\n        if re.search(pattern, repo):",
      "    for pattern, why in ():\n        if re.search(pattern, repo):",
@@ -150,8 +163,8 @@ MUTANTS = [
      "        h = self.get(model_id)\n        r = self._req(h, model_id, req)",
      [F + "test_the_pool_itself_recovers_from_an_out_of_memory_at_load"]),
     ("health: bypasses the OOM ladder", R + "pool.py",
-     '            r = self._get_with_oom_ladder(model_id).request({"op": "health"}, self.cfg.synth_timeout_s)',
-     '            r = self.get(model_id).request({"op": "health"}, self.cfg.synth_timeout_s)',
+     '            r = self._get_with_oom_ladder(model_id).request({"op": "health"}, self.cfg.synth_timeout_for(model_id))',
+     '            r = self.get(model_id).request({"op": "health"}, self.cfg.synth_timeout_for(model_id))',
      [F + "test_out_of_memory_while_loading_follows_the_ladder_to_cpu"]),
     # Removing only the main loop's stop check is an equivalent mutant (the
     # disk guard checks the same flag before every line); the stop request

@@ -46,7 +46,7 @@ class FakeAdapter(Adapter):
     name = "fake"
     repo = "local/fake"
     license = "LicenseRef-no-weights"
-    languages = frozenset({"hi", "mr", "bn", "te", "kn", "ta", "ml", "gu", "pa", "or", "as", "ur", "en"})
+    languages = frozenset({"hi", "mr", "bn", "te", "kn", "ta", "ml", "gu", "pa", "or", "as", "en"})
     supports_cpu_fallback = True
 
     @classmethod

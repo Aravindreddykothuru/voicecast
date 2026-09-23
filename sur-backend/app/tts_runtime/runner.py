@@ -142,10 +142,26 @@ class Runner:
 
     # --- jobs -------------------------------------------------------------------
     def submit(self, spec: dict) -> str:
+        from app.tts_runtime.adapters import adapter_class
+
         lines = spec.get("lines") or []
         for i, ln in enumerate(lines):
             if not isinstance(ln.get("text"), str) or not ln.get("lang"):
                 raise ValueError(f"line {i}: needs text and lang")
+            # A line no model in its chain could ever speak must not enter the
+            # queue: it would be flagged on every run, forever. This is the
+            # static claim (`supports`), not availability -- a model that is
+            # merely unprovisioned is a runtime skip, logged and recoverable,
+            # whereas Urdu (dropped 2026-09-23) has no model that speaks it at
+            # all. `app.capabilities` is deliberately not consulted here: the
+            # runtime also renders languages the dub product does not target,
+            # such as English for the parler_tiny test model.
+            lang = ln["lang"]
+            chain = self.cfg.chain_for(lang)
+            if not any(adapter_class(m).supports(lang) for m in chain):
+                raise ValueError(
+                    f"line {i}: no model in the {lang!r} chain speaks {lang!r} "
+                    f"(chain: {', '.join(chain) or 'empty'}). Nothing would ever render it.")
         jid = job_id_for(spec)
         out_dir = str(Path(spec.get("out_dir") or self.home / "jobs" / jid))
         if self.store.create_job(jid, spec, out_dir, lines):
