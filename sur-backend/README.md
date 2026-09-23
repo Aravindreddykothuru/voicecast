@@ -273,6 +273,17 @@ What this needs, and why each piece exists:
   (`/startup] ... loaded and self-checked`). Expect ~1 minute (main) and
   ~2 minutes (TTS, with cloning enabled).
 
+## Self-healing TTS runtime
+
+`app/tts_runtime/` renders lines through a per-language chain of models
+(`tts_chains.yaml`) and survives model crashes, network loss, kill -9, OOM
+and a full disk without losing or repeating work. `make setup-tts`
+provisions it (idempotent; gated models need `HF_TOKEN` in the environment),
+`python -m app.tts_runtime run|resume|supervise|status|report|benchmark`
+drives it. Today only SYSPIN runs on the dev box: Indic Parler-TTS and
+IndicF5 are gated on Hugging Face. See `docs/tts-runtime.md` and
+CONTRACTS.md #9.
+
 ## API surface
 
 | Method & path | Purpose |

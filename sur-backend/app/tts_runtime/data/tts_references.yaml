@@ -1,0 +1,30 @@
+# Reference clips IndicF5 may clone from. Only entries with status: verified
+# are used -- a verified licence AND documented consent of the speaker
+# (IndicF5 model card: "only clone voices for which you have explicit
+# permission"). `file` is relative to the verified IndicF5 model folder,
+# or absolute for clips you provide.
+#
+# The two clips shipped in the IndicF5 repository are listed but NOT usable
+# yet: their licence is inferred from the file naming (it matches the
+# ai4bharat/Rasa dataset, CC-BY-4.0), not stated by the repository, and the
+# Marathi clip's transcript is not published anywhere we could read.
+references:
+  - id: indicf5_pan_f_happy_00001
+    file: prompts/PAN_F_HAPPY_00001.wav
+    lang: pa
+    gender: female
+    emotion: happiness
+    text: "ਭਹੰਪੀ ਵਿੱਚ ਸਮਾਰਕਾਂ ਦੇ ਭਵਨ ਨਿਰਮਾਣ ਕਲਾ ਦੇ ਵੇਰਵੇ ਗੁੰਝਲਦਾਰ ਅਤੇ ਹੈਰਾਨ ਕਰਨ ਵਾਲੇ ਹਨ, ਜੋ ਮੈਨੂੰ ਖੁਸ਼ ਕਰਦੇ  ਹਨ।"
+    text_source: "github.com/AI4Bharat/IndicF5 README usage example"
+    license: "CC-BY-4.0 (inferred from Rasa naming; unconfirmed)"
+    consent: unverified
+    status: needs_verification
+  - id: indicf5_mar_f_happy_00001
+    file: prompts/MAR_F_HAPPY_00001.wav
+    lang: mr
+    gender: female
+    emotion: happiness
+    text: null
+    license: "CC-BY-4.0 (inferred from Rasa naming; unconfirmed)"
+    consent: unverified
+    status: missing_transcript

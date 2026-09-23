@@ -1,0 +1,39 @@
+{
+ "name": "flan_t5_large_tokenizer",
+ "repo": "google/flan-t5-large",
+ "revision": "0613663d0d48ea86ba8cb3d7a44f0f65dc596a2a",
+ "license": "Apache-2.0",
+ "gated": false,
+ "files": [
+  {
+   "path": "config.json",
+   "size": 662,
+   "git_oid": "52d6c53a0bc88c7d1fe251e9643ce8aaf1c13e2e",
+   "lfs": false
+  },
+  {
+   "path": "special_tokens_map.json",
+   "size": 2201,
+   "git_oid": "2c19eb6e3b583f52d34b903b5978d3d30b6b7682",
+   "lfs": false
+  },
+  {
+   "path": "spiece.model",
+   "size": 791656,
+   "git_oid": "317a5ccbde45300f5d1d970d4d449af2108b147e",
+   "lfs": true
+  },
+  {
+   "path": "tokenizer.json",
+   "size": 2424064,
+   "git_oid": "fc669fbad1a6a82119ca3e1fa75db33ee22ca47d",
+   "lfs": false
+  },
+  {
+   "path": "tokenizer_config.json",
+   "size": 2539,
+   "git_oid": "031ce30f2198693aabefeac9588257b81658d7f4",
+   "lfs": false
+  }
+ ]
+}

@@ -1,0 +1,45 @@
+{
+ "name": "indicf5",
+ "repo": "ai4bharat/IndicF5",
+ "revision": "ba85abedf18dc479a447eaa0eccbd76ab78a47d5",
+ "license": "MIT",
+ "gated": true,
+ "files": [
+  {
+   "path": "checkpoints/vocab.txt",
+   "size": 11283,
+   "git_oid": "65db6313e8830d8a31b2ae46f15d8487456c1a8d",
+   "lfs": false
+  },
+  {
+   "path": "config.json",
+   "size": 350,
+   "git_oid": "bb1ebb0ad5e6b06a2f493887dce171b6e86640f0",
+   "lfs": false
+  },
+  {
+   "path": "model.py",
+   "size": 5774,
+   "git_oid": "c8431d492667a4d7b618e262b3d58a7b6964122f",
+   "lfs": false
+  },
+  {
+   "path": "model.safetensors",
+   "size": 1402789408,
+   "git_oid": "686852688f658da442eaaeeaf09408e16586f879",
+   "lfs": true
+  },
+  {
+   "path": "prompts/MAR_F_HAPPY_00001.wav",
+   "size": 465740,
+   "git_oid": "4e55348a33315d5d9212c5550a8b9696f6b0ef01",
+   "lfs": true
+  },
+  {
+   "path": "prompts/PAN_F_HAPPY_00001.wav",
+   "size": 777644,
+   "git_oid": "6be07591e46ecf95076f7d712438c39f594f5b5f",
+   "lfs": true
+  }
+ ]
+}

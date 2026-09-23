@@ -1,0 +1,51 @@
+# Which TTS models speak which language, in what order, and how the runtime
+# (app/tts_runtime) reacts when one fails. Validated strictly at startup: an
+# unknown key, an unknown model, or a model outside the licence allowlist
+# (app/tts_runtime/licenses.py) refuses to start -- never a silent default.
+#
+# Order is evidence: a chain is reordered only by `tts benchmark` results
+# (docs/tts-runtime.md). indic_parler and indicf5 are gated on Hugging Face
+# and need HF_TOKEN for `make setup-tts`; until their weights are provisioned
+# they are skipped (logged as `unavailable`) and never block a line.
+chains:
+  hi: [syspin, indic_parler, indicf5]
+  mr: [syspin, indic_parler, indicf5]
+  bn: [syspin, indic_parler, indicf5]
+  te: [syspin, indic_parler, indicf5]
+  kn: [syspin, indic_parler, indicf5]
+  default: [indic_parler, indicf5]   # languages with no SYSPIN voice
+
+timeouts: { synth_s: 60, check_s: 30 }
+retries: { per_model: 1, network_backoff: [2, 4, 8, 16, 32, 60, 120, 300] }  # seconds, capped
+
+# A model is disabled for a language when it fails more than fail_ratio of its
+# last `window` lines -- evaluated once it has min_samples lines, so two early
+# failures cannot open it -- or fails its health check. Half-open after cooldown.
+circuit_breaker: { window: 20, fail_ratio: 0.30, cooldown_s: 600, min_samples: 10 }
+
+# SYSPIN is skipped for a line containing a known-bad word (known_bad/<lang>.txt).
+# Words are learned only from single-word lines: a failed sentence does not say
+# which word failed. Never auto-removed.
+known_bad: { auto_add_after: "3 of last 5", auto_remove: false }
+
+scene_consistency: true
+max_models_on_gpu: 2          # also bounds models resident in RAM on CPU hosts
+offline_mode: auto            # auto | force | off
+
+# Carrier-and-cut (CONTRACTS.md #7) only for models measured to need it.
+# `unmeasured`: not applied -- the cut was validated on SYSPIN only.
+carrier: { syspin: true, indic_parler: unmeasured, indicf5: unmeasured }
+
+# Pause a batch (with an alert) when free disk falls below this.
+disk: { min_free_mb: 2048 }
+
+# Readers for the reader-check trigger. Only where a reader is reliable on the
+# lines it scores (CONTRACTS.md #7): te and kn.
+readers: { te: [vakyansh], kn: [vakyansh] }
+
+# Models whose dependencies conflict with the backend venv run under their own
+# interpreter (e.g. parler-tts pins a different transformers). Paths are
+# relative to sur-backend/. Missing interpreter => model unavailable, logged.
+interpreters:
+  indic_parler: .venv-parler/Scripts/python.exe
+  indicf5: .venv-indicf5/Scripts/python.exe

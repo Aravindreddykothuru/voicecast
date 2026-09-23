@@ -566,3 +566,41 @@ that ships is still the line at its natural length.
 - `sur-frontend/src/lib/runState.test.ts`
 - `sur-frontend/e2e/stall.spec.ts` (browser, against a stack with its
   workers stopped)
+
+---
+
+## 9. A TTS line never stops a batch, and no work is lost or done twice
+
+`app/tts_runtime/` (details and every guarantee's test: `docs/tts-runtime.md`).
+
+- Each language has a chain of models (`tts_chains.yaml`). A model that is
+  unprovisioned, unhealthy, breaker-open, or -- SYSPIN only -- meets a word in
+  `known_bad/<lang>.txt` is skipped with a logged reason; one that crashes,
+  hangs, runs out of memory or fails a trigger hands the line to the next.
+  When nothing passes, the best attempt is kept and the line is FLAGGED. No
+  line raises out of the loop.
+- Only allowlisted, commercially usable weights load (`licenses.py`); the
+  worker re-checks before loading anything. MMS-TTS, original F5-TTS and XTTS
+  are refused by name. Readers are allowlisted too: the Vakyansh models have
+  no licence field on Hugging Face and are allowed on their upstream MIT
+  licence, which is written down next to them.
+- Every model runs in its own process. State is SQLite in WAL mode with
+  synchronous=FULL; each line transition commits. Outputs are temp + fsync +
+  atomic rename. After kill -9, `resume` requeues the in-flight line,
+  re-hashes every finished output, and renders only what is missing.
+- Rendering needs no network: workers run with `HF_HUB_OFFLINE` and, in the
+  tests, with their sockets blocked. Downloads resume from partial files
+  by HTTP Range and are verified against pins taken from Hugging Face's
+  public tree API (which works for gated repos without a token).
+- Every switch, retry, pause, resume, breaker event, OOM and flag is an
+  event and appears in the run report. Nothing falls back silently.
+- Thresholds come from measurement, never by hand: `calibration.json` is
+  derived by `tts benchmark` on draw set A and evaluated on held-out set B.
+
+**Enforced by.** `tests/test_tts_runtime_units.py`,
+`tests/test_tts_runtime_failover.py`, `tests/test_tts_runtime_chaos.py`
+(network cut mid-download and mid-batch, kill -9, supervisor, signals, disk
+low/full, corrupted model file), `tests/test_tts_runtime_real.py` (SYSPIN
+byte-identical to production; offline rendering with sockets blocked).
+Every check has a mutation test: `python scripts/mutate_tts_runtime.py`
+breaks each one and confirms the named test fails -- 40 of 40 caught.

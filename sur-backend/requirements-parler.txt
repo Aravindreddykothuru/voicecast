@@ -1,0 +1,12 @@
+# Indic Parler-TTS (ai4bharat/indic-parler-tts, Apache-2.0) runs in its own
+# interpreter, .venv-parler, because parler-tts pins transformers==4.46.1 and
+# neither backend venv can satisfy that (CONTRACTS.md #1: never mix stacks).
+# The runtime starts the model's worker process with this interpreter
+# (tts_chains.yaml: interpreters.indic_parler). Created by `make setup-tts`.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.4.1
+torchaudio==2.4.1
+parler-tts @ git+https://github.com/huggingface/parler-tts.git@d108732cd57788ec86bc857d99a6cabd66663d68
+soundfile==0.12.1
+soxr==0.5.0.post1
+pyyaml==6.0.2

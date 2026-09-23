@@ -1,0 +1,10 @@
+# SYSPIN known-bad words for Hindi: SYSPIN is skipped for any line containing
+# one of these; with no other model available the line is rendered by SYSPIN
+# anyway and FLAGGED for review. Never removed automatically -- remove a word
+# only with new evidence, and say what it is.
+#
+# Evidence (CONTRACTS.md #7, measured 2026-09-22). Hindi's CTC reader
+# false-rejects 25-31% of correct single renders, so per-render failure rates
+# near that level are weak evidence on their own.
+क्यों  # fails the production median-of-3 render (read "किम", CER 0.800); single renders pass 67.0%/70.0% (N=200 x 2) -- weak alone
+रुकिए  # single renders pass 54.5%/58.5% read uncut (N=200 x 2), i.e. fails ~43% -- above the reader's false-reject rate

@@ -34,7 +34,12 @@ def test_no_hf_token_literal_anywhere_in_repo():
     for path in BACKEND_ROOT.rglob("*"):
         if not path.is_file() or path.suffix not in {".py", ".env", ".example", ".md", ".yml", ".yaml", ".toml"}:
             continue
-        if any(part in {".venv", ".venv-tts", ".tools", "__pycache__", ".git"} for part in path.parts):
+        # Only this repo's own files: a virtualenv holds third-party packages
+        # (transformers' testing_utils.py carries a dummy hf_ token), and
+        # .tts_runtime holds downloaded model files.
+        if any(part.startswith(".venv") or part in {".tools", "__pycache__", ".git", ".tts_runtime",
+                                                    ".pytest_cache", ".ruff_cache", ".mypy_cache"}
+               for part in path.parts):
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")

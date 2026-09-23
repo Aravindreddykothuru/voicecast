@@ -8,6 +8,8 @@
 # --- Python --------------------------------------------------------------
 .venv/
 .venv-tts/
+.venv-parler/
+.venv-indicf5/
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -40,3 +42,7 @@ Claude outputs/
 .claude/*.lock
 .DS_Store
 Thumbs.db
+
+# --- TTS runtime state -----------------------------------------------------
+# SQLite job state, worker logs, verified model downloads (GBs), outputs.
+sur-backend/.tts_runtime/

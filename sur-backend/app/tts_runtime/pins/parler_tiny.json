@@ -1,0 +1,57 @@
+{
+ "name": "parler_tiny",
+ "repo": "parler-tts/parler-tts-tiny-v1",
+ "revision": "fe1bd939bb05464d39a76e20cf8a35d4e6885571",
+ "license": "Apache-2.0",
+ "gated": false,
+ "files": [
+  {
+   "path": "config.json",
+   "size": 7664,
+   "git_oid": "c1a8d6f2cb57ed7723fddbe8ac6202560efdf353",
+   "lfs": false
+  },
+  {
+   "path": "generation_config.json",
+   "size": 218,
+   "git_oid": "fa8567e6668da2ea183333a243a8b24899fadbd5",
+   "lfs": false
+  },
+  {
+   "path": "model.safetensors",
+   "size": 1266301840,
+   "git_oid": "0a35330900fb5d373c509b66d4cad07c16d3b4a8",
+   "lfs": true
+  },
+  {
+   "path": "preprocessor_config.json",
+   "size": 234,
+   "git_oid": "ccd4e731ec86843bca8de2b7f84c4f12c4b58325",
+   "lfs": false
+  },
+  {
+   "path": "special_tokens_map.json",
+   "size": 2543,
+   "git_oid": "17ade346a1042cbe0c1436f5bedcbd85c099d582",
+   "lfs": false
+  },
+  {
+   "path": "spiece.model",
+   "size": 791656,
+   "git_oid": "317a5ccbde45300f5d1d970d4d449af2108b147e",
+   "lfs": true
+  },
+  {
+   "path": "tokenizer.json",
+   "size": 2422234,
+   "git_oid": "41a5ffa2657f77be129f7d2f791e45aab6c145ae",
+   "lfs": false
+  },
+  {
+   "path": "tokenizer_config.json",
+   "size": 20797,
+   "git_oid": "ddf62e18832aca0f1f67ae2514c34f8ba739bbcd",
+   "lfs": false
+  }
+ ]
+}
