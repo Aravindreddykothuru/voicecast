@@ -38,6 +38,7 @@ def test_s3_backend_construction_failure_raises_not_falls_back(monkeypatch):
     import app.storage.s3 as s3_module
 
     monkeypatch.setenv("STORAGE_BACKEND", "s3")
+    monkeypatch.setenv("ALLOW_REMOTE_STORAGE", "true")
     monkeypatch.setenv("STORAGE_ACCESS_KEY", "wrong")
     monkeypatch.setenv("STORAGE_SECRET_KEY", "wrong")
 
@@ -48,6 +49,55 @@ def test_s3_backend_construction_failure_raises_not_falls_back(monkeypatch):
 
     with pytest.raises(RuntimeError, match="InvalidAccessKeyId"):
         s3_module.get_storage()
+
+
+def test_remote_storage_is_refused_without_the_opt_in(monkeypatch):
+    """`.env` holds real bucket credentials. Three e2e runs on 2026-10-01
+    wrote to the production bucket because STORAGE_BACKEND was left at its
+    .env value, so STORAGE_BACKEND=s3 alone is no longer enough: a remote
+    backend needs ALLOW_REMOTE_STORAGE=true as well."""
+    import app.storage.s3 as s3_module
+
+    monkeypatch.setenv("STORAGE_BACKEND", "s3")
+    monkeypatch.delenv("ALLOW_REMOTE_STORAGE", raising=False)
+
+    called = False
+
+    def _should_not_run():
+        nonlocal called
+        called = True
+        raise AssertionError("S3Storage was constructed despite the guard")
+
+    monkeypatch.setattr(s3_module, "S3Storage", _should_not_run)
+
+    with pytest.raises(RuntimeError, match="ALLOW_REMOTE_STORAGE"):
+        s3_module.get_storage()
+    assert not called, "the guard must refuse before any client is built"
+
+
+def test_remote_storage_is_allowed_with_the_opt_in(monkeypatch):
+    """The guard is an opt-in, not a ban: a deployment that means to use the
+    bucket sets both variables and gets S3Storage."""
+    import app.storage.s3 as s3_module
+
+    monkeypatch.setenv("STORAGE_BACKEND", "s3")
+    monkeypatch.setenv("ALLOW_REMOTE_STORAGE", "true")
+
+    sentinel = object()
+    monkeypatch.setattr(s3_module, "S3Storage", lambda: sentinel)
+
+    assert s3_module.get_storage() is sentinel
+
+
+def test_the_guard_does_not_touch_local(monkeypatch):
+    """Local work must not need the opt-in -- otherwise the guard would just
+    be turned on everywhere and stop meaning anything."""
+    from app.storage.local import LocalStorage
+    from app.storage.s3 import get_storage
+
+    monkeypatch.setenv("STORAGE_BACKEND", "local")
+    monkeypatch.delenv("ALLOW_REMOTE_STORAGE", raising=False)
+    assert isinstance(get_storage(), LocalStorage)
 
 
 def test_ensure_bucket_passes_location_constraint_outside_us_east_1(monkeypatch):

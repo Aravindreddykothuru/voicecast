@@ -59,6 +59,11 @@ class Settings(BaseSettings):
 
     # --- Object storage ---
     storage_backend: str = "local"  # "local" or "s3"
+    # A second, deliberate switch for anything that is not local disk. `.env`
+    # carries real bucket credentials, so STORAGE_BACKEND=s3 alone is one
+    # forgotten override away from a local run writing to production -- which
+    # has happened. get_storage() refuses a remote backend unless this is on.
+    allow_remote_storage: bool = False
     # None means "use the real AWS S3 endpoint for storage_region" -- boto3's
     # own client() treats endpoint_url=None as "no override" natively. Only
     # set an explicit http://... value when pointing at MinIO, R2, or another

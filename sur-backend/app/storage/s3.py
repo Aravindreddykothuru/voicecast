@@ -121,10 +121,24 @@ def get_storage() -> StorageBackend:
     loud, never silently substitute. A bad AWS key, wrong bucket, or wrong
     region under STORAGE_BACKEND=s3 must surface as a startup error, not as
     uploads silently landing on local disk while presigned URLs point at a
-    bucket that never receives anything. See CONTRACTS.md #5."""
+    bucket that never receives anything. See CONTRACTS.md #5.
+
+    A remote backend additionally needs ALLOW_REMOTE_STORAGE=true. `.env`
+    carries real bucket credentials, so any local script, test or e2e run
+    that forgets to override STORAGE_BACKEND would otherwise write to the
+    production bucket -- which has happened. Deployments that mean to use S3
+    set both variables; nothing local can reach the bucket by omission."""
     settings = get_settings()
-    if getattr(settings, "storage_backend", "local") == "local":
+    backend = getattr(settings, "storage_backend", "local")
+    if backend == "local":
         from app.storage.local import LocalStorage
         return LocalStorage()
+    if not getattr(settings, "allow_remote_storage", False):
+        raise RuntimeError(
+            f"STORAGE_BACKEND={backend!r} needs ALLOW_REMOTE_STORAGE=true. Refusing to reach "
+            f"remote object storage without that explicit opt-in: .env holds real bucket "
+            f"credentials and a local run that forgets STORAGE_BACKEND=local would write to "
+            f"the production bucket. Set STORAGE_BACKEND=local for local work, or "
+            f"ALLOW_REMOTE_STORAGE=true in the deployment that is supposed to use the bucket.")
     return S3Storage()
 
