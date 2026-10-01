@@ -235,9 +235,16 @@ function DotGrid({ children }: { children: ReactNode }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Capabilities gate — the HARD RULE. No screen renders until /api/capabilities
-// answers. On failure the app blocks with an error and a retry, never a
-// fallback list. See sur-backend/CONTRACTS.md #2.
+// Capabilities gate — the HARD RULE, scoped to the screens it is about.
+// No screen that OFFERS a language, a voice or an emotion renders until
+// /api/capabilities answers; on failure it blocks with an error and a retry,
+// never a fallback list (sur-backend/CONTRACTS.md #2).
+//
+// It deliberately does NOT wrap the landing page. It used to wrap the whole
+// app, so with the backend down the product showed nothing at all — not even
+// the marketing page, which offers no languages and needs no capabilities.
+// "The page won't open" was this screen. The contract is about not guessing
+// what the engine supports, not about hiding the front door.
 // ─────────────────────────────────────────────────────────────────────────────
 function FullScreen({ children }: { children: ReactNode }) {
   return (
@@ -248,7 +255,7 @@ function FullScreen({ children }: { children: ReactNode }) {
   );
 }
 
-function CapabilitiesGate({ children }: { children: ReactNode }) {
+function CapabilitiesGate({ children, onBack }: { children: ReactNode; onBack?: () => void }) {
   const { caps, loading, error, reload } = useCapabilities();
 
   if (loading) {
@@ -267,9 +274,20 @@ function CapabilitiesGate({ children }: { children: ReactNode }) {
           {error ?? "The capabilities endpoint returned nothing."}
         </div>
         <div className="text-[11px] font-mono" style={{ color: C.textDim }}>
-          The UI stays blocked rather than guess which languages and emotions the engine supports.
+          The studio stays blocked rather than guess which languages and emotions the engine
+          supports. Start the API (<span style={{ color: C.textMuted }}>uvicorn app.main:app</span>)
+          and retry.
         </div>
-        <PrimaryBtn onClick={reload}>Retry</PrimaryBtn>
+        <div className="flex items-center gap-3">
+          <PrimaryBtn onClick={reload}>Retry</PrimaryBtn>
+          {onBack && (
+            <button onClick={onBack}
+              className="text-[11px] font-mono uppercase tracking-widest px-3 py-2 rounded"
+              style={{ color: C.textMuted, background: "none", border: `1px solid ${C.border}`, cursor: "pointer" }}>
+              Back to home
+            </button>
+          )}
+        </div>
       </FullScreen>
     );
   }
@@ -1354,9 +1372,12 @@ function Studio() {
     return () => { alive = false; clearInterval(t); };
   }, []);
 
+  // Before the gate on purpose: the landing page offers no language, voice or
+  // emotion, so it has nothing to guess and must render with the API down.
   if (screen === "landing") return <EchoLandingLazy enter={handleEnter} />;
 
   return (
+    <CapabilitiesGate onBack={() => go("landing")}>
     <div className="min-h-screen w-full flex flex-col" style={{ fontFamily: "'DM Sans',sans-serif", backgroundColor: C.bg, color: C.text }}>
       <header className="flex items-center justify-between px-6 flex-shrink-0" style={{ height: 52, borderBottom: `1px solid ${C.border}`, background: C.panel }}>
         <div className="flex items-center gap-3">
@@ -1401,6 +1422,7 @@ function Studio() {
         {screen === "export" && <Export projectId={projectId} />}
       </main>
     </div>
+    </CapabilitiesGate>
   );
 }
 
@@ -1411,9 +1433,7 @@ function EchoLandingLazy({ enter }: { enter: () => void }) {
 export default function App() {
   return (
     <CapabilitiesProvider>
-      <CapabilitiesGate>
-        <Studio />
-      </CapabilitiesGate>
+      <Studio />
     </CapabilitiesProvider>
   );
 }

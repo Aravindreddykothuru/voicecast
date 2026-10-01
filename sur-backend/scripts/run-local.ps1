@@ -20,6 +20,12 @@
   the local cache and never touch the network. That is also how the gated
   models (pyannote, IndicTrans2) load without HF_TOKEN once cached.
 
+  Storage defaults to local disk here whatever .env says, because .env holds
+  real bucket credentials and this script is the local-development entry
+  point: three e2e runs on 2026-10-01 wrote to the production bucket because
+  nothing overrode STORAGE_BACKEND=s3. Pass -RemoteStorage to opt in, which
+  also sets ALLOW_REMOTE_STORAGE so get_storage() permits it.
+
   Celery runs with the solo pool on Windows (set in app/celery_app.py);
   prefork is unsupported there.
 
@@ -29,6 +35,7 @@
 param(
     [Parameter(Mandatory)][ValidateSet("api", "worker", "tts-worker")][string]$Role,
     [switch]$Offline,
+    [switch]$RemoteStorage,
     [int]$Port = 8000
 )
 
@@ -37,6 +44,17 @@ Set-Location $backend
 
 if ($Offline) { $env:HF_HUB_OFFLINE = "1" }
 $env:PYTHONUTF8 = "1"
+
+# Local by default, remote only when asked for out loud. .env is configured
+# for the real bucket, so without this a local run silently writes there.
+if ($RemoteStorage) {
+    $env:ALLOW_REMOTE_STORAGE = "true"
+    Write-Host "storage: REMOTE (ALLOW_REMOTE_STORAGE=true) -- this writes to the real bucket" -ForegroundColor Yellow
+} else {
+    $env:STORAGE_BACKEND = "local"
+    $env:ALLOW_REMOTE_STORAGE = "false"
+    Write-Host "storage: local disk (data/storage). Pass -RemoteStorage to use the bucket." -ForegroundColor DarkGray
+}
 # Deliberately NOT $ErrorActionPreference = "Stop": in Windows PowerShell 5.1
 # that turns the first line a native process writes to stderr -- any Python
 # warning -- into a terminating error once output is redirected, killing a
