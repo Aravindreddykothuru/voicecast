@@ -1,0 +1,75 @@
+{
+ "step": "0 preflight",
+ "checked_at": "2026-10-01 22:20:18",
+ "git_commit": "fd642ed (git log --oneline)",
+ "token": {
+  "reaches_process": true,
+  "source": "Windows Machine-scope environment variable",
+  "note": "never printed, logged or written; this file records only that it was present"
+ },
+ "hf_account": "aravindreddy111",
+ "repos": [
+  {
+   "repo": "ai4bharat/indic-parler-tts",
+   "gated": "auto",
+   "license": "apache-2.0",
+   "config_json": {
+    "ok": true,
+    "bytes": 7338,
+    "seconds": 0.0
+   },
+   "status": "200",
+   "revision": "see docs/tts-licences.md (abbreviated) and app/tts_runtime/pins/*.json (exact)"
+  },
+  {
+   "repo": "ai4bharat/IndicF5",
+   "gated": "auto",
+   "license": "mit",
+   "config_json": {
+    "ok": true,
+    "bytes": 350,
+    "seconds": 0.0
+   },
+   "status": "200",
+   "revision": "see docs/tts-licences.md (abbreviated) and app/tts_runtime/pins/*.json (exact)"
+  },
+  {
+   "repo": "ai4bharat/indic-conformer-600m-multilingual",
+   "gated": "auto",
+   "license": "mit",
+   "config_json": {
+    "ok": true,
+    "bytes": 241,
+    "seconds": 0.0
+   },
+   "status": "200",
+   "revision": "see docs/tts-licences.md (abbreviated) and app/tts_runtime/pins/*.json (exact)"
+  }
+ ],
+ "disk": {
+  "path": "c:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend",
+  "total_gb": 475.73,
+  "free_gb": 120.47,
+  "needed_gb": 15,
+  "enough": true
+ },
+ "ram": {
+  "total_gb": 15.24,
+  "available_gb": 0.7,
+  "note": "measured with \\Memory\\Available MBytes = 719 MB at 22:2x; 456 processes, 11 Docker containers (most belong to other projects), committed 32.95 GB of 46.36 GB. Enough for downloads; a real constraint for warm-up, recorded per model in step 1."
+ },
+ "hardware": "Windows 11, Ryzen 5 7520U, CPU only",
+ "storage_guard": {
+  "commit": "1893183",
+  "setting": "ALLOW_REMOTE_STORAGE",
+  "behaviour": "get_storage() raises for any non-local backend without it",
+  "tests": [
+   "test_remote_storage_is_refused_without_the_opt_in",
+   "test_remote_storage_is_allowed_with_the_opt_in",
+   "test_the_guard_does_not_touch_local"
+  ]
+ },
+ "verdict": "GO: token reaches the process, all three gated repos return 200, 120 GB free disk.",
+ "exact_revisions": "No revision hash is written in this file. The detect-secrets hook reads any bare hex string, including a 12-char abbreviation, as a secret, and clearing it means adding an entry to .secrets.baseline -- which the permission layer refused. That refusal is reported, not worked around, and the hashes were not reformatted to slip past the scanner either. Abbreviated revisions are in docs/tts-licences.md; the exact 40-char values are in app/tts_runtime/pins/indic_parler.json and pins/indicf5.json, which were already allowlisted. Recompute any of them with HfApi().model_info(repo).sha.",
+ "pins_were_already_correct": "The revisions the authenticated API returns are byte-for-byte the ones this repo pinned WITHOUT a token, via the public tree API: both indic_parler and indicf5 match app/tts_runtime/pins/*.json exactly. The token-less pinning method is now confirmed against the authenticated source. indic_conformer has no pins file yet."
+}
