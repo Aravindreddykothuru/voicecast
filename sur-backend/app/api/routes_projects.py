@@ -33,7 +33,7 @@ from app.schemas.project import (
     UploadUrlRequest,
     UploadUrlResponse,
 )
-from app.schemas.segment import SegmentRead
+from app.schemas.segment import SegmentRead, segment_read
 from app.storage import get_storage
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -290,7 +290,9 @@ def list_segments(
     segments = db.execute(
         select(Segment).where(Segment.project_id == project_id).order_by(Segment.index)
     ).scalars().all()
-    return segments
+    # segment_read, not the raw rows: the audio columns hold storage keys and
+    # the schema fields are named `..._url`.
+    return [segment_read(s) for s in segments]
 
 
 @router.get("/{project_id}/export", response_model=ExportRead)
@@ -308,7 +310,14 @@ def get_export(
     read = ExportRead.model_validate(export, from_attributes=True)
     if export.output_url:
         storage = get_storage()
-        read = read.model_copy(update={"output_url": storage.presigned_get_url(export.output_url)})
+        update = {"output_url": storage.presigned_get_url(export.output_url)}
+        try:
+            update["output_size_bytes"] = storage.get_size(export.output_url)
+        except Exception:  # noqa: BLE001
+            # A missing or unreadable object must not take the whole export
+            # response down; the UI shows "size unknown" instead.
+            pass
+        read = read.model_copy(update=update)
     return read
 
 

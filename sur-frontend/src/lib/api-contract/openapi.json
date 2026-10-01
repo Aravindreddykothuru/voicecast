@@ -207,6 +207,17 @@
             "title": "Id",
             "type": "string"
           },
+          "output_size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Size Bytes"
+          },
           "output_url": {
             "anyOf": [
               {
@@ -2252,6 +2263,44 @@
           }
         },
         "summary": "Get Local File",
+        "tags": [
+          "storage"
+        ]
+      },
+      "head": {
+        "operationId": "head_local_file_api_storage_files__key__head",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Head Local File",
         "tags": [
           "storage"
         ]

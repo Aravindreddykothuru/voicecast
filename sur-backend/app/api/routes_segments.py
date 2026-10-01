@@ -11,7 +11,7 @@ from app.models.project import Project, ProjectStatus
 from app.models.segment import Segment
 from app.pipeline.regenerate import regenerate_segment as regenerate_segment_task
 from app.schemas.common import OkResponse
-from app.schemas.segment import RegenerateRequest, SegmentPatch, SegmentRead
+from app.schemas.segment import RegenerateRequest, SegmentPatch, SegmentRead, segment_read
 
 router = APIRouter(prefix="/api/segments", tags=["segments"])
 
@@ -33,7 +33,9 @@ def patch_segment(
         segment.emotion_overridden = True
     db.commit()
     db.refresh(segment)
-    return segment
+    # Same reason as list_segments: the audio columns are keys, the fields
+    # are URLs.
+    return segment_read(segment)
 
 
 @router.post("/{segment_id}/regenerate", response_model=OkResponse, status_code=202)

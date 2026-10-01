@@ -2,9 +2,13 @@
  * Export: the muxed video, plus subtitles generated in the browser from the
  * segments the API already returns.
  *
- * The video comes from ExportRead.output_url. Its size is read with a HEAD
- * request against that same URL rather than guessed, and if the server does
- * not send Content-Length the size is shown as unknown instead of estimated.
+ * The video comes from ExportRead.output_url and its size from
+ * ExportRead.output_size_bytes -- the backend asks its own storage. The
+ * client deliberately does NOT probe with HEAD: when a <video> is streaming
+ * that same URL, Chrome reuses the media load's opaque response and the
+ * CORS check on the HEAD then fails (reproduced: HEAD alone 200, HEAD during
+ * playback "Failed to fetch"), and giving the HEAD its own query string to
+ * dodge that would invalidate an S3 presigned signature.
  *
  * SRT and VTT are built here from real segment timings and translated text --
  * that is a format change on data the client already holds, not invented
@@ -75,7 +79,6 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
   const [segs, setSegs] = useState<SegmentRead[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [size, setSize] = useState<number | null | "unknown">(null);
 
   const load = useCallback(() => {
     if (!projectId) return;
@@ -90,19 +93,6 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
   }, [projectId]);
 
   useEffect(load, [load]);
-
-  // Real size or nothing: a HEAD against the artefact we are about to offer.
-  useEffect(() => {
-    if (!exp?.output_url) return;
-    let alive = true;
-    fetch(resolveUrl(exp.output_url), { method: "HEAD" })
-      .then((r) => {
-        const len = r.headers.get("content-length");
-        if (alive) setSize(len ? Number(len) : "unknown");
-      })
-      .catch(() => { if (alive) setSize("unknown"); });
-    return () => { alive = false; };
-  }, [exp?.output_url]);
 
   if (!projectId) {
     return (
@@ -158,7 +148,7 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
                   />
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
-                      {size === null ? "checking size…" : size === "unknown" ? "size not reported by the server" : fmtBytes(size)}
+                      {exp.output_size_bytes != null ? fmtBytes(exp.output_size_bytes) : "size unavailable"}
                     </span>
                     <Button
                       onClick={() => window.open(resolveUrl(exp.output_url!), "_blank")}

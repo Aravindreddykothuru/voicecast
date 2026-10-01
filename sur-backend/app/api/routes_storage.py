@@ -57,10 +57,26 @@ async def upload_local_file(key: str, request: Request) -> Response:
     return Response(status_code=200)
 
 
-@router.get("/files/{key:path}")
-async def get_local_file(key: str) -> FileResponse:
+def _file_response(key: str) -> FileResponse:
     _require_local_backend()
     target = _resolve(key)
     if not target.exists() or not target.is_file():
         raise HTTPException(404, detail="File not found")
     return FileResponse(target)
+
+
+@router.get("/files/{key:path}")
+async def get_local_file(key: str) -> FileResponse:
+    return _file_response(key)
+
+
+# HEAD as well, because a real presigned S3/MinIO URL answers HEAD and this
+# route stands in for one -- GET-only made it 405 here and 200 in production,
+# which is the worst kind of difference. Two handlers rather than one route
+# with both methods: FastAPI derives the operation id from the function, so a
+# single dual-method route emits a duplicate id into the OpenAPI snapshot.
+# Starlette's FileResponse sends headers without a body for HEAD, so
+# Content-Length is right and nothing is streamed.
+@router.head("/files/{key:path}")
+async def head_local_file(key: str) -> FileResponse:
+    return _file_response(key)

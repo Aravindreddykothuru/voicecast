@@ -149,6 +149,10 @@ export interface ExportRead {
   format: string;
   resolution: string;
   output_url: string | null;
+  /** Byte size of output_url, from the backend's own storage. The client
+   *  cannot HEAD that URL: Chrome reuses the <video> media load's opaque
+   *  response and the CORS check fails. Null when storage could not say. */
+  output_size_bytes: number | null;
   qa_report: QaReport | null;
   created_at: string;
   completed_at: string | null;

@@ -175,8 +175,8 @@ const SEGMENT_READ: Record<keyof SegmentRead, true> = {
   sync_offset_pct: true, status: true, error_message: true, created_at: true, updated_at: true,
 };
 const EXPORT_READ: Record<keyof ExportRead, true> = {
-  id: true, project_id: true, status: true, format: true, resolution: true, output_url: true, qa_report: true,
-  created_at: true, completed_at: true,
+  id: true, project_id: true, status: true, format: true, resolution: true, output_url: true,
+  output_size_bytes: true, qa_report: true, created_at: true, completed_at: true,
 };
 const CAPABILITIES: Record<keyof Capabilities, true> = {
   languages: true, source_languages: true, emotions: true, providers: true, emotion_confidence_floor: true,

@@ -6,6 +6,30 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.segment import EmotionLabel, SegmentStatus
 
 
+def segment_read(segment) -> "SegmentRead":
+    """SegmentRead with its audio fields turned into URLs a client can fetch.
+
+    The columns hold storage KEYS, not URLs, and the fields are named
+    `..._url`. GET /export already presigned its key before returning it;
+    the segment routes returned the raw row, so `tts_audio_url` arrived as
+    "projects/<id>/segments/<id>/tts.wav". Resolved against the API base
+    that is a 404, and the browser blocked it (ERR_BLOCKED_BY_ORB), so no
+    segment audio ever played under STORAGE_BACKEND=local. With S3 it
+    happened to work, because a presigned URL is absolute and the client
+    left it alone -- which is why this stayed hidden.
+    """
+    from app.storage import get_storage
+
+    read = SegmentRead.model_validate(segment, from_attributes=True)
+    storage = get_storage()
+    patch = {}
+    for field in ("source_audio_url", "tts_audio_url"):
+        key = getattr(read, field)
+        if key and not key.startswith(("http://", "https://", "/")):
+            patch[field] = storage.presigned_get_url(key)
+    return read.model_copy(update=patch) if patch else read
+
+
 class SegmentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

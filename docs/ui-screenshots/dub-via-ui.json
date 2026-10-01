@@ -1,0 +1,30 @@
+{
+ "finished": true,
+ "log": [
+  "18:10:39 logged in",
+  "18:10:41 step 1: file accepted, preview and duration shown",
+  "18:10:43 step 2: title, source en, target Kannada",
+  "18:10:44 step 3: review",
+  "18:10:44 started; watching the progress tracker",
+  "18:10:49 progress: 0%",
+  "18:13:06 progress: 0%",
+  "18:13:16 progress: 0%",
+  "18:15:38 progress: 29%",
+  "18:16:28 progress: 29%",
+  "18:16:33 progress: 43%",
+  "18:17:03 progress: 57%",
+  "18:20:00 progress: 57%",
+  "18:20:05 progress: 71%",
+  "18:22:37 progress: 71%",
+  "18:22:42 progress: 71%",
+  "18:22:47 progress: 100%",
+  "18:22:47 run finished",
+  "18:22:53 editor captured",
+  "18:22:58 export captured",
+  "18:23:02 SRT downloaded: 9 cues, 638 bytes"
+ ],
+ "problems": [
+  "warning: WebSocket connection to 'ws://localhost:8000/ws/projects/2190e1ed-cfeb-4862-a0d0-ff37a73081ae?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0MjQ5YjU1NC1lOWIyLTQ1MDUtYTQ4NC01MzI3ODViNTk5M2QiLCJpYXQiOjE3OTA4NzgyMzksImV4cCI6MTc5MTQ4MzA",
+  "error: Failed to load resource: the server responded with a status of 405 (Method Not Allowed)"
+ ]
+}

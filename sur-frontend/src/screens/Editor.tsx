@@ -83,6 +83,9 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
   const [segments, setSegments] = useState<SegmentRead[] | null>(null);
   const [qa, setQa] = useState<Map<string, SegmentQaEntry>>(new Map());
   const [dubUrl, setDubUrl] = useState<string | null>(null);
+  const [dubBytes, setDubBytes] = useState<number | null>(null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaTooBig, setMediaTooBig] = useState(false);
   const [selId, setSelId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [emotionDraft, setEmotionDraft] = useState<string>("");
@@ -105,12 +108,58 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
       setSelId((cur) => cur ?? rows[0]?.id ?? null);
       setQa(new Map((exp?.qa_report?.segments ?? []).map((r) => [r.segment_id, r])));
       setDubUrl(exp?.output_url ? resolveUrl(exp.output_url) : null);
+      setDubBytes(exp?.output_size_bytes ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load the project");
     }
   }, [projectId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // One fetch, one blob, both consumers.
+  //
+  // The <video> and the waveform need the same bytes. Pointed at the same
+  // URL they collide: the media element's load is a no-cors request, Chrome
+  // reuses that opaque response for wavesurfer's fetch, and the CORS check
+  // fails ("Failed to fetch") even though the server sends the right header.
+  // Reproduced: the fetch alone succeeds, the same fetch during playback does
+  // not. Cache-busting one of them would invalidate an S3 presigned
+  // signature, so instead the file is fetched once and both read the blob.
+  //
+  // That holds the export in memory, which is fine for a dub of this size and
+  // not fine for an arbitrarily large one, so it is bounded: past the limit
+  // the video streams normally and the waveform is skipped rather than
+  // silently eating memory.
+  const MAX_INLINE_BYTES = 150 * 1024 * 1024;
+  useEffect(() => {
+    if (!dubUrl) {
+      setMediaUrl(null);
+      return;
+    }
+    if (dubBytes != null && dubBytes > MAX_INLINE_BYTES) {
+      setMediaTooBig(true);
+      setMediaUrl(dubUrl);
+      return;
+    }
+    let alive = true;
+    let objectUrl: string | null = null;
+    fetch(dubUrl)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((blob) => {
+        if (!alive) return;
+        objectUrl = URL.createObjectURL(blob);
+        setMediaUrl(objectUrl);
+      })
+      .catch(() => {
+        // Fall back to streaming the URL directly: the player still works,
+        // the waveform is the part that cannot draw.
+        if (alive) setMediaUrl(dubUrl);
+      });
+    return () => {
+      alive = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [dubUrl, dubBytes]);
 
   // A regenerate used to be fire-and-forget: the screen never refreshed, so
   // new audio never appeared and a failure was invisible.
@@ -298,11 +347,11 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
       {/* Player + waveform */}
       <Card className="p-4 flex flex-col gap-3">
         <div className="grid gap-4" style={{ gridTemplateColumns: "minmax(0,1fr)" }}>
-          {dubUrl ? (
+          {mediaUrl ? (
             <div className="flex flex-col sm:flex-row gap-4">
               <video
                 ref={video}
-                src={dubUrl}
+                src={mediaUrl}
                 controls
                 className="rounded-lg w-full sm:w-1/2"
                 style={{ background: "#000", maxHeight: 280 }}
@@ -336,7 +385,7 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
 
         {segments ? (
           <Waveform
-            audioUrl={dubUrl}
+            audioUrl={mediaTooBig ? null : mediaUrl}
             segments={segs}
             durationMs={durationMs}
             currentMs={currentMs}
