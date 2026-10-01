@@ -1,6 +1,6 @@
 {
  "viewport": "1440x900",
- "hasProject": false,
+ "hasProject": true,
  "results": [
   {
    "screen": "01-landing",
@@ -46,7 +46,28 @@
    "screen": "09-projects-table",
    "ok": true,
    "newProblems": 0
+  },
+  {
+   "screen": "10-progress-or-editor",
+   "ok": true,
+   "newProblems": 2
+  },
+  {
+   "screen": "12-export",
+   "ok": true,
+   "newProblems": 0
   }
  ],
- "problems": []
+ "problems": [
+  {
+   "screen": "10-progress-or-editor",
+   "type": "requestfailed",
+   "text": "blob:http://localhost:8443/c721670d-2c20-4eb3-ab38-a3f24bad877e net::ERR_ABORTED"
+  },
+  {
+   "screen": "10-progress-or-editor",
+   "type": "requestfailed",
+   "text": "blob:http://localhost:8443/13980e2f-85ba-4dbb-b19d-30f01817a390 net::ERR_ABORTED"
+  }
+ ]
 }

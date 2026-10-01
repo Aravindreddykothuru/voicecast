@@ -52,7 +52,7 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const styles: Record<Variant, React.CSSProperties> = {
-    primary: { background: "var(--accent)", color: "var(--accent-contrast)", border: "1px solid transparent" },
+    primary: { background: "var(--accent-strong)", color: "var(--accent-contrast)", border: "1px solid transparent" },
     secondary: { background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border-strong)" },
     ghost: { background: "transparent", color: "var(--text-mid)", border: "1px solid var(--border)" },
     danger: { background: "var(--danger-soft)", color: "var(--danger)", border: "1px solid var(--danger-border)" },

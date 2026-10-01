@@ -290,7 +290,12 @@ export function AppShell({
               onClick={() => setMenuOpen((o) => !o)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              aria-label="User menu"
+              // WCAG 2.5.3: the accessible name has to CONTAIN the visible
+              // label. The visible label is the initials, so "User menu"
+              // alone failed label-content-name-mismatch -- and hiding the
+              // initials from the tree did not help, because the check reads
+              // what is on screen.
+              aria-label={`${initials}, user menu`}
               className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold"
               style={{ background: "var(--accent-soft)", border: "1px solid var(--accent-border)", color: "var(--accent)" }}
             >

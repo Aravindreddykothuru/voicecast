@@ -31,12 +31,19 @@
 
   --text: #f2f4f8;
   --text-mid: #b2b9c9;
-  --text-muted: #828ba0;
-  --text-dim: #5d６57a;
-  --text-dim: #5d6577;
+  /* Raised to clear WCAG AA (4.5:1) on --bg: the old muted/dim pair measured
+     3.14 and 3.32 against this ground, which Lighthouse flagged on real text.
+     The hierarchy is kept; both steps are just lighter. */
+  --text-muted: #9aa3b7;
+  --text-dim: #828ba0;
 
-  /* One accent, violet. */
-  --accent: #8b5cf6;
+  /* One accent, violet, in two weights, because one value cannot do both
+     jobs: --accent is drawn as text and icons ON the dark ground and must be
+     light enough (the old #8b5cf6 measured 4.48 there, just under AA), while
+     --accent-strong is a button FILL under white text and must be dark
+     enough (#8b5cf6 measured 4.23 that way). */
+  --accent: #a78bfa;
+  --accent-strong: #7c3aed;
   --accent-hover: #9d74f8;
   --accent-soft: rgba(139, 92, 246, 0.14);
   --accent-border: rgba(139, 92, 246, 0.38);
@@ -79,6 +86,7 @@
   --text-dim: #8a93a6;
 
   --accent: #6d31e8;
+  --accent-strong: #5b21b6;
   --accent-hover: #5c23d4;
   --accent-soft: rgba(109, 49, 232, 0.09);
   --accent-border: rgba(109, 49, 232, 0.3);
