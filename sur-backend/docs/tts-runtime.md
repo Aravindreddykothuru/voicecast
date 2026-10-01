@@ -209,6 +209,20 @@ happens once per worker, is the part that differs: 217.4 s in-process (all
 voices loaded in the parent's self-check) against 164.4 s for the runtime.
 Production viability on this axis: yes, the flag is free per line.
 
+**A whole dub, both ways.** One full 7-stage run per setting, same source
+(the 32.56 s two-speaker clip, 9 spoken segments), same target (kn), same
+`--asr-check` (`docs/tts-pipeline-flag-e2e.json`). Both passed every check,
+and the exported audio is **bit-identical**: one sha256 over 1,041,750
+bytes of decoded PCM for both (the digest is abbreviated in the evidence
+file because the hook reads a bare 64-char hex string as a secret; the
+recomputing command is there instead). Every
+scored line matches too -- corpus CER 0.131, per-line 0.042 to 0.282, 0
+overruns, 0 overlaps, max tempo 1.3437 in both runs. The worker's own log
+line records which provider served each run, so neither can claim a path it
+did not take. The synthesize *stage* took 127.8 s against 264.6 s, which is
+the lazy first load inside the job, not per-line cost -- and single runs on
+a loaded laptop, so no CI is claimed for either number.
+
 Not yet routed through the runtime: the failover chain itself. Production
 still renders SYSPIN or fails; it does not fall through to Indic Parler or
 IndicF5, because neither is provisioned (both gated) and neither has been
