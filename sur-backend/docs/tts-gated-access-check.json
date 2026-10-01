@@ -1,0 +1,24 @@
+{
+ "checked_at": "2026-09-30 21:05",
+ "token_present": false,
+ "repos": [
+  {
+   "repo": "ai4bharat/indic-parler-tts",
+   "file": "config.json",
+   "status": "401 GatedRepoError",
+   "detail": "401 Client Error. (Request ID: Root=1-6abd2c5f-4e700f502b6cc798454e4884;0185bfad-d328-415c-b1b7-3a091208624e)"
+  },
+  {
+   "repo": "ai4bharat/IndicF5",
+   "file": "config.json",
+   "status": "401 GatedRepoError",
+   "detail": "401 Client Error. (Request ID: Root=1-6abd2c5f-6a6b491c7b6d40780a64925e;dca269e8-428f-4ce8-8d11-ec373b95d2e6)"
+  },
+  {
+   "repo": "ai4bharat/indic-conformer-600m-multilingual",
+   "file": "config.json",
+   "status": "401 GatedRepoError",
+   "detail": "401 Client Error. (Request ID: Root=1-6abd2c5f-2ac3e1076bb0ab040b9aab72;9be50e97-3b93-4d98-8061-749b5e32b858)"
+  }
+ ]
+}

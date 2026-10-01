@@ -1,0 +1,108 @@
+{
+ "created": "2026-09-30 21:26",
+ "harness": {
+  "self_cer_zero": 40,
+  "reader_reproduces_committed_score": {
+   "lang": "mr",
+   "cer": 0.0588
+  },
+  "silence_rejected": true
+ },
+ "licence_note": "facebook/mms-tts-* is CC-BY-NC-4.0: benchmark-only, never shippable here.",
+ "langs": {
+  "mr": {
+   "render_seconds": 1137.8,
+   "sets": {
+    "A": {
+     "mms": {
+      "n_lines": 20,
+      "mean": 0.166,
+      "ci95": [
+       0.1371,
+       0.195
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.1085,
+      "ci95": [
+       0.0862,
+       0.1324
+      ]
+     },
+     "mms_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_mms": true
+    },
+    "B": {
+     "mms": {
+      "n_lines": 20,
+      "mean": 0.1601,
+      "ci95": [
+       0.1339,
+       0.1881
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.1014,
+      "ci95": [
+       0.0769,
+       0.1293
+      ]
+     },
+     "mms_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_mms": true
+    }
+   },
+   "verdict": "chain unchanged: the CI rule is not met in both sets",
+   "rule": "challenger moves ahead only if its sentence-CER 95% CI is entirely below the incumbent's in BOTH draw sets"
+  },
+  "bn": {
+   "render_seconds": 1094.1,
+   "sets": {
+    "A": {
+     "mms": {
+      "n_lines": 20,
+      "mean": 0.0891,
+      "ci95": [
+       0.0542,
+       0.1303
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.1108,
+      "ci95": [
+       0.0753,
+       0.156
+      ]
+     },
+     "mms_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_mms": false
+    },
+    "B": {
+     "mms": {
+      "n_lines": 20,
+      "mean": 0.0963,
+      "ci95": [
+       0.0646,
+       0.1379
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.0999,
+      "ci95": [
+       0.0677,
+       0.1361
+      ]
+     },
+     "mms_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_mms": false
+    }
+   },
+   "verdict": "chain unchanged: the CI rule is not met in both sets",
+   "rule": "challenger moves ahead only if its sentence-CER 95% CI is entirely below the incumbent's in BOTH draw sets"
+  }
+ }
+}

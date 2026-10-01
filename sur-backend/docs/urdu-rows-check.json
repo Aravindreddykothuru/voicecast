@@ -1,0 +1,24 @@
+{
+ "checked_at": "2026-09-30",
+ "database": "dev only (sur-dev-postgres-1, surdev). No staging or production database is reachable from this machine, so this answers the question for dev and nothing else.",
+ "language_columns_in_schema": [
+  "projects.source_language",
+  "projects.target_languages",
+  "segments.detected_language"
+ ],
+ "note": "projects.review_language is a boolean flag, not a language code.",
+ "counts": {
+  "projects_total": 9,
+  "projects_with_ur_in_target_languages": 0,
+  "projects_with_source_language_ur": 0,
+  "segments_total": 63,
+  "segments_with_detected_language_ur": 0
+ },
+ "distinct_values": {
+  "target_languages": ["hi", "kn", "te"],
+  "source_language": ["en"],
+  "detected_language": ["en"]
+ },
+ "migration": "none written: there are no rows to migrate. Nothing was deleted.",
+ "reproduce": "docker exec sur-dev-postgres-1 psql -U sur -d surdev -c \"select count(*) from projects where target_languages::text like '%\\\"ur\\\"%'\""
+}

@@ -122,6 +122,18 @@ Full table: `docs/tts-benchmark.md` (`tts benchmark`; 846 renders, 3 seeds x
 - **Speed.** A sentence takes 6.1-7.2 s (RTF ~1.6-2.2); a short line takes
   10.6-14.1 s, because it is three draws of carrier-plus-word. Peak RSS with
   two voices and a reader resident: ~2.6 GB.
+- **That 4x headroom is not 4x under load.** In a full-suite run
+  (2026-10-01, 524 tests, 37m48s) the first byte-identity case failed with
+  `WorkerTimeout: syspin: synth exceeded 60s` -- one short Hindi line, three
+  draws, in a freshly spawned worker, at the end of 500 other tests. The same
+  file passes alone (9 of 9, 621 s), and the code was byte-identical to the
+  run that scored 516 of 516, so this is contention, not a regression. It is
+  still the real failure mode: `timeouts.synth_s` bounds the synth call only
+  (loading gets its own 900 s), so on a loaded host a line that normally
+  takes 14 s can cross 60 s and the pool kills the worker. Production sees
+  that as a flagged line, not a wrong one. Not re-tuned here: one observation
+  is not a measurement, and the next step is to time first-synth-in-a-fresh-worker
+  under deliberate load before touching the number.
 - **parler-tts-tiny-v1** (the ungated stand-in that exercises the Parler
   adapter): 40 s to load, 1.64 GB, ~45 s per ~2 s of audio on this CPU. So
   `timeouts.synth_s: 60` is too small for Indic Parler on a CPU host -- on
@@ -182,11 +194,46 @@ report cannot claim a path it did not take
 against 163.1 s through the runtime, but those are not comparable: the
 in-process provider had already loaded every voice during its startup
 self-check, outside the measured window, while the worker loads lazily
-inside it. The steady-state per-line overhead (IPC plus a WAV round trip)
-was not isolated.
+inside it.
+
+The steady-state overhead was then measured on its own
+(`scripts/measure_runtime_overhead.py`, `docs/tts-runtime-overhead.json`):
+both providers warmed first, then the same 9 lines x 3 runs each,
+interleaved so CPU drift hits both arms equally. Per line, `synthesize()`
+took **8.204 s** in-process (sd 4.889, n=27) against **8.063 s** through the
+runtime (sd 4.496, n=27) -- the runtime is **0.141 s faster per line
+(-1.7%)**, which is not a speed-up either: the gap is 3% of the
+between-line spread, so what this shows is that IPC plus the WAV round trip
+costs nothing measurable next to the render itself. Construction, which
+happens once per worker, is the part that differs: 217.4 s in-process (all
+voices loaded in the parent's self-check) against 164.4 s for the runtime.
+Production viability on this axis: yes, the flag is free per line.
 
 Not yet routed through the runtime: the failover chain itself. Production
 still renders SYSPIN or fails; it does not fall through to Indic Parler or
 IndicF5, because neither is provisioned (both gated) and neither has been
 benchmarked against the pre-registered rule. Turning that on is a config
 change (`chains:`) plus a benchmark, not a code change.
+
+## Running without a token, stated in config
+
+`tts setup` against the default `tts_chains.yaml` exits non-zero on a
+token-less box, naming `indic_parler` and `indicf5` as unprovisioned. That
+is deliberate: a chain naming a model nobody downloaded is a half-set-up
+deployment, and skipping it quietly is how a language ends up rendering
+nothing. The supported way to run anyway is to say so in configuration:
+
+```
+make setup-tts TTS_CONFIG=tts_chains.syspin-only.yaml
+```
+
+`tts_chains.syspin-only.yaml` declares SYSPIN-only chains for the five
+languages SYSPIN speaks and omits the rest, so `submit()` refuses a line it
+cannot serve instead of queueing it to be flagged forever. There is no
+failover in that profile -- which is what the default config already does
+in practice today, only now it is a stated choice rather than a shrug.
+
+The one ungated alternative was benchmarked under the same protocol and did
+not displace anything: `docs/tts-alternatives.md`. It is also CC-BY-NC, so
+`licenses.FORBIDDEN` still refuses it and the runs were done outside the
+runtime.
