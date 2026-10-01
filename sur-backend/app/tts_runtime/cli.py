@@ -49,8 +49,18 @@ def cmd_setup(a) -> int:
     from app.tts_runtime.store import Store
 
     cfg = cfgmod.load(a.config)
-    rep = setup(cfg, a.home, Store(a.home / "runtime.sqlite3"), ConnectivityMonitor(cfg.offline_mode),
-                timeout_s=a.timeout)
+    # start() the monitor, as Runner does. Without it nothing polls during a
+    # setup: connectivity is only re-evaluated when a download fails and calls
+    # check_now(), so once every task is PAUSED (offline) there is no longer
+    # anything left to fail, nothing asks again, and the queue waits forever
+    # for news that never arrives. Observed twice on a 3.7 GB download -- the
+    # link came back within seconds and setup sat paused for over an hour.
+    netmon = ConnectivityMonitor(cfg.offline_mode)
+    netmon.start()
+    try:
+        rep = setup(cfg, a.home, Store(a.home / "runtime.sqlite3"), netmon, timeout_s=a.timeout)
+    finally:
+        netmon.stop()
     print(json.dumps(rep, indent=1, ensure_ascii=False))
     failed = [t for t, v in rep["tasks"].items() if v["state"] == "FAILED"]
     # A model named in a chain but left unprovisioned is a half-set-up
