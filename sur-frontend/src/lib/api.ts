@@ -129,14 +129,36 @@ export function createUploadUrl(
   });
 }
 
-/** PUTs the raw file straight to the (possibly relative, local-storage) presigned URL. */
-export async function putUploadFile(uploadUrl: string, file: File): Promise<void> {
-  const res = await fetch(resolveUrl(uploadUrl), {
-    method: "PUT",
-    headers: { "Content-Type": file.type || "application/octet-stream" },
-    body: file,
+/** PUTs the raw file straight to the (possibly relative, local-storage)
+ *  presigned URL.
+ *
+ *  XMLHttpRequest rather than fetch for one reason: upload progress. fetch
+ *  cannot report how much of a request body has gone out, so a progress bar
+ *  over it would have to be invented, and a video upload on a slow link is
+ *  exactly where a made-up bar misleads. `onProgress` is only called when the
+ *  transfer reports a computable length. */
+export function putUploadFile(
+  uploadUrl: string,
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", resolveUrl(uploadUrl), true);
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) onProgress(e.loaded / e.total);
+      };
+    }
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new ApiError(xhr.status, `Upload failed: ${xhr.statusText || xhr.status}`));
+    xhr.onerror = () => reject(new ApiError(0, "Upload failed: the connection dropped"));
+    xhr.onabort = () => reject(new ApiError(0, "Upload cancelled"));
+    xhr.send(file);
   });
-  if (!res.ok) throw new ApiError(res.status, `Upload failed: ${res.statusText}`);
 }
 
 export function confirmUpload(

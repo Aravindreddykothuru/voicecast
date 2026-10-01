@@ -16,6 +16,7 @@ function project(over: Partial<ProjectRead>): ProjectRead {
 
 const blank = (): StageState[] => PIPELINE_STAGE_ORDER.map((key) => ({
   key, done: false, active: false, progress: 0, completed: null, total: null, eta: null, startedAt: null,
+  completedAt: null,
 }));
 
 describe("runVerdict", () => {

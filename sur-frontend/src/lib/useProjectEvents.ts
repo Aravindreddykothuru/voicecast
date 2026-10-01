@@ -22,6 +22,9 @@ export interface StageState {
    *  unusable; this is measured, not guessed from a fixed rate. */
   eta: string | null;
   startedAt: number | null;
+  /** When stage_completed arrived, so the UI can show time per stage. Taken
+   *  from the event's own ts, never measured in the browser. */
+  completedAt: number | null;
 }
 
 export interface LogLine {
@@ -50,6 +53,7 @@ function initialStages(): StageState[] {
     total: null,
     eta: null,
     startedAt: null,
+    completedAt: null,
   }));
 }
 
@@ -171,7 +175,7 @@ function applyEvent(s: ProjectEventsState, event: ProjectEvent): ProjectEventsSt
     case "stage_started": {
       const stages = s.stages.map((st) =>
         st.key === event.stage
-          ? { ...st, active: true, done: false, progress: 0, completed: null, total: null, eta: null, startedAt: event.ts }
+          ? { ...st, active: true, done: false, progress: 0, completed: null, total: null, eta: null, startedAt: event.ts, completedAt: null }
           : st,
       );
       return {
@@ -208,7 +212,7 @@ function applyEvent(s: ProjectEventsState, event: ProjectEvent): ProjectEventsSt
     }
     case "stage_completed": {
       const stages = s.stages.map((st) =>
-        st.key === event.stage ? { ...st, active: false, done: true, progress: 1, eta: null } : st,
+        st.key === event.stage ? { ...st, active: false, done: true, progress: 1, eta: null, completedAt: event.ts } : st,
       );
       return {
         ...s,

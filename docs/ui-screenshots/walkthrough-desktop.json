@@ -1,0 +1,52 @@
+{
+ "viewport": "1440x900",
+ "hasProject": false,
+ "results": [
+  {
+   "screen": "01-landing",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "02-login",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "03-dashboard",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "04-new-dub",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "05-projects",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "06-voices",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "07-settings",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "08-settings-light",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "09-projects-table",
+   "ok": true,
+   "newProblems": 0
+  }
+ ],
+ "problems": []
+}
