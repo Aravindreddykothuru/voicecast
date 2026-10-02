@@ -1,0 +1,61 @@
+{
+ "created": "2026-10-03",
+ "question": "How many target languages produce a complete, correctly timed dub end to end?",
+ "answer": "Five: te, kn, hi, mr, bn -- every language this deployment has a SYSPIN voice for.",
+ "source_clip": "data/e2e/verified-run-2026-09-13/input_english.mp4 (32.56 s, two speakers, 9 spoken segments)",
+ "method": "scripts/e2e_dub.py drives the real API exactly as the frontend does: create, presigned upload, confirm, process, poll, download. All seven stages run. STORAGE_BACKEND=local throughout.",
+ "languages": {
+  "te": {
+   "status": "pass",
+   "intelligibility": {"corpus_cer": 0.156, "lines_scored": "8 of 9", "reader": "Whisper large-v3"},
+   "evidence": "gate_final run 2026-09-20, data/e2e/final-2026-09-20"
+  },
+  "kn": {
+   "status": "pass",
+   "intelligibility": {"corpus_cer": 0.131, "lines_scored": "8 of 9", "reader": "Whisper large-v3"},
+   "evidence": "docs/tts-pipeline-flag-e2e.json, data/e2e/kn-runtime-off-full2"
+  },
+  "hi": {
+   "status": "pass",
+   "queued_to_ready_s": 632.8,
+   "segments_rendered": "9 of 9",
+   "avg_sync_offset_pct": 56.19,
+   "max_tempo": 1.2776,
+   "overrun_ms": 0,
+   "export_bytes": 3760373,
+   "intelligibility": null,
+   "evidence": "data/e2e/lang-hi"
+  },
+  "mr": {
+   "status": "pass",
+   "queued_to_ready_s": 533.9,
+   "segments_rendered": "9 of 9",
+   "avg_sync_offset_pct": 45.52,
+   "max_tempo": 1.1381,
+   "overrun_ms": 0,
+   "intelligibility": null,
+   "evidence": "data/e2e/lang-mr"
+  },
+  "bn": {
+   "status": "pass",
+   "queued_to_ready_s": 394.0,
+   "segments_rendered": "9 of 9",
+   "avg_sync_offset_pct": 39.36,
+   "max_tempo": 1.08,
+   "overrun_ms": 0,
+   "intelligibility": null,
+   "evidence": "data/e2e/lang-bn"
+  }
+ },
+ "checks_passed_by_all_five": [
+  "duration_matches_source (32.560 s expected, 32.560 s got)",
+  "every_spoken_segment_rendered (9 of 9)",
+  "speech_at_every_clip",
+  "silence_before_first_line",
+  "silence_between_lines",
+  "no_overruns (0 ms, 0 segments)",
+  "no_overlapping_speech"
+ ],
+ "what_is_not_yet_measured": "hi, mr and bn have no read-back CER. --asr-check needs Whisper large-v3 (~3.5 GB) and both model-holding workers were resident; scoring it means stopping them and re-verifying with --project <id> --asr-check. The structural checks above prove the dub is complete and correctly placed, not that the words are right.",
+ "not_dubbable_here": "ta, ml, gu, pa, or, as -- /api/capabilities reports tts_available=false for all six because SYSPIN has no voice for them, and POST /api/projects refuses them with 422 rather than failing at the synthesize stage."
+}
