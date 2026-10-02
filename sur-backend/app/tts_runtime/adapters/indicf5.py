@@ -7,12 +7,17 @@ and only entries whose licence and consent are recorded as `verified` are
 used ("By using this model, you agree to only clone voices for which you
 have explicit permission" -- model card).
 
-UNTESTED against real weights: the repository is gated and its remote code
-(model.py) cannot be read without HF_TOKEN. IndicF5's public source
-(f5_tts/infer/utils_infer.py) downloads the Vocos vocoder from Hugging Face
-at load time with no pinned revision; the adapter serves that request from
-the verified local copy so rendering stays offline. Whether model.py uses
-that same function cannot be confirmed until the code is readable.
+Checked against the real model.py at the pinned revision
+(docs/indicf5-adapter-diff.md). model.py imports the `f5_tts` package and
+calls load_vocoder(..., is_local=False), which reaches for
+charactr/vocos-mel-24khz over the network; the adapter serves that and the
+repo's own checkpoints/vocab.txt from the verified local copies so
+rendering stays offline.
+
+.venv-indicf5 needs f5-tts, transformers<4.50 (config.json pins 4.49.0) and
+numpy<=1.26.4. The f5-tts PACKAGE is MIT; the SWivid/F5-TTS WEIGHTS are
+CC-BY-NC and are refused by name in licenses.FORBIDDEN. IndicF5 ships its
+own MIT weights, which is what this loads.
 """
 from __future__ import annotations
 
@@ -98,28 +103,76 @@ class IndicF5Adapter(Adapter):
             verify_locked(model_dir(home, pin), pin)
         self.folder = model_dir(home, pins[0])
         vocos_dir = model_dir(home, pins[1])
-        self._serve_vocos_locally(vocos_dir)
+        self._serve_locally(vocos_dir, self.folder)
         from transformers import AutoModel
 
         self.device = "cuda" if device.startswith("cuda") and torch.cuda.is_available() else "cpu"
-        self.model = AutoModel.from_pretrained(str(self.folder), trust_remote_code=True)
+        # remove_sil and speed come from options, not the shipped config.json:
+        # it defaults remove_sil=True, which keeps keep_silence=500 ms at each
+        # edge and would fail the runtime's calibrated 0.30 s silence trigger
+        # on every line (docs/indicf5-adapter-diff.md).
+        overrides = {k: self.options[k] for k in ("remove_sil", "speed") if k in self.options}
+        self.model = AutoModel.from_pretrained(str(self.folder), trust_remote_code=True, **overrides)
+        self._assert_weights_loaded()
         if hasattr(self.model, "to"):
             self.model = self.model.to(self.device)
-        return {"device": self.device}
+        return {"device": self.device, "remove_sil": getattr(self.model.config, "remove_sil", None),
+                "speed": getattr(self.model.config, "speed", None)}
 
     @staticmethod
-    def _serve_vocos_locally(vocos_dir: Path) -> None:
+    def _serve_locally(vocos_dir: Path, model_dir: Path) -> None:
+        """Serve every hub fetch model.py makes from the verified local copies.
+
+        Two of them. load_vocoder(is_local=False) pulls
+        charactr/vocos-mel-24khz, and __init__ does
+
+            hf_hub_download(config.name_or_path, "checkpoints/vocab.txt")
+
+        which, loaded from a folder, asks the hub for a repo whose id is a
+        local path -- and under HF_HUB_OFFLINE=1 simply fails. Both files are
+        already provisioned and hash-locked, so both are answered from disk.
+        """
         import huggingface_hub
 
         real = huggingface_hub.hf_hub_download
 
         def local_first(repo_id=None, filename=None, *a, **k):
-            if repo_id == "charactr/vocos-mel-24khz" and filename and (vocos_dir / filename).exists():
-                return str(vocos_dir / filename)
+            if filename:
+                if repo_id == "charactr/vocos-mel-24khz" and (vocos_dir / filename).exists():
+                    return str(vocos_dir / filename)
+                # repo_id is "ai4bharat/IndicF5" or the local folder path.
+                if (model_dir / filename).exists():
+                    return str(model_dir / filename)
             return real(repo_id, filename, *a, **k)
 
         huggingface_hub.hf_hub_download = local_first
         os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
+    def _assert_weights_loaded(self) -> None:
+        """Refuse to speak unless the checkpoint's tensors actually landed.
+
+        CONTRACTS.md #1. Every key in model.safetensors carries a
+        `_orig_mod.` segment, because __init__ wraps both submodules in
+        torch.compile and the checkpoint was saved from the compiled model.
+        torch.compile needs Triton, which Windows does not have. If the wrap
+        degrades to a no-op the module tree has no `_orig_mod` level, not one
+        of the 447 tensors matches, and from_pretrained *warns* and hands
+        back a model speaking with untrained weights.
+        """
+        from safetensors import safe_open
+
+        ckpt = self.folder / "model.safetensors"
+        with safe_open(str(ckpt), framework="pt") as f:
+            expected = set(f.keys())
+        got = set(self.model.state_dict().keys())
+        missing = expected - got
+        if missing:
+            raise Unavailable(
+                f"IndicF5 weights did not load: {len(missing)} of {len(expected)} tensors from "
+                f"model.safetensors are absent from the built model (e.g. {sorted(missing)[0]}). "
+                f"The checkpoint's keys carry a '_orig_mod.' segment from torch.compile; if compile "
+                f"is a no-op here the names cannot match and the model would speak untrained. "
+                f"Refusing rather than rendering.")
 
     def synth(self, text, lang, speaker, emotion, draw=0) -> SynthOutput:
         import hashlib
