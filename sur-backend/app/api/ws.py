@@ -31,10 +31,37 @@ router = APIRouter()
 WS_POLICY_VIOLATION = 1008
 
 
+BEARER_SUBPROTOCOL = "bearer.token"
+
+
+def token_from_subprotocol(header: str | None) -> str | None:
+    """The session token out of Sec-WebSocket-Protocol, or None.
+
+    A browser cannot set arbitrary headers on a WebSocket handshake, which is
+    why this used to travel as ?token=. It does not have to: the second
+    argument to `new WebSocket(url, protocols)` becomes
+    Sec-WebSocket-Protocol, and that is a header. The difference matters --
+    a query string is written to the access log in plaintext, and uvicorn
+    duly logged every session JWT this app has ever opened a socket with:
+
+        WebSocket /ws/projects/<id>?token=eyJhbGciOi... [accepted]
+
+    Tokens in URLs also reach proxy logs, browser history and Referer
+    headers. The offer is "bearer.token, <the token>".
+    """
+    if not header:
+        return None
+    parts = [p.strip() for p in header.split(",")]
+    if len(parts) >= 2 and parts[0] == BEARER_SUBPROTOCOL and parts[1]:
+        return parts[1]
+    return None
+
+
 def _caller_owns_project(project_id: str, token: str | None, user_email: str | None) -> bool:
     """Same two-mode identity as get_current_user: a bearer token wins, and
-    the X-User-Email dev stub is the fallback. Browsers can't set headers on
-    a WebSocket handshake, so both arrive as query parameters instead."""
+    the X-User-Email dev stub is the fallback. The token arrives as a
+    WebSocket subprotocol (see token_from_subprotocol); user_email is a
+    non-secret dev stub and stays a query parameter."""
     if not is_uuid(project_id):
         return False
 
@@ -65,9 +92,13 @@ def _caller_owns_project(project_id: str, token: str | None, user_email: str | N
 async def project_events(
     websocket: WebSocket,
     project_id: str,
-    token: str | None = None,
     user_email: str | None = None,
 ):
+    # The token is a subprotocol, never a query parameter: the query string
+    # is logged in plaintext by uvicorn and every proxy in between.
+    offered = websocket.headers.get("sec-websocket-protocol")
+    token = token_from_subprotocol(offered)
+
     # Authorize BEFORE accepting. This channel carries transcript text,
     # detected language and error messages; without this check anyone who
     # knew or guessed a project id could stream another user's run.
@@ -75,7 +106,9 @@ async def project_events(
         await websocket.close(code=WS_POLICY_VIOLATION, reason="Not authorized for this project")
         return
 
-    await websocket.accept()
+    # A client that offered a subprotocol must be told which one was chosen,
+    # or the browser fails the handshake after the server has accepted it.
+    await websocket.accept(subprotocol=BEARER_SUBPROTOCOL if token else None)
     settings = get_settings()
 
     try:

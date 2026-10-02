@@ -68,30 +68,42 @@ function formatEta(seconds: number): string {
 // Exported for tests: which identity this URL carries is a security
 // decision (sending the dev-stub email once logged in identifies the
 // wrong user), so it is asserted directly rather than through the hook.
+export const BEARER_SUBPROTOCOL = "bearer.token";
+
+function storedToken(): string | null {
+  try {
+    const raw = localStorage.getItem("sur.auth");
+    return raw ? ((JSON.parse(raw) as { token?: string }).token ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The URL only. The session token is NOT in it -- see wsProtocols. */
 export function wsUrl(projectId: string): string {
   const httpBase = API_BASE.replace(/\/$/, "");
   const wsBase = httpBase.replace(/^http/i, "ws");
 
   // The server authorizes the subscription before accepting it and closes
-  // with 1008 if this identity doesn't own the project. A browser can't set
-  // headers on a WebSocket handshake, so identity travels as a query param
-  // rather than the Authorization / X-User-Email headers the REST calls use.
+  // with 1008 if this identity doesn't own the project.
   //
-  // Prefer the real session token: once logged in, sending the dev-stub
-  // email instead would identify the wrong user and get the owner refused
-  // their own project's events.
-  let token: string | null = null;
-  try {
-    const raw = localStorage.getItem("sur.auth");
-    token = raw ? ((JSON.parse(raw) as { token?: string }).token ?? null) : null;
-  } catch {
-    token = null;
-  }
+  // Only the dev-stub email travels in the query string, and only when
+  // there is no session: it is not a secret. The real token goes in the
+  // handshake's Sec-WebSocket-Protocol header instead, because a query
+  // string is written to the access log in plaintext -- uvicorn logged
+  // every JWT this app opened a socket with.
+  const token = storedToken();
+  return token
+    ? `${wsBase}/ws/projects/${projectId}`
+    : `${wsBase}/ws/projects/${projectId}?user_email=${encodeURIComponent(USER_EMAIL)}`;
+}
 
-  const identity = token
-    ? `token=${encodeURIComponent(token)}`
-    : `user_email=${encodeURIComponent(USER_EMAIL)}`;
-  return `${wsBase}/ws/projects/${projectId}?${identity}`;
+/** Second argument to `new WebSocket(url, protocols)`, which the browser
+ *  sends as Sec-WebSocket-Protocol. Empty when there is no session, so the
+ *  dev-stub email in the URL is used instead. */
+export function wsProtocols(): string[] {
+  const token = storedToken();
+  return token ? [BEARER_SUBPROTOCOL, token] : [];
 }
 
 
@@ -126,7 +138,7 @@ export function useProjectEvents(projectId: string | null): ProjectEventsState {
     let socket: WebSocket | null = null;
 
     const connect = () => {
-      socket = new WebSocket(wsUrl(projectId));
+      socket = new WebSocket(wsUrl(projectId), wsProtocols());
 
       socket.onopen = () => setState((s) => ({ ...s, connected: true }));
 
@@ -155,7 +167,18 @@ export function useProjectEvents(projectId: string | null): ProjectEventsState {
     return () => {
       closedByEffect = true;
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
-      socket?.close();
+      const s = socket;
+      if (!s) return;
+      // Closing a socket that is still CONNECTING makes the browser log
+      // "WebSocket is closed before the connection is established". React
+      // StrictMode mounts every effect twice in development, so the first
+      // socket is always torn down mid-handshake and the warning was
+      // guaranteed. Let the handshake finish, then close it.
+      if (s.readyState === WebSocket.CONNECTING) {
+        s.addEventListener("open", () => s.close(), { once: true });
+      } else {
+        s.close();
+      }
     };
   }, [projectId]);
 

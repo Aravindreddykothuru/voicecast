@@ -50,24 +50,14 @@
   {
    "screen": "10-progress-or-editor",
    "ok": true,
-   "newProblems": 2
-  },
-  {
-   "screen": "12-export",
-   "ok": true,
-   "newProblems": 0
+   "newProblems": 1
   }
  ],
  "problems": [
   {
    "screen": "10-progress-or-editor",
-   "type": "requestfailed",
-   "text": "blob:http://localhost:8443/c721670d-2c20-4eb3-ab38-a3f24bad877e net::ERR_ABORTED"
-  },
-  {
-   "screen": "10-progress-or-editor",
-   "type": "requestfailed",
-   "text": "blob:http://localhost:8443/13980e2f-85ba-4dbb-b19d-30f01817a390 net::ERR_ABORTED"
+   "type": "warning",
+   "text": "WebSocket connection to 'ws://localhost:8000/ws/projects/9c02713c-50b6-421f-9f17-5c64de9639b8?token=<redacted: session token, the very leak this run found>' failed: We"
   }
  ]
 }

@@ -1,24 +1,43 @@
 /**
- * Which identity the WebSocket URL carries is a security decision.
+ * Which identity the WebSocket carries, and HOW, is a security decision.
  *
- * The backend authorizes the subscription before accepting it, and after
- * the production auth fix it only trusts `user_email` outside production.
- * If this builder sent the dev-stub address while a real session existed,
- * a logged-in user would be refused their own project's events in dev and
- * would get nothing at all in production.
+ * The backend authorizes the subscription before accepting it, and only
+ * trusts `user_email` outside production. If this builder sent the dev-stub
+ * address while a real session existed, a logged-in user would be refused
+ * their own project's events.
+ *
+ * The session token must never be in the URL. A query string is written to
+ * the access log in plaintext, and uvicorn logged every JWT this app opened
+ * a socket with:
+ *
+ *     WebSocket /ws/projects/<id>?token=eyJhbGciOi... [accepted]
+ *
+ * It travels in Sec-WebSocket-Protocol instead, which is what the second
+ * argument to `new WebSocket(url, protocols)` becomes.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import { wsUrl } from "./useProjectEvents";
+import { BEARER_SUBPROTOCOL, wsProtocols, wsUrl } from "./useProjectEvents";
 import { USER_EMAIL } from "./api";
 
 describe("wsUrl", () => {
   beforeEach(() => localStorage.clear());
 
-  it("uses the session token when one is stored", () => {
+  it("keeps the session token out of the URL entirely", () => {
     localStorage.setItem("sur.auth", JSON.stringify({ token: "abc.def.ghi" }));
     const url = wsUrl("p1");
-    expect(url).toContain("token=abc.def.ghi");
+    expect(url).not.toContain("abc.def.ghi");
+    expect(url).not.toContain("token=");
     expect(url).not.toContain("user_email");
+    expect(url).toBe("ws://localhost:8000/ws/projects/p1");
+  });
+
+  it("sends the session token as a subprotocol instead", () => {
+    localStorage.setItem("sur.auth", JSON.stringify({ token: "abc.def.ghi" }));
+    expect(wsProtocols()).toEqual([BEARER_SUBPROTOCOL, "abc.def.ghi"]);
+  });
+
+  it("offers no subprotocol when there is no session", () => {
+    expect(wsProtocols()).toEqual([]);
   });
 
   it("falls back to the dev email only when there is no token", () => {
@@ -38,15 +57,15 @@ describe("wsUrl", () => {
     expect(wsUrl("p1")).toContain("user_email=");
   });
 
-  it("escapes the identity so a crafted value cannot add query parameters", () => {
+  it("a crafted token cannot add query parameters, because it is not in the URL", () => {
     localStorage.setItem("sur.auth", JSON.stringify({ token: "a&admin=1" }));
     const url = wsUrl("p1");
-    expect(url).toContain("token=a%26admin%3D1");
-    expect(url).not.toContain("admin=1&");
+    expect(url).not.toContain("admin");
+    expect(url).toBe("ws://localhost:8000/ws/projects/p1");
   });
 
   it("targets ws:// derived from the http API base", () => {
     expect(wsUrl("p1")).toMatch(/^wss?:\/\//);
-    expect(wsUrl("p1")).toContain("/ws/projects/p1?");
+    expect(wsUrl("p1")).toContain("/ws/projects/p1");
   });
 });
