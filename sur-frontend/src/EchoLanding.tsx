@@ -17,7 +17,7 @@ const CSS = `
   display: grid;
   grid-template-rows: auto 1fr;
   isolation: isolate;
-  background: #000;
+  background: var(--bg);
   --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
   --gutter: clamp(20px, 5vw, 100px);
   --line: rgba(255,255,255,0.14);
@@ -150,7 +150,7 @@ const CSS = `
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(4,4,6,0.94);
+  background: rgb(var(--bg-rgb) / 0.94);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
   display: flex;
@@ -338,11 +338,11 @@ const CSS = `
   cursor: pointer;
   transition: background 0.25s ease, color 0.25s ease;
 }
-.ec-btn:focus-visible { outline: 1px solid rgba(255,255,255,0.7); outline-offset: 3px; }
+.ec-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .ec-btn--ghost { background: var(--fill-ghost); color: var(--text-dimmer); }
 .ec-btn--ghost:hover { background: rgba(255,255,255,0.09); color: #fff; }
-.ec-btn--solid { background: var(--fill-solid); color: #fff; }
-.ec-btn--solid:hover { background: rgba(255,255,255,0.17); }
+.ec-btn--solid { background: var(--accent-strong); color: #fff; }
+.ec-btn--solid:hover { background: var(--accent); color: #fff; }
 
 /* Back button */
 .ec-back {
@@ -379,8 +379,8 @@ const CSS = `
   font-weight: 400;
   font-size: clamp(11px, 0.78vw, 13px);
   letter-spacing: 0.04em;
-  color: #ff8a8a;
-  background: rgba(255, 90, 90, 0.08);
+  color: var(--danger);
+  background: var(--danger-soft);
   border: 1px solid rgba(255, 90, 90, 0.28);
   border-radius: 0;
   padding: clamp(10px, 1vw, 14px) clamp(12px, 1.1vw, 16px);
@@ -472,7 +472,7 @@ const CSS = `
   z-index: 1;
   pointer-events: none;
   overflow: hidden;
-  background: #000;
+  background: var(--bg);
 }
 .ec-left-img img {
   width: 100%;

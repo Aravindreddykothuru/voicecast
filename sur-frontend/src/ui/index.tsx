@@ -29,9 +29,9 @@ type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-[12px] gap-1.5",
-  md: "h-10 px-4 text-[13px] gap-2",
-  lg: "h-12 px-6 text-sm gap-2",
+  sm: "h-9 px-3.5 text-[13px] gap-1.5",
+  md: "h-11 px-5 text-[14px] gap-2",
+  lg: "h-13 px-7 text-[15px] gap-2.5",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -101,10 +101,10 @@ export function Card({
 
 export function CardHeader({ title, action, sub }: { title: ReactNode; action?: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+    <div className="flex items-start justify-between gap-4 px-6 py-5" style={{ borderBottom: "1px solid var(--border)" }}>
       <div className="min-w-0">
-        <div className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{title}</div>
-        {sub && <div className="text-[12px] mt-0.5" style={{ color: "var(--text-muted)" }}>{sub}</div>}
+        <div className="text-[16px] font-semibold truncate" style={{ color: "var(--text)" }}>{title}</div>
+        {sub && <div className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>{sub}</div>}
       </div>
       {action}
     </div>
@@ -127,7 +127,7 @@ export function StatusBadge({ tone, children, pulse = false }: { tone: Tone; chi
   const v = TONE_VARS[tone];
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-medium whitespace-nowrap"
       style={{ color: v.fg, background: v.bg, border: `1px solid ${v.bd}` }}
     >
       <span
@@ -155,11 +155,11 @@ export function Callout({ tone, title, children, action }: { tone: Tone; title?:
   return (
     <div
       role={tone === "danger" ? "alert" : "status"}
-      className="flex gap-3 rounded-xl px-4 py-3"
+      className="flex gap-3 rounded-xl px-4.5 py-3.5"
       style={{ background: v.bg, border: `1px solid ${v.bd}` }}
     >
       <Icon size={16} style={{ color: v.fg, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
-      <div className="flex flex-col gap-1 min-w-0 flex-1 text-[13px]">
+      <div className="flex flex-col gap-1 min-w-0 flex-1 text-[14px]">
         {title && <span className="font-semibold" style={{ color: v.fg }}>{title}</span>}
         {children && <span style={{ color: "var(--text-mid)" }}>{children}</span>}
         {action}
@@ -226,15 +226,15 @@ export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; ti
           {icon}
         </div>
       )}
-      <h2 className="text-lg font-semibold" style={{ color: "var(--text)", fontFamily: "Inter, sans-serif", letterSpacing: 0 }}>{title}</h2>
-      {body && <p className="text-[13px] max-w-sm" style={{ color: "var(--text-muted)" }}>{body}</p>}
+      <h2 className="text-xl font-semibold" style={{ color: "var(--text)", fontFamily: "Inter, sans-serif", letterSpacing: 0 }}>{title}</h2>
+      {body && <p className="text-[14px] max-w-md" style={{ color: "var(--text-muted)" }}>{body}</p>}
       {action && <div className="mt-1">{action}</div>}
     </div>
   );
 }
 
 // ── Inputs ───────────────────────────────────────────────────────────────
-const FIELD = `w-full rounded-lg px-3.5 text-[13px] outline-none transition-colors`;
+const FIELD = `w-full rounded-lg px-4 text-[14px] outline-none transition-colors`;
 const fieldStyle: React.CSSProperties = {
   background: "var(--bg-elevated)",
   border: "1px solid var(--border)",
@@ -244,23 +244,23 @@ const fieldStyle: React.CSSProperties = {
 export function Field({ label, hint, error, children, htmlFor }: { label: string; hint?: ReactNode; error?: string | null; children: ReactNode; htmlFor?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-[12px] font-medium" style={{ color: "var(--text-mid)" }}>{label}</label>
+      <label htmlFor={htmlFor} className="text-[13px] font-medium" style={{ color: "var(--text-mid)" }}>{label}</label>
       {children}
       {error ? (
-        <span className="text-[12px]" style={{ color: "var(--danger)" }}>{error}</span>
+        <span className="text-[13px]" style={{ color: "var(--danger)" }}>{error}</span>
       ) : hint ? (
-        <span className="text-[12px]" style={{ color: "var(--text-dim)" }}>{hint}</span>
+        <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>{hint}</span>
       ) : null}
     </div>
   );
 }
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`${FIELD} h-10 ${props.className ?? ""}`} style={{ ...fieldStyle, ...props.style }} />;
+  return <input {...props} className={`${FIELD} h-11 ${props.className ?? ""}`} style={{ ...fieldStyle, ...props.style }} />;
 }
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={`${FIELD} h-10 ${props.className ?? ""}`} style={{ ...fieldStyle, ...props.style }} />;
+  return <select {...props} className={`${FIELD} h-11 ${props.className ?? ""}`} style={{ ...fieldStyle, ...props.style }} />;
 }
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -292,8 +292,8 @@ export function Toggle({ checked, onChange, label, help, disabled }: { checked: 
         />
       </button>
       <label htmlFor={id} className="flex flex-col gap-0.5 cursor-pointer select-none">
-        <span className="text-[13px] font-medium" style={{ color: "var(--text)" }}>{label}</span>
-        {help && <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>{help}</span>}
+        <span className="text-[14px] font-medium" style={{ color: "var(--text)" }}>{label}</span>
+        {help && <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{help}</span>}
       </label>
     </div>
   );

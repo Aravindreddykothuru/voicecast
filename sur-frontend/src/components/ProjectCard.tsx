@@ -55,7 +55,7 @@ export function ProjectCard({
         }}
       >
         <span
-          className="text-[22px] font-semibold tracking-tight"
+          className="text-[26px] font-semibold tracking-tight"
           style={{ color: "var(--accent)", fontFamily: "Sora, sans-serif" }}
         >
           {targetNames.split(",")[0]?.trim() || "—"}
@@ -68,31 +68,31 @@ export function ProjectCard({
       <div className="flex flex-col gap-2.5 p-4 flex-1">
         <div className="min-w-0">
           <h3
-            className="text-[14px] font-semibold truncate"
+            className="text-[15px] font-semibold truncate"
             style={{ color: "var(--text)", fontFamily: "Inter, sans-serif", letterSpacing: 0 }}
             title={project.title}
           >
             {project.title}
           </h3>
-          <p className="text-[12px] truncate mt-0.5" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[13px] truncate mt-0.5" style={{ color: "var(--text-muted)" }}>
             {sourceName} → {targetNames}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] flex-wrap" style={{ color: "var(--text-dim)" }}>
+        <div className="flex items-center gap-3 text-[12px] flex-wrap" style={{ color: "var(--text-dim)" }}>
           <span>{fmtDuration(project.source_video_duration_ms)}</span>
           <span>{project.segment_count} segments</span>
           <span>{fmtWhen(project.updated_at)}</span>
         </div>
 
         {stage && project.status !== "failed" && project.status !== "ready" && (
-          <span className="text-[11px]" style={{ color: "var(--running)" }}>{stage}</span>
+          <span className="text-[12px]" style={{ color: "var(--running)" }}>{stage}</span>
         )}
         {verdict.kind === "stalled" && (
-          <span className="text-[11px]" style={{ color: "var(--warning)" }}>{verdict.reason}</span>
+          <span className="text-[12px]" style={{ color: "var(--warning)" }}>{verdict.reason}</span>
         )}
         {verdict.kind === "failed" && (
-          <span className="text-[11px] line-clamp-2" style={{ color: "var(--danger)" }} title={verdict.message}>
+          <span className="text-[12px] line-clamp-2" style={{ color: "var(--danger)" }} title={verdict.message}>
             {verdict.message}
           </span>
         )}

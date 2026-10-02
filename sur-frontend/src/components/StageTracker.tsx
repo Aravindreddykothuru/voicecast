@@ -92,10 +92,10 @@ export function StageTracker({ stages, failedStage }: { stages: StageState[]; fa
             </div>
 
             <div className={isNarrow ? "flex-1 min-w-0" : "flex flex-col items-center text-center min-w-0 w-full"}>
-              <span className="text-[11px] font-medium truncate max-w-full" style={{ color: s.active || s.done ? "var(--text)" : "var(--text-dim)" }}>
+              <span className="text-[12px] font-medium truncate max-w-full" style={{ color: s.active || s.done ? "var(--text)" : "var(--text-dim)" }}>
                 {label}
               </span>
-              <span className="text-[10px] truncate max-w-full" style={{ color: "var(--text-dim)" }}>
+              <span className="text-[11px] truncate max-w-full" style={{ color: "var(--text-dim)" }}>
                 {failed
                   ? "failed"
                   : s.done

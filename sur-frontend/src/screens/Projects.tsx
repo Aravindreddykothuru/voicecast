@@ -118,8 +118,8 @@ export function Projects({
     <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1700px] mx-auto w-full">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-[26px] font-semibold" style={{ color: "var(--text)" }}>Projects</h1>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+          <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Projects</h1>
+          <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
             {loading ? "Loading…" : `${rows.length} of ${all.length}`}
           </p>
         </div>
@@ -147,7 +147,7 @@ export function Projects({
       {/* Filters */}
       <Card className="p-3 flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label htmlFor="f-status" className="text-[11px]" style={{ color: "var(--text-dim)" }}>Status</label>
+          <label htmlFor="f-status" className="text-[12px]" style={{ color: "var(--text-dim)" }}>Status</label>
           <Select id="f-status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus | "all")} className="w-44">
             {STATUSES.map((s) => (
               <option key={s} value={s}>{s === "all" ? "All statuses" : statusTone(s).label}</option>
@@ -155,7 +155,7 @@ export function Projects({
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="f-lang" className="text-[11px]" style={{ color: "var(--text-dim)" }}>Target language</label>
+          <label htmlFor="f-lang" className="text-[12px]" style={{ color: "var(--text-dim)" }}>Target language</label>
           <Select id="f-lang" value={lang} onChange={(e) => setLang(e.target.value)} className="w-44">
             <option value="all">All languages</option>
             {caps.languages.map((l) => (
@@ -164,7 +164,7 @@ export function Projects({
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="f-sort" className="text-[11px]" style={{ color: "var(--text-dim)" }}>Sort by</label>
+          <label htmlFor="f-sort" className="text-[12px]" style={{ color: "var(--text-dim)" }}>Sort by</label>
           <Select id="f-sort" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="w-44">
             <option value="updated">Last updated</option>
             <option value="created">Created</option>
@@ -235,7 +235,7 @@ export function Projects({
                     />
                   </th>
                   {["Title", "Languages", "Status", "Duration", "Segments", "Updated", ""].map((h) => (
-                    <th key={h} scope="col" className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                    <th key={h} scope="col" className="px-3 py-2.5 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
                       {h}
                     </th>
                   ))}
@@ -262,20 +262,20 @@ export function Projects({
                         />
                       </td>
                       <td className="px-3 py-2.5">
-                        <button onClick={() => openProject(p.id, openTo(p))} className="text-[13px] font-medium text-left hover:underline" style={{ color: "var(--text)" }}>
+                        <button onClick={() => openProject(p.id, openTo(p))} className="text-[14px] font-medium text-left hover:underline" style={{ color: "var(--text)" }}>
                           {p.title}
                         </button>
                         {stageLabel(p.current_stage) && p.status !== "ready" && (
-                          <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>{stageLabel(p.current_stage)}</div>
+                          <div className="text-[12px]" style={{ color: "var(--text-dim)" }}>{stageLabel(p.current_stage)}</div>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>
+                      <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>
                         {(p.source_language ? sourceLanguageName(caps, p.source_language) : "auto")} → {p.target_languages.map((c) => languageName(caps, c)).join(", ")}
                       </td>
                       <td className="px-3 py-2.5"><StatusBadge tone={st.tone} pulse={st.pulse}>{st.label}</StatusBadge></td>
-                      <td className="px-3 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>{fmtDuration(p.source_video_duration_ms)}</td>
-                      <td className="px-3 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>{p.segment_count}</td>
-                      <td className="px-3 py-2.5 text-[12px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{fmtWhen(p.updated_at)}</td>
+                      <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{fmtDuration(p.source_video_duration_ms)}</td>
+                      <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{p.segment_count}</td>
+                      <td className="px-3 py-2.5 text-[13px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{fmtWhen(p.updated_at)}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex gap-1.5 justify-end">
                           {canRestart(p) && (

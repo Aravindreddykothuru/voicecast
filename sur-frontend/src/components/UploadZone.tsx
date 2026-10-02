@@ -95,8 +95,8 @@ export function UploadZone({
           <div className="flex items-center gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
             <FileVideo size={16} style={{ color: "var(--accent)", flexShrink: 0 }} aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium truncate" style={{ color: "var(--text)" }}>{picked.file.name}</div>
-              <div className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+              <div className="text-[14px] font-medium truncate" style={{ color: "var(--text)" }}>{picked.file.name}</div>
+              <div className="text-[13px]" style={{ color: "var(--text-muted)" }}>
                 {fmtBytes(picked.file.size)}
                 {picked.durationMs != null && ` · ${msToTimecode(picked.durationMs)}`}
                 {picked.durationMs == null && " · duration unavailable"}
@@ -110,7 +110,7 @@ export function UploadZone({
           </div>
           {progress != null && (
             <div className="px-4 pb-3 flex flex-col gap-1.5">
-              <div className="flex justify-between text-[11px]" style={{ color: "var(--text-muted)" }}>
+              <div className="flex justify-between text-[12px]" style={{ color: "var(--text-muted)" }}>
                 <span>Uploading…</span>
                 <span>{Math.round(progress * 100)}%</span>
               </div>
@@ -153,16 +153,16 @@ export function UploadZone({
           <UploadCloud size={22} />
         </div>
         <div className="text-center">
-          <div className="text-[14px] font-medium" style={{ color: "var(--text)" }}>
+          <div className="text-[15px] font-medium" style={{ color: "var(--text)" }}>
             Drop a video here, or click to choose
           </div>
-          <div className="text-[12px] mt-1" style={{ color: "var(--text-muted)" }}>
+          <div className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
             {accept.length ? accept.map((a) => a.replace("video/", "").toUpperCase()).join(" · ") : "video"} · up to {maxMb} MB
           </div>
         </div>
       </button>
       {error && (
-        <span role="alert" className="text-[12px]" style={{ color: "var(--danger)" }}>{error}</span>
+        <span role="alert" className="text-[13px]" style={{ color: "var(--danger)" }}>{error}</span>
       )}
     </div>
   );

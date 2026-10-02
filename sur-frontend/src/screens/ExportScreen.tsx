@@ -111,10 +111,10 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-[26px] font-semibold" style={{ color: "var(--text)" }}>Export</h1>
+            <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Export</h1>
             {st && <StatusBadge tone={st.tone} pulse={st.pulse}>{st.label}</StatusBadge>}
           </div>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>Final muxed video, subtitles and the QA report</p>
+          <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>Final muxed video, subtitles and the QA report</p>
         </div>
         <Button variant="ghost" onClick={load} icon={<RefreshCw size={14} />}>Refresh</Button>
       </div>
@@ -147,7 +147,7 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
                     aria-label="Dubbed output"
                   />
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+                    <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
                       {exp.output_size_bytes != null ? fmtBytes(exp.output_size_bytes) : "size unavailable"}
                     </span>
                     <Button
@@ -169,7 +169,7 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
           <Card>
             <CardHeader title="Subtitles" sub={`${subtitled} of ${segs.length} segments have a translation`} />
             <div className="p-5 flex flex-col gap-3">
-              <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+              <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>
                 Generated here from each segment&apos;s real start and end times and its saved translation.
               </p>
               <div className="flex gap-2 flex-wrap">
@@ -197,7 +197,7 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
                 </Button>
               </div>
               {subtitled === 0 && (
-                <span className="text-[12px]" style={{ color: "var(--text-dim)" }}>
+                <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>
                   No translated lines yet, so there is nothing to write.
                 </span>
               )}
@@ -216,8 +216,8 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5">
             {Object.entries(exp.qa_report.overall).map(([k, v]) => (
               <div key={k}>
-                <dt className="text-[11px]" style={{ color: "var(--text-muted)" }}>{k.replace(/_/g, " ")}</dt>
-                <dd className="text-[15px] font-semibold mt-0.5" style={{ color: "var(--text)" }}>{String(v)}</dd>
+                <dt className="text-[12px]" style={{ color: "var(--text-muted)" }}>{k.replace(/_/g, " ")}</dt>
+                <dd className="text-[16px] font-semibold mt-0.5" style={{ color: "var(--text)" }}>{String(v)}</dd>
               </div>
             ))}
           </dl>
@@ -233,7 +233,7 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
                   {["Starts", "Speech", "Emotion", "Tempo", "Plays", "Overrun", "Sync offset"].map((h) => (
-                    <th key={h} scope="col" className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                    <th key={h} scope="col" className="px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
                       {h}
                     </th>
                   ))}
@@ -244,17 +244,17 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
                   const over = r.overrun_ms ?? 0;
                   return (
                     <tr key={r.segment_id} style={{ borderBottom: "1px solid var(--border)" }}>
-                      <td className="px-4 py-2.5 text-[12px]" style={{ color: "var(--text-mid)", fontFamily: "JetBrains Mono, monospace" }}>{msToTimecode(r.start_ms)}</td>
-                      <td className="px-4 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>{r.has_speech ? "yes" : "silent"}</td>
-                      <td className="px-4 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>{r.emotion_label ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-[12px]" style={{ color: (r.tempo ?? 1) > 1.15 ? "var(--warning)" : "var(--text-muted)" }}>
+                      <td className="px-4 py-2.5 text-[13px]" style={{ color: "var(--text-mid)", fontFamily: "JetBrains Mono, monospace" }}>{msToTimecode(r.start_ms)}</td>
+                      <td className="px-4 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{r.has_speech ? "yes" : "silent"}</td>
+                      <td className="px-4 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{r.emotion_label ?? "—"}</td>
+                      <td className="px-4 py-2.5 text-[13px]" style={{ color: (r.tempo ?? 1) > 1.15 ? "var(--warning)" : "var(--text-muted)" }}>
                         {r.tempo != null ? `×${r.tempo.toFixed(2)}` : "—"}
                       </td>
-                      <td className="px-4 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>{r.fitted_ms != null ? `${r.fitted_ms} ms` : "—"}</td>
-                      <td className="px-4 py-2.5 text-[12px]" style={{ color: over > 0 ? "var(--danger)" : "var(--success)" }}>
+                      <td className="px-4 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{r.fitted_ms != null ? `${r.fitted_ms} ms` : "—"}</td>
+                      <td className="px-4 py-2.5 text-[13px]" style={{ color: over > 0 ? "var(--danger)" : "var(--success)" }}>
                         {r.overrun_ms != null ? `${r.overrun_ms} ms` : "—"}
                       </td>
-                      <td className="px-4 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>{r.sync_offset_pct != null ? `${r.sync_offset_pct}%` : "—"}</td>
+                      <td className="px-4 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{r.sync_offset_pct != null ? `${r.sync_offset_pct}%` : "—"}</td>
                     </tr>
                   );
                 })}

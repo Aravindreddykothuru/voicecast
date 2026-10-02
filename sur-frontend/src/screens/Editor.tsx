@@ -314,16 +314,16 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
-          <h1 className="text-[26px] font-semibold truncate" style={{ color: "var(--text)" }}>
+          <h1 className="text-[30px] font-semibold truncate" style={{ color: "var(--text)" }}>
             {project?.title ?? "Studio"}
           </h1>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
             {segments ? `${segs.length} segments` : "Loading…"}
             {changedCount > 0 && ` · ${changedCount} edited`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] hidden lg:inline" style={{ color: "var(--text-dim)" }}>
+          <span className="text-[12px] hidden lg:inline" style={{ color: "var(--text-dim)" }}>
             Space play · ←/→ segment · Ctrl+S save
           </span>
           <Button variant="ghost" onClick={() => go("export")} icon={<Download size={14} />}>Export</Button>
@@ -361,8 +361,8 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
                 aria-label="Dubbed output"
               />
               <div className="flex-1 flex flex-col gap-2 justify-center">
-                <div className="text-[12px] font-medium" style={{ color: "var(--text-mid)" }}>Dubbed output</div>
-                <p className="text-[12px]" style={{ color: "var(--text-dim)" }}>
+                <div className="text-[13px] font-medium" style={{ color: "var(--text-mid)" }}>Dubbed output</div>
+                <p className="text-[13px]" style={{ color: "var(--text-dim)" }}>
                   The original video has no URL on this API, so it cannot be shown beside this one. Per line, the
                   original audio plays from the segment table.
                 </p>
@@ -408,7 +408,7 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)" }}>
                 {["#", "Time", "Speaker", "Original", "Translation", "Emotion", "Fit", ""].map((h) => (
-                  <th key={h} scope="col" className="px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                  <th key={h} scope="col" className="px-3 py-2.5 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
                     {h}
                   </th>
                 ))}
@@ -435,20 +435,20 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
                       background: active ? "var(--accent-soft)" : "transparent",
                     }}
                   >
-                    <td className="px-3 py-2.5 text-[12px]" style={{ color: "var(--text-dim)" }}>{s.index}</td>
-                    <td className="px-3 py-2.5 text-[12px] whitespace-nowrap" style={{ color: "var(--text-mid)", fontFamily: "JetBrains Mono, monospace" }}>
+                    <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-dim)" }}>{s.index}</td>
+                    <td className="px-3 py-2.5 text-[13px] whitespace-nowrap" style={{ color: "var(--text-mid)", fontFamily: "JetBrains Mono, monospace" }}>
                       {msToTimecode(s.start_ms)}
                     </td>
-                    <td className="px-3 py-2.5 text-[12px]" style={{ color: "var(--text-muted)" }}>{s.speaker_id ?? "—"}</td>
-                    <td className="px-3 py-2.5 text-[12px] max-w-[240px]" style={{ color: "var(--text-muted)" }}>
+                    <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{s.speaker_id ?? "—"}</td>
+                    <td className="px-3 py-2.5 text-[13px] max-w-[240px]" style={{ color: "var(--text-muted)" }}>
                       <span className="line-clamp-2">{s.source_text ?? "—"}</span>
                     </td>
-                    <td className="px-3 py-2.5 text-[12px] max-w-[280px]" style={{ color: "var(--text)" }}>
+                    <td className="px-3 py-2.5 text-[13px] max-w-[280px]" style={{ color: "var(--text)" }}>
                       <span className="line-clamp-2">{s.translated_text ?? "—"}</span>
                     </td>
                     <td className="px-3 py-2.5">
                       <span
-                        className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full"
+                        className="inline-flex items-center gap-1.5 text-[12px] px-2 py-0.5 rounded-full"
                         style={{ background: "var(--surface-hover)", color: "var(--text-mid)" }}
                       >
                         <span className="w-2 h-2 rounded-full" style={{ background: colorFor(s) }} aria-hidden="true" />
@@ -517,7 +517,7 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
       {seg && (
         <Card className="p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3 text-[12px]" style={{ color: "var(--text-muted)" }}>
+            <div className="flex items-center gap-3 text-[13px]" style={{ color: "var(--text-muted)" }}>
               <span style={{ color: "var(--text)" }}>Segment {seg.index}</span>
               <span style={{ fontFamily: "JetBrains Mono, monospace" }}>{msToTimecode(seg.start_ms)}–{msToTimecode(seg.end_ms)}</span>
               {seg.detected_language && <span>{sourceLanguageName(caps, seg.detected_language)}</span>}
@@ -537,12 +537,12 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div>
-              <div className="text-[11px] uppercase tracking-wider mb-1.5" style={{ color: "var(--text-dim)" }}>Original</div>
-              <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-muted)" }}>{seg.source_text ?? "—"}</p>
+              <div className="text-[12px] uppercase tracking-wider mb-1.5" style={{ color: "var(--text-dim)" }}>Original</div>
+              <p className="text-[14px] leading-relaxed" style={{ color: "var(--text-muted)" }}>{seg.source_text ?? "—"}</p>
             </div>
             <div className="flex flex-col gap-3">
               <div>
-                <label htmlFor="translation" className="block text-[11px] uppercase tracking-wider mb-1.5" style={{ color: "var(--accent)" }}>
+                <label htmlFor="translation" className="block text-[12px] uppercase tracking-wider mb-1.5" style={{ color: "var(--accent)" }}>
                   Translation
                 </label>
                 <Textarea
@@ -555,7 +555,7 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
               </div>
               <div className="flex items-end gap-3">
                 <div className="flex-1">
-                  <label htmlFor="emotion" className="block text-[11px] uppercase tracking-wider mb-1.5" style={{ color: "var(--text-dim)" }}>
+                  <label htmlFor="emotion" className="block text-[12px] uppercase tracking-wider mb-1.5" style={{ color: "var(--text-dim)" }}>
                     Emotion
                   </label>
                   <Select
@@ -595,7 +595,7 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
               Re-translate &amp; re-voice
             </Button>
             {dirty && (
-              <span className="text-[12px]" style={{ color: "var(--warning)" }}>
+              <span className="text-[13px]" style={{ color: "var(--warning)" }}>
                 Save before re-voicing — unsaved edits are not sent.
               </span>
             )}

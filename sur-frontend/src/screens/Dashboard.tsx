@@ -53,15 +53,15 @@ function StatCard({
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[12px]" style={{ color: "var(--text-muted)" }}>{label}</div>
+        <div className="text-[13px]" style={{ color: "var(--text-muted)" }}>{label}</div>
         {loading ? (
           <Skeleton className="h-7 w-16 mt-1" />
         ) : (
-          <div className="text-[24px] font-semibold leading-tight" style={{ color: "var(--text)", fontFamily: "Sora, sans-serif" }}>
+          <div className="text-[28px] font-semibold leading-tight" style={{ color: "var(--text)", fontFamily: "Sora, sans-serif" }}>
             {value}
           </div>
         )}
-        {sub && <div className="text-[11px] mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>{sub}</div>}
+        {sub && <div className="text-[12px] mt-0.5 truncate" style={{ color: "var(--text-dim)" }}>{sub}</div>}
       </div>
     </Card>
   );
@@ -143,8 +143,8 @@ export function Dashboard({
     <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1500px] mx-auto w-full">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-[26px] font-semibold" style={{ color: "var(--text)" }}>Dashboard</h1>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+          <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Dashboard</h1>
+          <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
             {caps.tts_engine} voices on {caps.device.toUpperCase()}
             {!caps.tts_commercial_use && caps.tts_engine !== "mock" && " · non-commercial licence"}
           </p>
@@ -193,7 +193,7 @@ export function Dashboard({
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold" style={{ color: "var(--text)", fontFamily: "Inter, sans-serif", letterSpacing: 0 }}>
+        <h2 className="text-[16px] font-semibold" style={{ color: "var(--text)", fontFamily: "Inter, sans-serif", letterSpacing: 0 }}>
           Recent projects
         </h2>
         {all.length > recent.length && (

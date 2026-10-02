@@ -129,19 +129,19 @@ export function ProgressScreen({ projectId, go }: { projectId: string | null; go
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-[26px] font-semibold truncate" style={{ color: "var(--text)" }}>
+            <h1 className="text-[30px] font-semibold truncate" style={{ color: "var(--text)" }}>
               {project ? project.title : "Loading…"}
             </h1>
             {st && <StatusBadge tone={st.tone} pulse={st.pulse}>{st.label}</StatusBadge>}
           </div>
-          <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
             {project
               ? `${project.source_language ? sourceLanguageName(caps, project.source_language) : "auto-detect"} → ${project.target_languages.map((c) => caps.languages.find((l) => l.code === c)?.display_name ?? c).join(", ")}`
               : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] inline-flex items-center gap-1.5" style={{ color: events.connected ? "var(--success)" : "var(--text-dim)" }}>
+          <span className="text-[12px] inline-flex items-center gap-1.5" style={{ color: events.connected ? "var(--success)" : "var(--text-dim)" }}>
             <Activity size={13} aria-hidden="true" />
             {events.connected ? "live" : "polling"}
           </span>
@@ -204,10 +204,10 @@ export function ProgressScreen({ projectId, go }: { projectId: string | null; go
       {awaiting && (
         <Card className="p-5 flex flex-col gap-4" style={{ borderColor: "var(--warning-border)" }}>
           <div>
-            <h2 className="text-[15px] font-semibold" style={{ color: "var(--warning)", fontFamily: "Inter, sans-serif", letterSpacing: 0 }}>
+            <h2 className="text-[16px] font-semibold" style={{ color: "var(--warning)", fontFamily: "Inter, sans-serif", letterSpacing: 0 }}>
               Confirm the source language
             </h2>
-            <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+            <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
               The expensive stages have not run yet. Getting this wrong translates the whole video from the wrong
               language.
             </p>
@@ -218,12 +218,12 @@ export function ProgressScreen({ projectId, go }: { projectId: string | null; go
               <StatusBadge tone={detected.confidence < 0.7 ? "warning" : "success"}>
                 {sourceLanguageName(caps, detected.code)}
               </StatusBadge>
-              <span className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+              <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>
                 {(detected.confidence * 100).toFixed(0)}% confidence · {detected.count}/{detected.spoken} spoken segments
               </span>
             </div>
           ) : (
-            <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>ASR has not reported a language yet.</span>
+            <span className="text-[14px]" style={{ color: "var(--text-muted)" }}>ASR has not reported a language yet.</span>
           )}
 
           {detected && detected.confidence < 0.7 && (
@@ -250,12 +250,12 @@ export function ProgressScreen({ projectId, go }: { projectId: string | null; go
       <Card className="p-5 flex flex-col gap-5">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <div className="text-[12px]" style={{ color: "var(--text-muted)" }}>Overall</div>
-            <div className="text-[22px] font-semibold" style={{ color: "var(--text)", fontFamily: "Sora, sans-serif" }}>
+            <div className="text-[13px]" style={{ color: "var(--text-muted)" }}>Overall</div>
+            <div className="text-[26px] font-semibold" style={{ color: "var(--text)", fontFamily: "Sora, sans-serif" }}>
               {Math.round(overall * 100)}%
             </div>
           </div>
-          <div className="text-right text-[12px]" style={{ color: "var(--text-muted)" }}>
+          <div className="text-right text-[13px]" style={{ color: "var(--text-muted)" }}>
             {activeStage ? (
               <>
                 <div style={{ color: "var(--text)" }}>{stageLabel(activeStage.key)}</div>
@@ -293,10 +293,10 @@ export function ProgressScreen({ projectId, go }: { projectId: string | null; go
         {showLog && (
           <div ref={logRef} className="max-h-72 overflow-y-auto px-5 py-3 flex flex-col gap-1">
             {events.log.length === 0 && (
-              <span className="text-[12px]" style={{ color: "var(--text-dim)" }}>No events yet.</span>
+              <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>No events yet.</span>
             )}
             {events.log.map((l, i) => (
-              <div key={i} className="flex gap-3 text-[12px]" style={{ fontFamily: "JetBrains Mono, monospace" }}>
+              <div key={i} className="flex gap-3 text-[13px]" style={{ fontFamily: "JetBrains Mono, monospace" }}>
                 <span className="flex-shrink-0" style={{ color: "var(--text-dim)" }}>{fmtTime(l.ts)}</span>
                 <span
                   className="flex-shrink-0"

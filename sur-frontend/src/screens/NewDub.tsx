@@ -119,8 +119,8 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
   return (
     <div className="p-5 md:p-7 flex flex-col gap-6 max-w-3xl mx-auto w-full">
       <div>
-        <h1 className="text-[26px] font-semibold" style={{ color: "var(--text)" }}>New dub</h1>
-        <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+        <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>New dub</h1>
+        <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
           Upload a video, choose what it becomes, then start the pipeline.
         </p>
       </div>
@@ -139,7 +139,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
                 className="flex items-center gap-2 disabled:cursor-default"
               >
                 <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold flex-shrink-0 transition-colors"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0 transition-colors"
                   style={{
                     background: done ? "var(--success-soft)" : here ? "var(--accent)" : "var(--surface-hover)",
                     color: done ? "var(--success)" : here ? "#fff" : "var(--text-dim)",
@@ -149,7 +149,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
                   {done ? <Check size={13} /> : i + 1}
                 </span>
                 <span
-                  className="text-[13px] font-medium hidden sm:inline"
+                  className="text-[14px] font-medium hidden sm:inline"
                   style={{ color: here ? "var(--text)" : "var(--text-muted)" }}
                 >
                   {s}
@@ -226,7 +226,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
                           type="button"
                           onClick={() => toggleTarget(l.code)}
                           aria-pressed={on}
-                          className="h-9 px-3.5 rounded-full text-[13px] font-medium transition-all inline-flex items-center gap-1.5"
+                          className="h-9 px-3.5 rounded-full text-[14px] font-medium transition-all inline-flex items-center gap-1.5"
                           style={{
                             background: on ? "var(--accent-soft)" : "var(--bg-elevated)",
                             border: `1px solid ${on ? "var(--accent-border)" : "var(--border)"}`,
@@ -240,7 +240,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
                     })}
                   </div>
                   {translateOnly.length > 0 && (
-                    <span className="text-[12px] mt-1" style={{ color: "var(--text-dim)" }}>
+                    <span className="text-[13px] mt-1" style={{ color: "var(--text-dim)" }}>
                       No voice for {translateOnly.map((l) => l.display_name).join(", ")} on this deployment, so they
                       cannot be dubbed.
                     </span>
@@ -249,7 +249,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
               </Card>
 
               <Card className="p-5 flex flex-col gap-4">
-                <div className="text-[12px] font-medium" style={{ color: "var(--text-mid)" }}>Pipeline options</div>
+                <div className="text-[13px] font-medium" style={{ color: "var(--text-mid)" }}>Pipeline options</div>
                 <Toggle
                   checked={preserveEmotion}
                   onChange={setPreserveEmotion}
@@ -282,8 +282,8 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
 
           {step === 2 && (
             <Card className="p-5 flex flex-col gap-4">
-              <div className="text-[15px] font-semibold" style={{ color: "var(--text)" }}>{title || "Untitled"}</div>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
+              <div className="text-[16px] font-semibold" style={{ color: "var(--text)" }}>{title || "Untitled"}</div>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-[14px]">
                 {[
                   ["File", picked ? picked.file.name : "—"],
                   ["Size", picked ? fmtBytes(picked.file.size) : "—"],
@@ -295,7 +295,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
                   ["Device", caps.device.toUpperCase()],
                 ].map(([k, v]) => (
                   <div key={k} className="min-w-0">
-                    <dt className="text-[12px]" style={{ color: "var(--text-muted)" }}>{k}</dt>
+                    <dt className="text-[13px]" style={{ color: "var(--text-muted)" }}>{k}</dt>
                     <dd className="truncate" style={{ color: "var(--text)" }} title={String(v)}>{v}</dd>
                   </div>
                 ))}
@@ -303,7 +303,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
 
               <div className="flex items-center gap-2 rounded-lg px-3.5 py-3" style={{ background: "var(--surface-hover)" }}>
                 <Cpu size={15} style={{ color: "var(--text-muted)" }} aria-hidden="true" />
-                <span className="text-[13px]" style={{ color: "var(--text-mid)" }}>
+                <span className="text-[14px]" style={{ color: "var(--text-mid)" }}>
                   {estimate
                     ? `Rough estimate: ${estimate}. Measured throughput on this box, not a promise.`
                     : "No duration was readable from the file, so there is no estimate."}

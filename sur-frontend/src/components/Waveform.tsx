@@ -93,7 +93,7 @@ export function Waveform({
           )}
           {audioUrl && !ready && !failed && <Skeleton className="h-16 mx-3 mt-3" />}
           {(!audioUrl || failed) && (
-            <div className="h-16 mx-3 mt-3 rounded-lg flex items-center justify-center text-[12px]"
+            <div className="h-16 mx-3 mt-3 rounded-lg flex items-center justify-center text-[13px]"
               style={{ background: "var(--surface-hover)", color: "var(--text-dim)" }}>
               {failed ? "The dubbed track could not be decoded for display." : "No dubbed track yet — segments only."}
             </div>
@@ -134,7 +134,7 @@ export function Waveform({
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-3 pb-2 text-[11px]" style={{ color: "var(--text-dim)" }}>
+      <div className="flex items-center justify-between px-3 pb-2 text-[12px]" style={{ color: "var(--text-dim)" }}>
         <span>{msToTimecode(currentMs)}</span>
         <span>{msToTimecode(durationMs)}</span>
       </div>

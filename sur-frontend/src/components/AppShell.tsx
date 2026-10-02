@@ -55,16 +55,16 @@ function Logo({ compact }: { compact: boolean }) {
   return (
     <div className="flex items-center gap-2.5 min-w-0">
       <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
         style={{ background: "var(--accent)", color: "#fff" }}
         aria-hidden="true"
       >
-        <Mic2 size={16} />
+        <Mic2 size={18} />
       </div>
       {!compact && (
         <span
           className="truncate"
-          style={{ fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 15, letterSpacing: "0.06em", color: "var(--text)" }}
+          style={{ fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 16, letterSpacing: "0.06em", color: "var(--text)" }}
         >
           VOICECAST
         </span>
@@ -90,7 +90,7 @@ function NavButton({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       title={compact ? item.label : undefined}
-      className={`relative flex items-center gap-3 h-10 rounded-lg transition-colors w-full ${compact ? "justify-center px-0" : "px-3"}`}
+      className={`relative flex items-center gap-3 h-11 rounded-lg transition-colors w-full ${compact ? "justify-center px-0" : "px-3.5"}`}
       style={{
         color: active ? "var(--text)" : "var(--text-muted)",
         background: active ? "var(--accent-soft)" : "transparent",
@@ -106,8 +106,8 @@ function NavButton({
           aria-hidden="true"
         />
       )}
-      <Icon size={17} style={{ flexShrink: 0, color: active ? "var(--accent)" : undefined }} aria-hidden="true" />
-      {!compact && <span className="text-[13px] font-medium truncate">{item.label}</span>}
+      <Icon size={19} style={{ flexShrink: 0, color: active ? "var(--accent)" : undefined }} aria-hidden="true" />
+      {!compact && <span className="text-[14px] font-medium truncate">{item.label}</span>}
     </button>
   );
 }
@@ -191,10 +191,10 @@ export function AppShell({
       {!isMobile && (
         <aside
           className="flex flex-col flex-shrink-0 transition-all duration-200"
-          style={{ width: compact ? 64 : 232, borderRight: "1px solid var(--border)", background: "var(--bg-elevated)" }}
+          style={{ width: compact ? 72 : 252, borderRight: "1px solid var(--border)", background: "var(--bg-elevated)" }}
           aria-label="Primary"
         >
-          <div className={`h-14 flex items-center ${compact ? "justify-center" : "justify-between px-4"} flex-shrink-0`} style={{ borderBottom: "1px solid var(--border)" }}>
+          <div className={`h-16 flex items-center ${compact ? "justify-center" : "justify-between px-5"} flex-shrink-0`} style={{ borderBottom: "1px solid var(--border)" }}>
             <Logo compact={compact} />
           </div>
 
@@ -214,7 +214,7 @@ export function AppShell({
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
               {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-              {!compact && <span className="text-[12px]">Collapse</span>}
+              {!compact && <span className="text-[13px]">Collapse</span>}
             </button>
           </div>
         </aside>
@@ -223,20 +223,20 @@ export function AppShell({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header
-          className="h-14 flex items-center gap-3 px-4 flex-shrink-0"
+          className="h-16 flex items-center gap-3 px-5 flex-shrink-0"
           style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-elevated)" }}
         >
           {isMobile && <Logo compact={false} />}
 
           <div className="relative flex-1 max-w-md hidden sm:block">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }} aria-hidden="true" />
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }} aria-hidden="true" />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search projects…"
               aria-label="Search projects"
-              className="w-full h-9 rounded-lg pl-9 pr-3 text-[13px] outline-none transition-colors"
+              className="w-full h-10 rounded-lg pl-10 pr-3 text-[14px] outline-none transition-colors"
               style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "var(--text)" }}
             />
           </div>
@@ -261,7 +261,7 @@ export function AppShell({
           )}
 
           <span
-            className="hidden md:inline-flex items-center gap-1.5 text-[11px]"
+            className="hidden md:inline-flex items-center gap-1.5 text-[12px]"
             style={{ color: apiUp === false ? "var(--danger)" : "var(--text-muted)" }}
             title="Backend reachability, re-checked every 30s"
           >
@@ -276,7 +276,7 @@ export function AppShell({
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-            className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
             style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-hover)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -296,7 +296,7 @@ export function AppShell({
               // initials from the tree did not help, because the check reads
               // what is on screen.
               aria-label={`${initials}, user menu`}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-semibold"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-semibold"
               style={{ background: "var(--accent-soft)", border: "1px solid var(--accent-border)", color: "var(--accent)" }}
             >
               {initials}
@@ -313,13 +313,13 @@ export function AppShell({
                   style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-strong)", boxShadow: "var(--shadow-lg)" }}
                 >
                   <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-                    <div className="text-[13px] font-medium truncate" style={{ color: "var(--text)" }}>{auth?.user.name || "Signed in"}</div>
-                    <div className="text-[12px] truncate" style={{ color: "var(--text-muted)" }}>{auth?.user.email}</div>
+                    <div className="text-[14px] font-medium truncate" style={{ color: "var(--text)" }}>{auth?.user.name || "Signed in"}</div>
+                    <div className="text-[13px] truncate" style={{ color: "var(--text-muted)" }}>{auth?.user.email}</div>
                   </div>
                   <button
                     role="menuitem"
                     onClick={() => { setMenuOpen(false); go("settings"); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-left transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-left transition-colors"
                     style={{ color: "var(--text-mid)" }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = "var(--surface-hover)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -329,7 +329,7 @@ export function AppShell({
                   <button
                     role="menuitem"
                     onClick={() => { setMenuOpen(false); onLogout(); }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13px] text-left transition-colors"
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[14px] text-left transition-colors"
                     style={{ color: "var(--danger)" }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = "var(--danger-soft)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -342,14 +342,14 @@ export function AppShell({
           </div>
         </header>
 
-        <main id="main" className="flex-1 overflow-y-auto" style={{ paddingBottom: isMobile ? 64 : 0 }} aria-label="Main content">
+        <main id="main" className="flex-1 overflow-y-auto" style={{ paddingBottom: isMobile ? 76 : 0 }} aria-label="Main content">
           {children}
         </main>
 
         {/* Mobile bottom nav */}
         {isMobile && (
           <nav
-            className="fixed bottom-0 left-0 right-0 h-16 flex items-stretch z-30"
+            className="fixed bottom-0 left-0 right-0 h-[68px] flex items-stretch z-30"
             style={{ background: "var(--bg-elevated)", borderTop: "1px solid var(--border)" }}
             aria-label="Primary"
           >
@@ -364,8 +364,8 @@ export function AppShell({
                   className="flex-1 flex flex-col items-center justify-center gap-1"
                   style={{ color: active ? "var(--accent)" : "var(--text-dim)" }}
                 >
-                  <Icon size={19} aria-hidden="true" />
-                  <span className="text-[10px] font-medium">{item.label}</span>
+                  <Icon size={21} aria-hidden="true" />
+                  <span className="text-[11px] font-medium">{item.label}</span>
                 </button>
               );
             })}

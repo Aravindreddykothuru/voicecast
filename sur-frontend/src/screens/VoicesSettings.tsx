@@ -25,8 +25,8 @@ export function Voices() {
   return (
     <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1100px] mx-auto w-full">
       <div>
-        <h1 className="text-[26px] font-semibold" style={{ color: "var(--text)" }}>Voices</h1>
-        <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+        <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Voices</h1>
+        <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
           What this deployment can speak, as the engine reports it
         </p>
       </div>
@@ -37,8 +37,8 @@ export function Voices() {
             <Mic2 size={17} />
           </div>
           <div>
-            <div className="text-[12px]" style={{ color: "var(--text-muted)" }}>Engine</div>
-            <div className="text-[15px] font-semibold" style={{ color: "var(--text)" }}>{caps.tts_engine}</div>
+            <div className="text-[13px]" style={{ color: "var(--text-muted)" }}>Engine</div>
+            <div className="text-[16px] font-semibold" style={{ color: "var(--text)" }}>{caps.tts_engine}</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
@@ -46,8 +46,8 @@ export function Voices() {
             <Cpu size={17} />
           </div>
           <div>
-            <div className="text-[12px]" style={{ color: "var(--text-muted)" }}>Runs on</div>
-            <div className="text-[15px] font-semibold" style={{ color: "var(--text)" }}>{caps.device.toUpperCase()}</div>
+            <div className="text-[13px]" style={{ color: "var(--text-muted)" }}>Runs on</div>
+            <div className="text-[16px] font-semibold" style={{ color: "var(--text)" }}>{caps.device.toUpperCase()}</div>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
@@ -62,8 +62,8 @@ export function Voices() {
             <ShieldCheck size={17} />
           </div>
           <div className="min-w-0">
-            <div className="text-[12px]" style={{ color: "var(--text-muted)" }}>Licence</div>
-            <div className="text-[15px] font-semibold truncate" style={{ color: "var(--text)" }} title={caps.tts_licenses.join(", ")}>
+            <div className="text-[13px]" style={{ color: "var(--text-muted)" }}>Licence</div>
+            <div className="text-[16px] font-semibold truncate" style={{ color: "var(--text)" }} title={caps.tts_licenses.join(", ")}>
               {caps.tts_commercial_use ? "Commercial OK" : "Non-commercial"}
             </div>
           </div>
@@ -76,8 +76,8 @@ export function Voices() {
           {caps.languages.map((l) => (
             <li key={l.code} className="flex items-center justify-between gap-3 px-5 py-3" style={{ borderTop: "1px solid var(--border)" }}>
               <div className="min-w-0">
-                <div className="text-[13px] font-medium" style={{ color: "var(--text)" }}>{l.display_name}</div>
-                <div className="text-[11px]" style={{ color: "var(--text-dim)" }}>{l.code} · {l.flores_code}</div>
+                <div className="text-[14px] font-medium" style={{ color: "var(--text)" }}>{l.display_name}</div>
+                <div className="text-[12px]" style={{ color: "var(--text-dim)" }}>{l.code} · {l.flores_code}</div>
               </div>
               {l.tts_available ? (
                 <StatusBadge tone="success">voice available</StatusBadge>
@@ -126,8 +126,8 @@ export function Settings({ theme, setTheme }: { theme: ThemeMode; setTheme: (m: 
   return (
     <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[900px] mx-auto w-full">
       <div>
-        <h1 className="text-[26px] font-semibold" style={{ color: "var(--text)" }}>Settings</h1>
-        <p className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>Appearance, and what this deployment reports</p>
+        <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Settings</h1>
+        <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>Appearance, and what this deployment reports</p>
       </div>
 
       <Card>
@@ -156,8 +156,8 @@ export function Settings({ theme, setTheme }: { theme: ThemeMode; setTheme: (m: 
         <dl>
           {rows.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between gap-4 px-5 py-2.5" style={{ borderTop: "1px solid var(--border)" }}>
-              <dt className="text-[13px]" style={{ color: "var(--text-muted)" }}>{k}</dt>
-              <dd className="text-[13px] text-right max-w-[55%] truncate" style={{ color: "var(--text)" }} title={String(v)}>
+              <dt className="text-[14px]" style={{ color: "var(--text-muted)" }}>{k}</dt>
+              <dd className="text-[14px] text-right max-w-[55%] truncate" style={{ color: "var(--text)" }} title={String(v)}>
                 {typeof v === "boolean" ? (
                   v ? <Check size={15} style={{ color: "var(--success)" }} aria-label="yes" /> : <X size={15} style={{ color: "var(--text-dim)" }} aria-label="no" />
                 ) : (
