@@ -17,3 +17,5 @@ postgres-data/
 *.db
 .DS_Store
 .tools/
+*.log
+*.pid
