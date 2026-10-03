@@ -191,7 +191,7 @@ export function AppShell({
       {!isMobile && (
         <aside
           className="flex flex-col flex-shrink-0 transition-all duration-200"
-          style={{ width: compact ? 72 : 252, borderRight: "1px solid var(--border)", background: "var(--bg-elevated)" }}
+          style={{ width: compact ? 68 : 230, borderRight: "1px solid var(--border)", background: "var(--bg-elevated)" }}
           aria-label="Primary"
         >
           <div className={`h-16 flex items-center ${compact ? "justify-center" : "justify-between px-5"} flex-shrink-0`} style={{ borderBottom: "1px solid var(--border)" }}>
@@ -220,15 +220,15 @@ export function AppShell({
         </aside>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
         <header
-          className="h-16 flex items-center gap-3 px-5 flex-shrink-0"
+          className="h-16 flex items-center gap-3 px-5 sm:px-7 flex-shrink-0"
           style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-elevated)" }}
         >
           {isMobile && <Logo compact={false} />}
 
-          <div className="relative flex-1 max-w-md hidden sm:block">
+          <div className="relative flex-1 max-w-xl hidden sm:block">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }} aria-hidden="true" />
             <input
               type="search"
@@ -342,7 +342,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main id="main" className="flex-1 overflow-y-auto" style={{ paddingBottom: isMobile ? 76 : 0 }} aria-label="Main content">
+        <main id="main" className="flex-1 overflow-y-auto w-full min-w-0" style={{ paddingBottom: isMobile ? 76 : 0 }} aria-label="Main content">
           {children}
         </main>
 

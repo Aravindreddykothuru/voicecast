@@ -50,13 +50,13 @@ function CapabilitiesGate({ children, onBack }: { children: ReactNode; onBack?: 
 
   if (loading) {
     return (
-      <div className="p-7 flex flex-col gap-4 max-w-[1500px] mx-auto w-full">
+      <div className="page-container gap-6">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
         <Skeleton className="h-6 w-40 mt-2" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid gap-5 w-full" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
         <span className="sr-only" role="status">Loading capabilities</span>

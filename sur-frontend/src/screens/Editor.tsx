@@ -309,7 +309,7 @@ export function Editor({ projectId, go }: { projectId: string | null; go: (s: Sc
   const changedCount = segs.filter((s) => s.status === "translated" || s.emotion_overridden).length;
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-4 max-w-[1700px] mx-auto w-full">
+    <div className="page-container gap-6">
       <audio ref={segAudio} hidden />
 
       <div className="flex items-start justify-between gap-4 flex-wrap">

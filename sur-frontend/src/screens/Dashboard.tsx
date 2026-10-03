@@ -140,7 +140,7 @@ export function Dashboard({
   );
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1500px] mx-auto w-full">
+    <div className="page-container gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Dashboard</h1>
@@ -152,7 +152,7 @@ export function Dashboard({
         <Button icon={<Plus size={15} />} onClick={() => go("new-project")}>New Dub</Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
         <StatCard
           label="Total projects"
           value={String(all.length)}
@@ -202,7 +202,7 @@ export function Dashboard({
       </div>
 
       {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid gap-5 w-full" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="overflow-hidden">
               <Skeleton className="h-24" rounded="rounded-none" />
@@ -234,7 +234,7 @@ export function Dashboard({
       )}
 
       {recent.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid gap-5 w-full" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
           {recent.map((p) => (
             <ProjectCard
               key={p.id}

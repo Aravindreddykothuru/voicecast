@@ -107,7 +107,7 @@ export function ExportScreen({ projectId, go }: { projectId: string | null; go: 
   const st = exp ? statusTone(exp.status) : null;
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1500px] mx-auto w-full">
+    <div className="page-container gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3">

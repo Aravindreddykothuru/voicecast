@@ -23,7 +23,7 @@ export function Voices() {
   const without = caps.languages.filter((l) => !l.tts_available);
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1100px] mx-auto w-full">
+    <div className="page-container gap-6">
       <div>
         <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Voices</h1>
         <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
@@ -31,7 +31,7 @@ export function Voices() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <Card className="p-4 flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "var(--accent-soft)", color: "var(--accent)" }} aria-hidden="true">
             <Mic2 size={17} />
@@ -70,13 +70,20 @@ export function Voices() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="w-full">
         <CardHeader title="Languages" sub={`${withVoice.length} with a voice, ${without.length} without`} />
-        <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+        <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 w-full">
           {caps.languages.map((l) => (
-            <li key={l.code} className="flex items-center justify-between gap-3 px-5 py-3" style={{ borderTop: "1px solid var(--border)" }}>
+            <div
+              key={l.code}
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+              }}
+            >
               <div className="min-w-0">
-                <div className="text-[14px] font-medium" style={{ color: "var(--text)" }}>{l.display_name}</div>
+                <div className="text-[14px] font-medium truncate" style={{ color: "var(--text)" }}>{l.display_name}</div>
                 <div className="text-[12px]" style={{ color: "var(--text-dim)" }}>{l.code} · {l.flores_code}</div>
               </div>
               {l.tts_available ? (
@@ -84,9 +91,9 @@ export function Voices() {
               ) : (
                 <StatusBadge tone="neutral">translate only</StatusBadge>
               )}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       </Card>
 
       {caps.tts_voice_warnings.length > 0 && (
@@ -124,55 +131,60 @@ export function Settings({ theme, setTheme }: { theme: ThemeMode; setTheme: (m: 
   ];
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[900px] mx-auto w-full">
+    <div className="page-container gap-6">
       <div>
         <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Settings</h1>
         <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>Appearance, and what this deployment reports</p>
       </div>
 
-      <Card>
-        <CardHeader title="Appearance" />
-        <div className="p-5">
-          <Toggle
-            checked={theme === "light"}
-            onChange={(v) => setTheme(v ? "light" : "dark")}
-            label={
-              <span className="inline-flex items-center gap-2">
-                {theme === "light" ? <Sun size={14} /> : <Moon size={14} />}
-                {theme === "light" ? "Light theme" : "Dark theme"}
-              </span>
-            }
-            help="Dark is the default. Stored in this browser only."
-          />
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader
-          title="Deployment"
-          sub="Read from /api/capabilities"
-          action={<Info size={15} style={{ color: "var(--text-dim)" }} aria-hidden="true" />}
-        />
-        <dl>
-          {rows.map(([k, v]) => (
-            <div key={k} className="flex items-center justify-between gap-4 px-5 py-2.5" style={{ borderTop: "1px solid var(--border)" }}>
-              <dt className="text-[14px]" style={{ color: "var(--text-muted)" }}>{k}</dt>
-              <dd className="text-[14px] text-right max-w-[55%] truncate" style={{ color: "var(--text)" }} title={String(v)}>
-                {typeof v === "boolean" ? (
-                  v ? <Check size={15} style={{ color: "var(--success)" }} aria-label="yes" /> : <X size={15} style={{ color: "var(--text-dim)" }} aria-label="no" />
-                ) : (
-                  v
-                )}
-              </dd>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+        <div className="lg:col-span-5 flex flex-col gap-6 w-full">
+          <Card className="w-full">
+            <CardHeader title="Appearance" />
+            <div className="p-5">
+              <Toggle
+                checked={theme === "light"}
+                onChange={(v) => setTheme(v ? "light" : "dark")}
+                label={
+                  <span className="inline-flex items-center gap-2">
+                    {theme === "light" ? <Sun size={14} /> : <Moon size={14} />}
+                    {theme === "light" ? "Light theme" : "Dark theme"}
+                  </span>
+                }
+                help="Dark is the default. Stored in this browser only."
+              />
             </div>
-          ))}
-        </dl>
-      </Card>
+          </Card>
 
-      <Callout tone="neutral" title="Read-only">
-        These come from the backend and cannot be changed from here: the API publishes capabilities but accepts no
-        settings. Changing them means changing the deployment&apos;s environment.
-      </Callout>
+          <Callout tone="neutral" title="Read-only configuration">
+            These parameters come from the backend deployment environment and cannot be changed from the browser.
+          </Callout>
+        </div>
+
+        <div className="lg:col-span-7 flex flex-col gap-6 w-full">
+          <Card className="w-full">
+            <CardHeader
+              title="Deployment capabilities"
+              sub="Read from /api/capabilities"
+              action={<Info size={15} style={{ color: "var(--text-dim)" }} aria-hidden="true" />}
+            />
+            <dl>
+              {rows.map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between gap-4 px-5 py-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  <dt className="text-[14px]" style={{ color: "var(--text-muted)" }}>{k}</dt>
+                  <dd className="text-[14px] text-right max-w-[60%] truncate font-mono text-[13px]" style={{ color: "var(--text)" }} title={String(v)}>
+                    {typeof v === "boolean" ? (
+                      v ? <Check size={15} style={{ color: "var(--success)" }} aria-label="yes" /> : <X size={15} style={{ color: "var(--text-dim)" }} aria-label="no" />
+                    ) : (
+                      v
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

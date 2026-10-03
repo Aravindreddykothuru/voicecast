@@ -117,7 +117,7 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
   };
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-6 max-w-3xl mx-auto w-full">
+    <div className="page-container gap-6">
       <div>
         <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>New dub</h1>
         <p className="text-[14px] mt-1" style={{ color: "var(--text-muted)" }}>
@@ -126,27 +126,27 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
       </div>
 
       {/* Stepper */}
-      <ol className="flex items-center gap-2" aria-label="Progress">
+      <ol className="flex items-center gap-3 w-full" aria-label="Progress">
         {STEPS.map((s, i) => {
           const done = i < step;
           const here = i === step;
           return (
-            <li key={s} className="flex items-center gap-2 flex-1 last:flex-none">
+            <li key={s} className="flex items-center gap-3 flex-1 last:flex-none">
               <button
                 onClick={() => i < step && setStep(i)}
                 disabled={i > step}
                 aria-current={here ? "step" : undefined}
-                className="flex items-center gap-2 disabled:cursor-default"
+                className="flex items-center gap-2.5 disabled:cursor-default"
               >
                 <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0 transition-colors"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-semibold flex-shrink-0 transition-colors"
                   style={{
                     background: done ? "var(--success-soft)" : here ? "var(--accent)" : "var(--surface-hover)",
                     color: done ? "var(--success)" : here ? "#fff" : "var(--text-dim)",
                     border: `1px solid ${done ? "var(--success-border)" : here ? "var(--accent)" : "var(--border)"}`,
                   }}
                 >
-                  {done ? <Check size={13} /> : i + 1}
+                  {done ? <Check size={14} /> : i + 1}
                 </span>
                 <span
                   className="text-[14px] font-medium hidden sm:inline"
@@ -177,25 +177,28 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -12 }}
           transition={{ duration: 0.18 }}
-          className="flex flex-col gap-5"
+          className="flex flex-col gap-5 w-full"
         >
           {step === 0 && (
-            <UploadZone
-              accept={caps.accepted_formats}
-              maxMb={caps.max_upload_mb}
-              picked={picked}
-              onPick={(p) => {
-                setPicked(p);
-                if (!title.trim()) setTitle(p.file.name.replace(/\.[^.]+$/, ""));
-              }}
-              onClear={() => setPicked(null)}
-              progress={uploadPct}
-            />
+            <div className="w-full">
+              <UploadZone
+                accept={caps.accepted_formats}
+                maxMb={caps.max_upload_mb}
+                picked={picked}
+                onPick={(p) => {
+                  setPicked(p);
+                  if (!title.trim()) setTitle(p.file.name.replace(/\.[^.]+$/, ""));
+                }}
+                onClear={() => setPicked(null)}
+                progress={uploadPct}
+              />
+            </div>
           )}
 
           {step === 1 && (
-            <>
-              <Card className="p-5 flex flex-col gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+              <Card className="lg:col-span-7 p-6 flex flex-col gap-5 w-full">
+                <div className="text-[16px] font-semibold" style={{ color: "var(--text)" }}>Project & Languages</div>
                 <Field label="Project name" htmlFor="title">
                   <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Meridian documentary" />
                 </Field>
@@ -248,74 +251,82 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
                 </Field>
               </Card>
 
-              <Card className="p-5 flex flex-col gap-4">
-                <div className="text-[13px] font-medium" style={{ color: "var(--text-mid)" }}>Pipeline options</div>
-                <Toggle
-                  checked={preserveEmotion}
-                  onChange={setPreserveEmotion}
-                  label="Preserve emotional delivery"
-                  help="Carries each segment's detected emotion into the synthesized voice."
-                />
-                <Toggle
-                  checked={cloneVoice && caps.voice_clone_available}
-                  onChange={setCloneVoice}
-                  disabled={!caps.voice_clone_available}
-                  label="Clone the original speaker's voice"
-                  help={
-                    caps.voice_clone_available
-                      ? "Uses a reference clip of the speaker so the dub keeps their timbre."
-                      : "Not enabled on this deployment."
-                  }
-                />
-                {/* Per-speaker voice choice and background-music retention are
-                    not offered: the backend publishes no voice list and
-                    /process takes no music flag. Inventing either would be a
-                    control that silently does nothing. */}
-                <Callout tone="neutral" title="Not available yet">
-                  Per-speaker voice selection and keeping the background music need endpoints this backend does not
-                  expose. The engine picks each speaker&apos;s voice from their estimated pitch, and the original
-                  background is preserved by the mux as it already works.
-                </Callout>
-              </Card>
-            </>
+              <div className="lg:col-span-5 flex flex-col gap-6 w-full">
+                <Card className="p-6 flex flex-col gap-4 w-full">
+                  <div className="text-[16px] font-semibold" style={{ color: "var(--text)" }}>Pipeline options</div>
+                  <Toggle
+                    checked={preserveEmotion}
+                    onChange={setPreserveEmotion}
+                    label="Preserve emotional delivery"
+                    help="Carries each segment's detected emotion into the synthesized voice."
+                  />
+                  <Toggle
+                    checked={cloneVoice && caps.voice_clone_available}
+                    onChange={setCloneVoice}
+                    disabled={!caps.voice_clone_available}
+                    label="Clone the original speaker's voice"
+                    help={
+                      caps.voice_clone_available
+                        ? "Uses a reference clip of the speaker so the dub keeps their timbre."
+                        : "Not enabled on this deployment."
+                    }
+                  />
+                  <Callout tone="neutral" title="Not available yet">
+                    Per-speaker voice selection and keeping the background music need endpoints this backend does not
+                    expose. The engine picks each speaker&apos;s voice from their estimated pitch, and the original
+                    background is preserved by the mux as it already works.
+                  </Callout>
+                </Card>
+              </div>
+            </div>
           )}
 
           {step === 2 && (
-            <Card className="p-5 flex flex-col gap-4">
-              <div className="text-[16px] font-semibold" style={{ color: "var(--text)" }}>{title || "Untitled"}</div>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-[14px]">
-                {[
-                  ["File", picked ? picked.file.name : "—"],
-                  ["Size", picked ? fmtBytes(picked.file.size) : "—"],
-                  ["Duration", picked?.durationMs != null ? msToTimecode(picked.durationMs) : "unknown"],
-                  ["Source", sourceLang === "auto" ? "Auto-detect, confirmed after transcription" : (caps.source_languages.find((l) => l.code === sourceLang)?.display_name ?? sourceLang)],
-                  ["Targets", chosen.map((c) => languageName(caps, c)).join(", ") || "—"],
-                  ["Emotion transfer", preserveEmotion ? "On" : "Off"],
-                  ["Voice cloning", cloneVoice && caps.voice_clone_available ? "On" : "Off"],
-                  ["Device", caps.device.toUpperCase()],
-                ].map(([k, v]) => (
-                  <div key={k} className="min-w-0">
-                    <dt className="text-[13px]" style={{ color: "var(--text-muted)" }}>{k}</dt>
-                    <dd className="truncate" style={{ color: "var(--text)" }} title={String(v)}>{v}</dd>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+              <Card className="lg:col-span-8 p-6 flex flex-col gap-5 w-full">
+                <div className="text-[18px] font-semibold" style={{ color: "var(--text)" }}>{title || "Untitled"}</div>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 text-[14px]">
+                  {[
+                    ["File", picked ? picked.file.name : "—"],
+                    ["Size", picked ? fmtBytes(picked.file.size) : "—"],
+                    ["Duration", picked?.durationMs != null ? msToTimecode(picked.durationMs) : "unknown"],
+                    ["Source", sourceLang === "auto" ? "Auto-detect, confirmed after transcription" : (caps.source_languages.find((l) => l.code === sourceLang)?.display_name ?? sourceLang)],
+                    ["Targets", chosen.map((c) => languageName(caps, c)).join(", ") || "—"],
+                    ["Emotion transfer", preserveEmotion ? "On" : "Off"],
+                    ["Voice cloning", cloneVoice && caps.voice_clone_available ? "On" : "Off"],
+                    ["Device", caps.device.toUpperCase()],
+                  ].map(([k, v]) => (
+                    <div key={k} className="min-w-0 p-3.5 rounded-xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                      <dt className="text-[12px] font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{k}</dt>
+                      <dd className="truncate text-[14px] font-medium mt-1" style={{ color: "var(--text)" }} title={String(v)}>{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </Card>
+
+              <div className="lg:col-span-4 flex flex-col gap-6 w-full">
+                <Card className="p-6 flex flex-col gap-3 w-full">
+                  <div className="flex items-center gap-2" style={{ color: "var(--accent)" }}>
+                    <Cpu size={18} aria-hidden="true" />
+                    <span className="text-[15px] font-semibold" style={{ color: "var(--text)" }}>Estimated runtime</span>
                   </div>
-                ))}
-              </dl>
+                  <div className="text-[26px] font-semibold" style={{ color: "var(--text)" }}>
+                    {estimate ?? "Calculating…"}
+                  </div>
+                  <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>
+                    {estimate
+                      ? "Measured throughput on CPU for this configuration, not a guarantee."
+                      : "No duration was readable from the file, so there is no estimate."}
+                  </span>
+                </Card>
 
-              <div className="flex items-center gap-2 rounded-lg px-3.5 py-3" style={{ background: "var(--surface-hover)" }}>
-                <Cpu size={15} style={{ color: "var(--text-muted)" }} aria-hidden="true" />
-                <span className="text-[14px]" style={{ color: "var(--text-mid)" }}>
-                  {estimate
-                    ? `Rough estimate: ${estimate}. Measured throughput on this box, not a promise.`
-                    : "No duration was readable from the file, so there is no estimate."}
-                </span>
+                {uploadPct != null && (
+                  <Callout tone="running" title={`Uploading ${Math.round(uploadPct * 100)}%`}>
+                    Keep this tab open until the upload finishes.
+                  </Callout>
+                )}
               </div>
-
-              {uploadPct != null && (
-                <Callout tone="running" title={`Uploading ${Math.round(uploadPct * 100)}%`}>
-                  Keep this tab open until the upload finishes.
-                </Callout>
-              )}
-            </Card>
+            </div>
           )}
         </motion.div>
       </AnimatePresence>

@@ -115,7 +115,7 @@ export function Projects({
   const allChecked = rows.length > 0 && rows.every((p) => selected.has(p.id));
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1700px] mx-auto w-full">
+    <div className="page-container gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-[30px] font-semibold" style={{ color: "var(--text)" }}>Projects</h1>
@@ -145,7 +145,7 @@ export function Projects({
       </div>
 
       {/* Filters */}
-      <Card className="p-3 flex flex-wrap items-end gap-3">
+      <Card className="p-4 flex flex-wrap items-end gap-3 w-full">
         <div className="flex flex-col gap-1">
           <label htmlFor="f-status" className="text-[12px]" style={{ color: "var(--text-dim)" }}>Status</label>
           <Select id="f-status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus | "all")} className="w-44">
@@ -203,7 +203,7 @@ export function Projects({
       )}
 
       {rows.length > 0 && view === "grid" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid gap-5 w-full" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
           {rows.map((p) => (
             <ProjectCard
               key={p.id}
@@ -220,13 +220,13 @@ export function Projects({
       )}
 
       {rows.length > 0 && view === "table" && (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left" style={{ minWidth: 860 }}>
+        <Card className="overflow-hidden w-full">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left table-auto">
               <caption className="sr-only">All projects</caption>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  <th scope="col" className="px-3 py-2.5 w-10">
+                  <th scope="col" className="px-3.5 py-3 w-10 text-center">
                     <input
                       type="checkbox"
                       checked={allChecked}
@@ -234,11 +234,27 @@ export function Projects({
                       aria-label="Select all shown projects"
                     />
                   </th>
-                  {["Title", "Languages", "Status", "Duration", "Segments", "Updated", ""].map((h) => (
-                    <th key={h} scope="col" className="px-3 py-2.5 text-[12px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                      {h}
-                    </th>
-                  ))}
+                  <th scope="col" className="px-3.5 py-3 text-[12px] font-semibold uppercase tracking-wider w-auto min-w-[240px]" style={{ color: "var(--text-dim)" }}>
+                    Title
+                  </th>
+                  <th scope="col" className="px-3.5 py-3 text-[12px] font-semibold uppercase tracking-wider w-48 whitespace-nowrap" style={{ color: "var(--text-dim)" }}>
+                    Languages
+                  </th>
+                  <th scope="col" className="px-3.5 py-3 text-[12px] font-semibold uppercase tracking-wider w-36 whitespace-nowrap" style={{ color: "var(--text-dim)" }}>
+                    Status
+                  </th>
+                  <th scope="col" className="px-3.5 py-3 text-[12px] font-semibold uppercase tracking-wider w-28 whitespace-nowrap" style={{ color: "var(--text-dim)" }}>
+                    Duration
+                  </th>
+                  <th scope="col" className="px-3.5 py-3 text-[12px] font-semibold uppercase tracking-wider w-24 whitespace-nowrap" style={{ color: "var(--text-dim)" }}>
+                    Segments
+                  </th>
+                  <th scope="col" className="px-3.5 py-3 text-[12px] font-semibold uppercase tracking-wider w-32 whitespace-nowrap" style={{ color: "var(--text-dim)" }}>
+                    Updated
+                  </th>
+                  <th scope="col" className="px-3.5 py-3 text-[12px] font-semibold uppercase tracking-wider w-28 text-right whitespace-nowrap" style={{ color: "var(--text-dim)" }}>
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -246,8 +262,8 @@ export function Projects({
                   const verdict = runVerdict(p);
                   const st = statusTone(p.status, verdict.kind === "stalled");
                   return (
-                    <tr key={p.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                      <td className="px-3 py-2.5">
+                    <tr key={p.id} className="transition-colors hover:bg-[var(--surface-hover)]" style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td className="px-3.5 py-3 text-center">
                         <input
                           type="checkbox"
                           checked={selected.has(p.id)}
@@ -261,22 +277,22 @@ export function Projects({
                           aria-label={`Select ${p.title}`}
                         />
                       </td>
-                      <td className="px-3 py-2.5">
-                        <button onClick={() => openProject(p.id, openTo(p))} className="text-[14px] font-medium text-left hover:underline" style={{ color: "var(--text)" }}>
+                      <td className="px-3.5 py-3 min-w-[240px]">
+                        <button onClick={() => openProject(p.id, openTo(p))} className="text-[14px] font-medium text-left hover:underline block max-w-full truncate" style={{ color: "var(--text)" }}>
                           {p.title}
                         </button>
                         {stageLabel(p.current_stage) && p.status !== "ready" && (
                           <div className="text-[12px]" style={{ color: "var(--text-dim)" }}>{stageLabel(p.current_stage)}</div>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>
+                      <td className="px-3.5 py-3 text-[13px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
                         {(p.source_language ? sourceLanguageName(caps, p.source_language) : "auto")} → {p.target_languages.map((c) => languageName(caps, c)).join(", ")}
                       </td>
-                      <td className="px-3 py-2.5"><StatusBadge tone={st.tone} pulse={st.pulse}>{st.label}</StatusBadge></td>
-                      <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{fmtDuration(p.source_video_duration_ms)}</td>
-                      <td className="px-3 py-2.5 text-[13px]" style={{ color: "var(--text-muted)" }}>{p.segment_count}</td>
-                      <td className="px-3 py-2.5 text-[13px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{fmtWhen(p.updated_at)}</td>
-                      <td className="px-3 py-2.5">
+                      <td className="px-3.5 py-3 whitespace-nowrap"><StatusBadge tone={st.tone} pulse={st.pulse}>{st.label}</StatusBadge></td>
+                      <td className="px-3.5 py-3 text-[13px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{fmtDuration(p.source_video_duration_ms)}</td>
+                      <td className="px-3.5 py-3 text-[13px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{p.segment_count}</td>
+                      <td className="px-3.5 py-3 text-[13px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{fmtWhen(p.updated_at)}</td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
                         <div className="flex gap-1.5 justify-end">
                           {canRestart(p) && (
                             <Button size="sm" variant="ghost" onClick={() => retry(p.id)} disabled={busyId === p.id}>Retry</Button>

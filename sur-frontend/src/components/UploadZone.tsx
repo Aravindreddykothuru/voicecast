@@ -138,25 +138,25 @@ export function UploadZone({
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); take(e.dataTransfer.files?.[0] ?? null); }}
-        className="rounded-xl flex flex-col items-center justify-center gap-3 transition-all px-6 disabled:opacity-50"
+        className="rounded-xl flex flex-col items-center justify-center gap-4 transition-all px-6 py-10 sm:py-16 disabled:opacity-50 w-full"
         style={{
-          minHeight: 220,
+          minHeight: "clamp(280px, 32vh, 420px)",
           border: `2px dashed ${over ? "var(--accent)" : "var(--border-strong)"}`,
           background: over ? "var(--accent-soft)" : "var(--bg-elevated)",
         }}
       >
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center"
+          className="w-14 h-14 rounded-2xl flex items-center justify-center"
           style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
           aria-hidden="true"
         >
-          <UploadCloud size={22} />
+          <UploadCloud size={26} />
         </div>
         <div className="text-center">
-          <div className="text-[15px] font-medium" style={{ color: "var(--text)" }}>
+          <div className="text-[16px] font-medium" style={{ color: "var(--text)" }}>
             Drop a video here, or click to choose
           </div>
-          <div className="text-[13px] mt-1" style={{ color: "var(--text-muted)" }}>
+          <div className="text-[13px] mt-1.5" style={{ color: "var(--text-muted)" }}>
             {accept.length ? accept.map((a) => a.replace("video/", "").toUpperCase()).join(" · ") : "video"} · up to {maxMb} MB
           </div>
         </div>

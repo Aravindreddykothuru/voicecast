@@ -125,7 +125,7 @@ export function ProgressScreen({ projectId, go }: { projectId: string | null; go
   };
 
   return (
-    <div className="p-5 md:p-7 flex flex-col gap-5 max-w-[1500px] mx-auto w-full">
+    <div className="page-container gap-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
