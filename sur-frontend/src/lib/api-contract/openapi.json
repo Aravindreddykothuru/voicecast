@@ -1237,6 +1237,39 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WorkerHealthResponse": {
+        "properties": {
+          "oldest_queued_age_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Queued Age Seconds"
+          },
+          "queues": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Queues",
+            "type": "object"
+          },
+          "workers_online": {
+            "title": "Workers Online",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "workers_online",
+          "queues",
+          "oldest_queued_age_seconds"
+        ],
+        "title": "WorkerHealthResponse",
+        "type": "object"
       }
     }
   },
@@ -1347,6 +1380,28 @@
         "summary": "Get Capabilities",
         "tags": [
           "capabilities"
+        ]
+      }
+    },
+    "/api/health/workers": {
+      "get": {
+        "description": "Worker health check (PRD / Reliability requirements BUG 2).\nReturns number of workers online, queue depths, and age of oldest queued project.\nCached for a few seconds so polling doesn't hammer the broker.",
+        "operationId": "get_worker_health_api_health_workers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Worker Health",
+        "tags": [
+          "health"
         ]
       }
     },
@@ -2343,6 +2398,28 @@
         "summary": "Upload Local File",
         "tags": [
           "storage"
+        ]
+      }
+    },
+    "/health/workers": {
+      "get": {
+        "description": "Worker health check (PRD / Reliability requirements BUG 2).\nReturns number of workers online, queue depths, and age of oldest queued project.\nCached for a few seconds so polling doesn't hammer the broker.",
+        "operationId": "get_worker_health_health_workers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Worker Health",
+        "tags": [
+          "health"
         ]
       }
     },

@@ -82,3 +82,40 @@ async def on_startup() -> None:
     sweep_stuck_projects()
 
 
+# Serve built frontend so frontend and backend work together on http://localhost:8000
+from pathlib import Path
+from fastapi.responses import FileResponse
+from fastapi import HTTPException
+
+_FRONTEND_DIST_CANDIDATES = [
+    Path(__file__).resolve().parent.parent.parent / "sur-frontend" / "dist",
+    Path("/app/frontend/dist"),
+    Path(__file__).resolve().parent / "static",
+]
+
+_FRONTEND_DIST = next((p for p in _FRONTEND_DIST_CANDIDATES if p.is_dir()), None)
+
+if _FRONTEND_DIST:
+    logger.info("Mounted frontend distribution directory from %s", _FRONTEND_DIST)
+
+    @app.api_route("/assets/{asset_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+    async def serve_frontend_asset(asset_path: str):
+        target = _FRONTEND_DIST / "assets" / asset_path
+        if target.is_file():
+            return FileResponse(str(target))
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+    async def serve_spa_frontend(full_path: str):
+        # Do not intercept API, WS, docs, health endpoints
+        if full_path.startswith(("api/", "api", "ws/", "ws", "docs", "redoc", "openapi.json", "healthz", "health/")):
+            raise HTTPException(status_code=404, detail="Not Found")
+        target = _FRONTEND_DIST / full_path
+        if full_path and target.is_file():
+            return FileResponse(str(target))
+        index_file = _FRONTEND_DIST / "index.html"
+        if index_file.is_file():
+            return FileResponse(str(index_file))
+        raise HTTPException(status_code=404, detail="Frontend build index.html not found")
+
+
