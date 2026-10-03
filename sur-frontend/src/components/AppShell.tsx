@@ -10,6 +10,7 @@
  * down, and that lesson is kept here.
  */
 import {
+  AlertTriangle,
   FolderOpen,
   LayoutDashboard,
   LogOut,
@@ -29,6 +30,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { StatusBadge, useMediaQuery, type ThemeMode } from "@/ui";
 import type { StoredAuth } from "@/lib/auth";
+import type { WorkerHealth } from "@/lib/types";
 
 export type Screen =
   | "dashboard"
@@ -123,6 +125,9 @@ export function AppShell({
   setTheme,
   search,
   setSearch,
+  workerHealth,
+  showWorkerBanner = false,
+  onDismissWorkerBanner,
   children,
 }: {
   screen: Screen;
@@ -135,6 +140,9 @@ export function AppShell({
   setTheme: (m: ThemeMode) => void;
   search: string;
   setSearch: (v: string) => void;
+  workerHealth?: WorkerHealth | null;
+  showWorkerBanner?: boolean;
+  onDismissWorkerBanner?: () => void;
   children: ReactNode;
 }) {
   const isMobile = useMediaQuery("(max-width: 767px)");
@@ -273,6 +281,37 @@ export function AppShell({
             API {apiUp === null ? "checking" : apiUp ? "online" : "offline"}
           </span>
 
+          <span
+            className="hidden md:inline-flex items-center gap-1.5 text-[12px]"
+            style={{
+              color:
+                workerHealth === null
+                  ? "var(--text-dim)"
+                  : workerHealth.workers_online > 0
+                  ? "var(--text-muted)"
+                  : "var(--danger)",
+            }}
+            title={
+              workerHealth === null
+                ? "Worker reachability, checking…"
+                : `${workerHealth.workers_online} worker(s) online (polled every 12s)`
+            }
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{
+                background:
+                  workerHealth === null
+                    ? "var(--text-dim)"
+                    : workerHealth.workers_online > 0
+                    ? "var(--success)"
+                    : "var(--danger)",
+              }}
+              aria-hidden="true"
+            />
+            Workers {workerHealth === null ? "checking" : workerHealth.workers_online > 0 ? "online" : "offline"}
+          </span>
+
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
@@ -341,6 +380,32 @@ export function AppShell({
             </AnimatePresence>
           </div>
         </header>
+
+        {showWorkerBanner && (
+          <div
+            role="alert"
+            className="flex items-center justify-between px-6 py-2.5 text-[13px] border-b flex-shrink-0"
+            style={{
+              background: "rgba(239, 68, 68, 0.12)",
+              borderColor: "rgba(239, 68, 68, 0.25)",
+              color: "var(--danger)",
+            }}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <AlertTriangle size={15} className="flex-shrink-0" />
+              <span className="truncate">
+                No workers are running. Jobs will not process until a worker is started. Start command: <code className="px-1.5 py-0.5 rounded font-mono text-[12px]" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>cd sur-backend; .\scripts\start-workers.ps1 -Role main</code>
+              </span>
+            </div>
+            <button
+              onClick={onDismissWorkerBanner}
+              aria-label="Dismiss worker warning banner"
+              className="p-1 rounded hover:opacity-80 transition-opacity ml-3 flex-shrink-0"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        )}
 
         <main id="main" className="flex-1 overflow-y-auto w-full min-w-0" style={{ paddingBottom: isMobile ? 76 : 0 }} aria-label="Main content">
           {children}

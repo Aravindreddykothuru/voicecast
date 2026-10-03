@@ -1,0 +1,49 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Live Server
+    runs-on: ubuntu-latest
+    # Only runs if secrets are configured
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check if Deployment Secrets are Configured
+        id: check_secrets
+        run: |
+          if [ -n "${{ secrets.DEPLOY_HOST }}" ] && [ -n "${{ secrets.DEPLOY_KEY }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "::notice ::Deployment secrets (DEPLOY_HOST, DEPLOY_KEY) not set yet. Skipping automatic SSH deploy. Set them in GitHub Repo Settings -> Secrets to enable automatic live deployment."
+          fi
+
+      - name: Deploy to Live Server via SSH
+        if: steps.check_secrets.outputs.configured == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER || 'ubuntu' }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            APP_DIR="${{ secrets.DEPLOY_PATH || '~/voicecast' }}"
+            echo "Deploying to $APP_DIR..."
+            if [ -d "$APP_DIR" ]; then
+              cd "$APP_DIR"
+              git pull origin main
+              docker compose -f docker-compose.prod.yml up -d --build
+              docker image prune -f
+              echo "Deployment complete! Status:"
+              docker compose -f docker-compose.prod.yml ps
+            else
+              echo "Directory $APP_DIR not found on server. Please initialize the repository first."
+              exit 1
+            fi

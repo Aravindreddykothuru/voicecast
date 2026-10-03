@@ -76,6 +76,9 @@ async def on_startup() -> None:
     # incomplete language table here would be published to every client.
     # Model loading is checked in the workers, which actually own the models.
     from app.startup_checks import verify_capabilities
+    from app.pipeline.maintenance import sweep_stuck_projects
 
     verify_capabilities()
+    sweep_stuck_projects()
+
 

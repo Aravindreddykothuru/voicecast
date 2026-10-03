@@ -16,10 +16,10 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import EchoLanding from "@/EchoLanding";
 import { AppShell, type Screen } from "@/components/AppShell";
-import { apiReachable, listProjects } from "@/lib/api";
+import { apiReachable, getWorkerHealth, listProjects } from "@/lib/api";
 import { getStoredAuth, logout, type StoredAuth } from "@/lib/auth";
 import { CapabilitiesProvider, useCapabilities } from "@/lib/capabilities";
-import type { ProjectListItem } from "@/lib/types";
+import type { ProjectListItem, WorkerHealth } from "@/lib/types";
 import { Dashboard } from "@/screens/Dashboard";
 import { Editor } from "@/screens/Editor";
 import { ExportScreen } from "@/screens/ExportScreen";
@@ -98,6 +98,8 @@ function Studio() {
   const [projects, setProjects] = useState<ProjectListItem[] | null>(null);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [apiUp, setApiUp] = useState<boolean | null>(null);
+  const [workerHealth, setWorkerHealth] = useState<WorkerHealth | null>(null);
+  const [workerBannerDismissed, setWorkerBannerDismissed] = useState(false);
 
   const go = useCallback((s: Screen) => setScreen(s), []);
   const openProject = useCallback((id: string, to: Screen) => {
@@ -143,6 +145,30 @@ function Studio() {
     return () => { alive = false; clearInterval(t); };
   }, [landing]);
 
+  // Worker health polling (every 12 seconds per BUG 2 requirement: 10-15s)
+  useEffect(() => {
+    if (landing) return;
+    let alive = true;
+    const checkWorkers = () =>
+      getWorkerHealth()
+        .then((h) => {
+          if (!alive) return;
+          setWorkerHealth(h);
+          if (h.workers_online > 0) {
+            setWorkerBannerDismissed(false);
+          }
+        })
+        .catch(() => {
+          if (alive) setWorkerHealth({ workers_online: 0, queues: {}, oldest_queued_age_seconds: null });
+        });
+    checkWorkers();
+    const t = setInterval(checkWorkers, 12000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [landing]);
+
   if (landing) return <EchoLanding enter={handleEnter} />;
 
   const queue = projects
@@ -151,6 +177,10 @@ function Studio() {
         queued: projects.filter((p) => ["queued", "uploading", "awaiting_language_confirmation"].includes(p.status)).length,
       }
     : null;
+
+  const workersOffline = workerHealth !== null && workerHealth.workers_online === 0;
+  const hasActiveJobs = (queue?.running ?? 0) > 0 || (queue?.queued ?? 0) > 0;
+  const showWorkerBanner = workersOffline && hasActiveJobs && !workerBannerDismissed;
 
   return (
     // The provider lives here, below the landing branch, so the capabilities
@@ -169,12 +199,17 @@ function Studio() {
       setTheme={setTheme}
       search={search}
       setSearch={setSearch}
+      workerHealth={workerHealth}
+      showWorkerBanner={showWorkerBanner}
+      onDismissWorkerBanner={() => setWorkerBannerDismissed(true)}
     >
       <CapabilitiesGate onBack={() => setLanding(true)}>
         {screen === "dashboard" && (
           <Dashboard go={go} openProject={openProject} projects={projects} error={projectsError} reload={reloadProjects} search={search} />
         )}
-        {screen === "new-project" && <NewDub go={go} onCreated={(id) => openProject(id, "processing")} />}
+        {screen === "new-project" && (
+          <NewDub go={go} onCreated={(id) => openProject(id, "processing")} workerHealth={workerHealth} />
+        )}
         {screen === "projects" && (
           <Projects projects={projects} error={projectsError} reload={reloadProjects} openProject={openProject} go={go} search={search} />
         )}

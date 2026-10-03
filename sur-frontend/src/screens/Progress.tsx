@@ -160,7 +160,7 @@ export function ProgressScreen({ projectId, go }: { projectId: string | null; go
           title={perr.kind === "permanent" ? "This run cannot succeed" : "The run failed"}
           action={
             <div className="flex gap-2 mt-1">
-              {perr.kind !== "permanent" && project && canRestart(project) && (
+              {project && canRestart(project) && (
                 <Button size="sm" onClick={restart} loading={restarting} icon={<RotateCcw size={13} />}>
                   Retry from the last finished segment
                 </Button>

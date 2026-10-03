@@ -106,3 +106,26 @@ describe("request auth", () => {
     await expect(getCapabilities()).rejects.toThrow("Incorrect email or password.");
   });
 });
+
+describe("getWorkerHealth", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("fetches worker health status from /api/health/workers", async () => {
+    const { getWorkerHealth } = await import("./api");
+    const mockHealth = {
+      workers_online: 2,
+      queues: { "q.extract_audio": 0, "q.translate": 1 },
+      oldest_queued_age_seconds: 30,
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockHealth));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const data = await getWorkerHealth();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${API_BASE}/api/health/workers`);
+    expect(data.workers_online).toBe(2);
+    expect(data.queues["q.translate"]).toBe(1);
+    expect(data.oldest_queued_age_seconds).toBe(30);
+  });
+});
+

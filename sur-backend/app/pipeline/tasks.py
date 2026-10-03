@@ -62,6 +62,7 @@ from app.pipeline.text_normalize import spell_out_numbers_en
 from app.pipeline.timeline import GUARD_MS, TimelineSlot, normalize_turns, plan_timeline
 from app.providers.base import EmotionResult, SpeakerChunk, SynthesisRequest
 from app.providers.registry import (
+    ProviderNotInstalledError,
     get_asr_provider,
     get_diarization_provider,
     get_emotion_provider,
@@ -78,22 +79,37 @@ liveness.connect_signals()
 _RETRYABLE = (Exception,)
 
 # Permanent failures: a missing project/segment/audio row, or an unsupported
-# target language, will fail exactly the same way on every attempt, so
+# target language, or corrupted/unsupported media, will fail exactly the same way on every attempt, so
 # retrying them three times with backoff only delays the error the operator
 # needs to see and holds a worker slot while doing it. Everything else
-# (network blips, S3 timeouts, a flaky ffmpeg subprocess) stays retryable.
-_PERMANENT = (ValueError, LookupError, TypeError)
+# (network blips, S3 timeouts) stays retryable.
+_PERMANENT = (ValueError, LookupError, TypeError, ffmpeg_utils.MediaToolError, ProviderNotInstalledError)
 
 
 def _target_lang(project: Project) -> str:
     return project.target_languages[0] if project.target_languages else get_settings().default_target_language
 
 
+def has_pronounceable_text(text: str | None) -> bool:
+    if not text:
+        return False
+    import unicodedata
+    return any(c.isalnum() or unicodedata.category(c)[0] in "LM" for c in text if c != "\ufffd")
+
+
 def has_speech(segment: Segment) -> bool:
-    return bool((segment.source_text or "").strip())
+    return has_pronounceable_text(segment.source_text)
 
 
-def _mark_project_failed(project_id: str, stage: str, exc: Exception) -> None:
+def _mark_project_failed(
+    project_id: str,
+    stage: str,
+    exc: Exception,
+    *,
+    is_permanent: bool | None = None,
+) -> None:
+    if is_permanent is None:
+        is_permanent = isinstance(exc, _PERMANENT)
     with session_scope() as db:
         # Guard first: this runs inside the exception handler, so a DataError
         # from a malformed id would replace the real failure with a confusing
@@ -101,9 +117,32 @@ def _mark_project_failed(project_id: str, stage: str, exc: Exception) -> None:
         project = db.get(Project, project_id) if is_uuid(project_id) else None
         if project:
             project.status = ProjectStatus.failed
+            project.current_stage = stage
             project.error_message = f"{stage}: {exc}"[:2000]
-            project.error_is_permanent = isinstance(exc, _PERMANENT)
-    emit_error(project_id, stage, str(exc), permanent=isinstance(exc, _PERMANENT))
+            project.error_is_permanent = is_permanent
+    emit_error(project_id, stage, str(exc), permanent=is_permanent)
+
+
+def _handle_task_error(task, project_id: str, stage: str, exc: Exception) -> None:
+    """Separate permanent from transient errors.
+    Permanent: set status = failed, record current_stage, clear error message, do not retry.
+    Transient: keep existing retry behavior, record current_stage and error_is_permanent=False.
+    """
+    is_perm = isinstance(exc, _PERMANENT)
+    _mark_project_failed(project_id, stage, exc, is_permanent=is_perm)
+    if not is_perm:
+        retries = getattr(getattr(task, "request", None), "retries", 0)
+        max_retries = getattr(task, "max_retries", 3) or 3
+        logger.warning(
+            "%s: transient failure on attempt %d/%d for project %s: %s",
+            stage,
+            retries + 1,
+            max_retries,
+            project_id,
+            exc,
+        )
+
+
 
 
 def _set_stage(db, project: Project, stage: str) -> None:
@@ -198,7 +237,7 @@ def extract_audio(self, project_id: str, source_video_id: str) -> str:
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
-        _mark_project_failed(project_id, stage, exc)
+        _handle_task_error(self, project_id, stage, exc)
         raise
     finally:
         clear_context()
@@ -337,7 +376,7 @@ def chunk_and_diarize(self, project_id: str, source_video_id: str) -> str:
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
-        _mark_project_failed(project_id, stage, exc)
+        _handle_task_error(self, project_id, stage, exc)
         raise
     finally:
         clear_context()
@@ -401,6 +440,16 @@ def transcribe(self, project_id: str, retranscribe: bool = False) -> str:
 
         with session_scope() as db:
             project = _require_project(db, project_id)
+            segments = db.execute(
+                select(Segment).where(Segment.project_id == project_id)
+            ).scalars().all()
+            if not segments:
+                raise ValueError("transcribe: no segments to transcribe -- diarization produced nothing for this project.")
+            if not any(has_speech(s) for s in segments):
+                raise ValueError(
+                    "transcribe: no speech was transcribed in any segment -- "
+                    "the source may be silent, music-only, or corrupt."
+                )
             if project.review_language and not project.source_language:
                 # Park here. The expensive half only starts once someone has
                 # confirmed the detected language via /confirm-language.
@@ -413,7 +462,7 @@ def transcribe(self, project_id: str, retranscribe: bool = False) -> str:
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
-        _mark_project_failed(project_id, stage, exc)
+        _handle_task_error(self, project_id, stage, exc)
         raise
     finally:
         clear_context()
@@ -468,7 +517,7 @@ def detect_emotion(self, project_id: str) -> str:
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
-        _mark_project_failed(project_id, stage, exc)
+        _handle_task_error(self, project_id, stage, exc)
         raise
     finally:
         clear_context()
@@ -497,7 +546,10 @@ def translate_segment(segment: Segment, target_lang: str, source_lang: str) -> N
             # them. See app/pipeline/text_normalize.py.
             text = spell_out_numbers_en(text)
         result = get_translation_provider().translate(text, target_lang, src_lang=source_lang)
-        segment.translated_text = result.text
+        translated = result.text or ""
+        if not has_pronounceable_text(translated):
+            translated = ""
+        segment.translated_text = translated
     segment.status = SegmentStatus.translated
 
 
@@ -575,7 +627,7 @@ def translate(self, project_id: str) -> str:
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
-        _mark_project_failed(project_id, stage, exc)
+        _handle_task_error(self, project_id, stage, exc)
         raise
     finally:
         clear_context()
@@ -688,7 +740,7 @@ def synthesize_segment(db, storage, segment: Segment, project: Project) -> None:
     """Shared by the full-project stage task and single-segment /regenerate."""
     bind_context(segment_id=segment.id)
     text = (segment.translated_text or "").strip()
-    if not text:
+    if not text or not has_pronounceable_text(text):
         # No speech in, no speech out: the mux leaves this stretch silent.
         segment.tts_audio_url = None
         segment.tts_duration_ms = None
@@ -726,7 +778,23 @@ def synthesize_segment(db, storage, segment: Segment, project: Project) -> None:
             target_duration_ms=_available_ms(db, segment, original_ms),
             extra=extra,
         )
-        result = get_tts_provider().synthesize(request)
+        try:
+            result = get_tts_provider().synthesize(request)
+        except ValueError as exc:
+            if "cannot pronounce any character" in str(exc).lower():
+                logger.warning(
+                    "synthesize_segment: segment %s text has no pronounceable characters (%r), leaving silent: %s",
+                    segment.id,
+                    text,
+                    exc,
+                )
+                segment.tts_audio_url = None
+                segment.tts_duration_ms = None
+                segment.sync_offset_pct = None
+                segment.status = SegmentStatus.synthesized
+                return
+            raise
+
         try:
             key = f"projects/{project.id}/segments/{segment.id}/tts.wav"
             storage.upload_file(key, result.local_audio_path, content_type="audio/wav")
@@ -762,7 +830,7 @@ def synthesize(self, project_id: str) -> str:
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
-        _mark_project_failed(project_id, stage, exc)
+        _handle_task_error(self, project_id, stage, exc)
         raise
     finally:
         clear_context()
@@ -857,7 +925,7 @@ def mux_export(self, project_id: str) -> str:
         emit_stage_completed(project_id, stage)
         return project_id
     except Exception as exc:  # noqa: BLE001
-        _mark_project_failed(project_id, stage, exc)
+        _handle_task_error(self, project_id, stage, exc)
         raise
     finally:
         clear_context()

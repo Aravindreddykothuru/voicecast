@@ -43,10 +43,19 @@ import {
   useToast,
 } from "@/ui";
 import type { Screen } from "@/components/AppShell";
+import type { WorkerHealth } from "@/lib/types";
 
 const STEPS = ["Upload", "Settings", "Review & start"] as const;
 
-export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: (id: string) => void }) {
+export function NewDub({
+  go,
+  onCreated,
+  workerHealth,
+}: {
+  go: (s: Screen) => void;
+  onCreated: (id: string) => void;
+  workerHealth?: WorkerHealth | null;
+}) {
   const caps = useReadyCapabilities();
   const toast = useToast();
 
@@ -319,6 +328,12 @@ export function NewDub({ go, onCreated }: { go: (s: Screen) => void; onCreated: 
                       : "No duration was readable from the file, so there is no estimate."}
                   </span>
                 </Card>
+
+                {workerHealth && workerHealth.workers_online === 0 && (
+                  <Callout tone="warning" title="Workers offline">
+                    No Celery workers are currently running. This job will be queued, but will not process until a worker is started (run <code className="font-mono text-[12px]">cd sur-backend; .\scripts\start-workers.ps1 -Role main</code>).
+                  </Callout>
+                )}
 
                 {uploadPct != null && (
                   <Callout tone="running" title={`Uploading ${Math.round(uploadPct * 100)}%`}>

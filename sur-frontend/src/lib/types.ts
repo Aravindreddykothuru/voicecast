@@ -267,3 +267,10 @@ export interface Capabilities {
   accepted_formats: string[];
 }
 
+export interface WorkerHealth {
+  workers_online: number;
+  queues: Record<string, number>;
+  oldest_queued_age_seconds: number | null;
+}
+
+

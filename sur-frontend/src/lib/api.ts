@@ -10,6 +10,7 @@ import type {
   ProjectRead,
   SegmentRead,
   UploadUrlResponse,
+  WorkerHealth,
 } from "./types";
 
 export const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
@@ -276,3 +277,9 @@ export async function apiReachable(): Promise<boolean> {
     return false;
   }
 }
+
+/** Check worker online status and queue depths (GET /api/health/workers). */
+export function getWorkerHealth(): Promise<WorkerHealth> {
+  return request("/api/health/workers");
+}
+
