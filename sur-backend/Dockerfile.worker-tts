@@ -44,6 +44,8 @@ ENV PYTHONPATH="/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS:/opt/OpenVo
 ENV TTS_ENGINE=syspin TTS_REQUIRE_COMMERCIAL_LICENSE=true TTS_VOICE_CLONE_ENGINE=openvoice
 
 COPY app ./app
+COPY tts_chains*.yaml ./
+COPY known_bad ./known_bad
 
 # Model weights (several GB) are deliberately NOT baked into this image --
 # mount them (see docker-compose.yml's `models-data` volume) and download

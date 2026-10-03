@@ -34,16 +34,17 @@ shell:
 # are not fetched again. Gated models need HF_TOKEN in the environment (never
 # in .env); without it `setup` names them and exits 1, because a chain
 # that names an unprovisioned model is a half-set-up deployment. To run
-# anyway, say so in config: TTS_CONFIG=tts_chains.syspin-only.yaml.
+# anyway, the default tts_chains.yaml is already SYSPIN-only and needs no
+# token; TTS_CONFIG=tts_chains.gpu.yaml is the one that does.
 PY ?= python
 VENV_PY = $(if $(wildcard .venv/Scripts/python.exe),.venv/Scripts/python.exe,.venv/bin/python)
 PARLER_PY = $(if $(filter Windows_NT,$(OS)),.venv-parler/Scripts/python.exe,.venv-parler/bin/python)
 
-# TTS_CONFIG points setup at a different chain file. On a box with no
-# HF_TOKEN the gated models cannot be provisioned and `setup` exits non-zero
-# naming them; run the SYSPIN-only profile instead, which is a stated choice
-# rather than a silent skip:
-#     make setup-tts TTS_CONFIG=tts_chains.syspin-only.yaml
+# TTS_CONFIG points setup at a different chain file. The default
+# tts_chains.yaml is SYSPIN-only, which is what this CPU box can actually
+# serve; tts_chains.gpu.yaml puts indic_parler and indicf5 back in the
+# chains for a host with a GPU:
+#     make setup-tts TTS_CONFIG=tts_chains.gpu.yaml
 TTS_CONFIG ?=
 TTS_CONFIG_ARG = $(if $(TTS_CONFIG),--config $(TTS_CONFIG),)
 

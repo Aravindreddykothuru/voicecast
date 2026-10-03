@@ -30,6 +30,7 @@ repos:
           (?x)^(
             .*package-lock\.json|
             .*pnpm-lock\.yaml|
+            .*pins/.*\.json|
             .*\.png|
             .*\.jpg|
             .*\.mp4|

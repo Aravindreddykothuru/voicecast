@@ -29,8 +29,12 @@ BASE = {"chains": {"hi": ["syspin", "indic_parler", "indicf5"], "default": ["ind
 # --- licence allowlist ----------------------------------------------------------
 def test_the_shipped_config_passes_the_allowlist():
     cfg = config.load()
-    assert cfg.chain_for("hi") == ("syspin", "indic_parler", "indicf5")
-    assert cfg.chain_for("ta") == ("indic_parler", "indicf5")      # no SYSPIN voice -> default chain
+    assert cfg.chain_for("hi") == ("syspin",)
+    assert cfg.chain_for("ta") == ("syspin",)
+
+    cfg_gpu = config.load("tts_chains.gpu.yaml")
+    assert cfg_gpu.chain_for("hi") == ("syspin", "indic_parler", "indicf5")
+    assert cfg_gpu.chain_for("ta") == ("indic_parler", "indicf5")
 
 
 @pytest.mark.parametrize("repo,why", [

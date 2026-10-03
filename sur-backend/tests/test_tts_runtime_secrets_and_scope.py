@@ -68,12 +68,19 @@ def test_urdu_cannot_enter_the_queue(tmp_path):
 def test_a_language_whose_models_are_merely_unprovisioned_is_still_queueable(tmp_path):
     """The distinction that matters: Tamil has no provisioned model on this
     box (both gated), but Indic Parler and IndicF5 do speak it -- so a Tamil
-    line queues and is skipped-with-a-reason at render time, recoverable the
-    moment the weights arrive. Urdu is refused outright."""
-    cfg = config.load()
-    r = Runner(cfg, tmp_path / "home", calibration=CAL, known_bad_dir=tmp_path / "kb", heartbeat_s=0.5)
-    jid = r.submit({"lines": [{"text": "\u0b95\u0bbe\u0bb2\u0bc8", "lang": "ta"}]})
-    assert r.store.counts(jid)["PENDING"] == 1
+    line queues under the GPU config (tts_chains.gpu.yaml) and is skipped-with-a-reason
+    at render time, recoverable the moment the weights arrive. In the CPU profile
+    (tts_chains.yaml), SYSPIN is the sole model and does not speak Tamil, so it is refused.
+    Urdu is refused outright everywhere."""
+    cfg_gpu = config.load("tts_chains.gpu.yaml")
+    r_gpu = Runner(cfg_gpu, tmp_path / "home_gpu", calibration=CAL, known_bad_dir=tmp_path / "kb", heartbeat_s=0.5)
+    jid = r_gpu.submit({"lines": [{"text": "\u0b95\u0bbe\u0bb2\u0bc8", "lang": "ta"}]})
+    assert r_gpu.store.counts(jid)["PENDING"] == 1
+
+    cfg_cpu = config.load()
+    r_cpu = Runner(cfg_cpu, tmp_path / "home_cpu", calibration=CAL, known_bad_dir=tmp_path / "kb", heartbeat_s=0.5)
+    with pytest.raises(ValueError, match="no model in the 'ta' chain speaks 'ta'"):
+        r_cpu.submit({"lines": [{"text": "\u0b95\u0bbe\u0bb2\u0bc8", "lang": "ta"}]})
 
 
 def test_urdu_is_gone_from_the_product():

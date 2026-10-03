@@ -1,0 +1,101 @@
+{
+ "step": "2 benchmark",
+ "created": "2026-10-03 01:46:34",
+ "rule": "challenger moves ahead only if its sentence-CER 95% CI is entirely below the incumbent's in BOTH draw sets",
+ "langs": {
+  "mr": {
+   "sets": {
+    "A": {
+     "indic_parler": {
+      "n_lines": 20,
+      "mean": 0.1046,
+      "ci95": [
+       0.0828,
+       0.1271
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.1085,
+      "ci95": [
+       0.0862,
+       0.1324
+      ]
+     },
+     "parler_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_parler": false
+    },
+    "B": {
+     "indic_parler": {
+      "n_lines": 20,
+      "mean": 0.0947,
+      "ci95": [
+       0.074,
+       0.1155
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.1014,
+      "ci95": [
+       0.0769,
+       0.1293
+      ]
+     },
+     "parler_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_parler": false
+    }
+   },
+   "verdict": "chain unchanged: the rule is not met in both sets",
+   "render_errors": 0,
+   "median_render_s": 77.3
+  },
+  "bn": {
+   "sets": {
+    "A": {
+     "indic_parler": {
+      "n_lines": 20,
+      "mean": 0.0463,
+      "ci95": [
+       0.0223,
+       0.0811
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.1108,
+      "ci95": [
+       0.0753,
+       0.156
+      ]
+     },
+     "parler_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_parler": false
+    },
+    "B": {
+     "indic_parler": {
+      "n_lines": 20,
+      "mean": 0.0394,
+      "ci95": [
+       0.0189,
+       0.0678
+      ]
+     },
+     "syspin": {
+      "n_lines": 20,
+      "mean": 0.0999,
+      "ci95": [
+       0.0677,
+       0.1361
+      ]
+     },
+     "parler_ci_entirely_below_syspin": false,
+     "syspin_ci_entirely_below_parler": false
+    }
+   },
+   "verdict": "chain unchanged: the rule is not met in both sets",
+   "render_errors": 0,
+   "median_render_s": 85.4
+  }
+ }
+}

@@ -111,6 +111,6 @@ def test_websocket_rejects_an_email_it_cannot_verify(client, production_env):
         "production accepted a WebSocket on an unverified email -- the owner's "
         "address is not a credential"
     )
-    assert not _ws_is_rejected(client, f"/ws/projects/{pid}?token={token}"), (
+    assert not _ws_is_rejected(client, f"/ws/projects/{pid}", subprotocols=["bearer.token", token]), (
         "the real owner was refused his own project's events"
     )

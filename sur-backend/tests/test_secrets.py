@@ -30,26 +30,26 @@ def test_no_hf_token_value_is_committed_to_disk(filename):
 
 def test_no_hf_token_literal_anywhere_in_repo():
     """Catches a token pasted into any tracked source file, not just .env."""
+    import os
+    import re
+
     offenders = []
-    for path in BACKEND_ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in {".py", ".env", ".example", ".md", ".yml", ".yaml", ".toml"}:
-            continue
-        # Only this repo's own files: a virtualenv holds third-party packages
-        # (transformers' testing_utils.py carries a dummy hf_ token), and
-        # .tts_runtime holds downloaded model files.
-        if any(part.startswith(".venv") or part in {".tools", "__pycache__", ".git", ".tts_runtime",
-                                                    ".pytest_cache", ".ruff_cache", ".mypy_cache"}
-               for part in path.parts):
-            continue
-        try:
-            text = path.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
-        # A real token is "hf_" + 34 alphanumerics; the prefix alone is fine
-        # to mention in prose.
-        import re
-        if re.search(r"\bhf_[A-Za-z0-9]{30,}\b", text):
-            offenders.append(str(path.relative_to(BACKEND_ROOT)))
+    skip_dirs = {".tools", "__pycache__", ".git", ".tts_runtime",
+                 ".pytest_cache", ".ruff_cache", ".mypy_cache"}
+    allowed_exts = {".py", ".env", ".example", ".md", ".yml", ".yaml", ".toml"}
+
+    for root, dirs, files in os.walk(BACKEND_ROOT):
+        dirs[:] = [d for d in dirs if not d.startswith(".venv") and d not in skip_dirs]
+        for f in files:
+            path = pathlib.Path(root) / f
+            if path.suffix not in allowed_exts:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if re.search(r"\bhf_[A-Za-z0-9]{30,}\b", text):
+                offenders.append(str(path.relative_to(BACKEND_ROOT)))
     assert not offenders, f"Hugging Face token literal found in: {offenders}"
 
 

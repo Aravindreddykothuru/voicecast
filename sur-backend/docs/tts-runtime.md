@@ -229,23 +229,25 @@ IndicF5, because neither is provisioned (both gated) and neither has been
 benchmarked against the pre-registered rule. Turning that on is a config
 change (`chains:`) plus a benchmark, not a code change.
 
-## Running without a token, stated in config
+## Running without a token
 
-`tts setup` against the default `tts_chains.yaml` exits non-zero on a
-token-less box, naming `indic_parler` and `indicf5` as unprovisioned. That
-is deliberate: a chain naming a model nobody downloaded is a half-set-up
-deployment, and skipping it quietly is how a language ends up rendering
-nothing. The supported way to run anyway is to say so in configuration:
+The default `tts_chains.yaml` is **SYSPIN-only** and needs no HF_TOKEN:
+every model it names is ungated, so `make setup-tts` completes on a bare
+box. That is not a fallback, it is the measured choice -- SYSPIN is the one
+engine that runs at a usable speed on CPU (RTF 1.6-2.2 against Indic
+Parler's 44-74), and all five of its languages are proven end to end in
+`docs/tts-languages-working.json`.
+
+A host with a GPU can put the gated models back in the chains:
 
 ```
-make setup-tts TTS_CONFIG=tts_chains.syspin-only.yaml
+make setup-tts TTS_CONFIG=tts_chains.gpu.yaml
 ```
 
-`tts_chains.syspin-only.yaml` declares SYSPIN-only chains for the five
-languages SYSPIN speaks and omits the rest, so `submit()` refuses a line it
-cannot serve instead of queueing it to be flagged forever. There is no
-failover in that profile -- which is what the default config already does
-in practice today, only now it is a stated choice rather than a shrug.
+That profile needs HF_TOKEN in the environment (never in `.env`) and the
+licences accepted on huggingface.co. Re-run `tts benchmark` there before
+trusting any chain order in it: the ordering evidence gathered so far is
+CPU evidence.
 
 The one ungated alternative was benchmarked under the same protocol and did
 not displace anything: `docs/tts-alternatives.md`. It is also CC-BY-NC, so

@@ -1,36 +1,25 @@
-# Which TTS models speak which language, in what order, and how the runtime
-# (app/tts_runtime) reacts when one fails. Validated strictly at startup: an
-# unknown key, an unknown model, or a model outside the licence allowlist
-# (app/tts_runtime/licenses.py) refuses to start -- never a silent default.
+# GPU profile. NOT the default -- see tts_chains.yaml.
 #
-# Order is evidence: a chain is reordered only by `tts benchmark` results
-# (docs/tts-runtime.md).
+# This is the chain layout to use where indic_parler and indicf5 can run at a
+# sensible speed, i.e. on a GPU host. On the CPU box this project is deployed
+# to they cannot: Indic Parler warmed up at RTF 44-74 (load 189 s, peak
+# 3.9 GB, docs/tts-warmup-run.json), about 33x slower than SYSPIN, which puts
+# a 32 s clip at ~35 minutes per language. A failover that slow is worse than
+# failing fast, so the default config does not list them.
 #
-# SYSPIN only, deliberately, because this deployment is CPU-only and SYSPIN
-# is the one engine that works at a usable speed on it:
+#     python -m app.tts_runtime --config tts_chains.gpu.yaml setup
 #
-#   syspin         sentence 6.1-7.2 s, RTF 1.6-2.2   (docs/tts-benchmark.md)
-#   indic_parler   RTF 44-74, load 189 s, peak 3.9 GB (docs/tts-warmup-run.json)
-#   indicf5        disabled regardless: no reference clip has verified consent
-#
-# Indic Parler is ~33x slower per second of audio, which puts a 32 s clip at
-# roughly 35 minutes per language. Listing it as failover would mean a
-# SYSPIN failure silently turns a 10-minute job into an hour-long one, so it
-# is not listed: a line SYSPIN cannot speak is flagged instead. Both models
-# are provisioned and verified on disk; tts_chains.gpu.yaml puts them back
-# in the chain for a host that can actually run them.
-#
-# All five languages here are proven end to end on this config
-# (docs/tts-languages-working.json). ta/ml/gu/pa/or/as are absent because
-# no allowlisted engine speaks them; POST /api/projects refuses them with
-# 422 rather than failing at the synthesize stage.
+# Before trusting the order here, re-run `tts benchmark` on the GPU host:
+# the order in any chain is evidence, and the evidence gathered so far is
+# CPU evidence.
+
 chains:
-  hi: [syspin]
-  mr: [syspin]
-  bn: [syspin]
-  te: [syspin]
-  kn: [syspin]
-  default: [syspin]
+  hi: [syspin, indic_parler, indicf5]
+  mr: [syspin, indic_parler, indicf5]
+  bn: [syspin, indic_parler, indicf5]
+  te: [syspin, indic_parler, indicf5]
+  kn: [syspin, indic_parler, indicf5]
+  default: [indic_parler, indicf5]   # languages with no SYSPIN voice
 
 # Per-model synthesis timeouts, from measurement on this CPU-only box.
 #   syspin: a sentence takes 6.1-7.2 s and a short line 10.6-14.1 s (three

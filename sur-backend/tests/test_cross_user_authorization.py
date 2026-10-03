@@ -69,7 +69,7 @@ def test_alices_project_list_never_contains_bobs(client, bobs_project):
     assert titles == ["Alice's"]
 
 
-def _ws_is_rejected(client, url) -> bool:
+def _ws_is_rejected(client, url, subprotocols: list[str] | None = None) -> bool:
     """True if the server refused the handshake.
 
     Deliberately never calls receive_text() on the success path: when Redis
@@ -80,7 +80,10 @@ def _ws_is_rejected(client, url) -> bool:
     from starlette.websockets import WebSocketDisconnect as WSDisconnect
 
     try:
-        with client.websocket_connect(url):
+        kwargs = {}
+        if subprotocols is not None:
+            kwargs["subprotocols"] = subprotocols
+        with client.websocket_connect(url, **kwargs):
             return False
     except WSDisconnect:
         return True

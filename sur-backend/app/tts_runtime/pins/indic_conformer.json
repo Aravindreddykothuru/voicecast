@@ -1,0 +1,2433 @@
+{
+ "name": "indic_conformer",
+ "repo": "ai4bharat/indic-conformer-600m-multilingual",
+ "revision": "e9b71b369c048e2c6b634d4c131061c34e441179",
+ "license": "MIT",
+ "gated": true,
+ "files": [
+  {
+   "path": ".gitattributes",
+   "size": 18829,
+   "git_oid": "2f4b3b72f0cd67db4046917b1913bbd122c8fc23",
+   "lfs": false
+  },
+  {
+   "path": "README.md",
+   "size": 2876,
+   "git_oid": "0c08cb93a58a842fe0ead6dbd54e70e17f3c58fc",
+   "lfs": false
+  },
+  {
+   "path": "assets/Constant_1970_attr__value",
+   "size": 40955904,
+   "git_oid": "f1ebb8651e45b3b4c62934b4e3656506ab1e4b17",
+   "lfs": true
+  },
+  {
+   "path": "assets/ctc_decoder.onnx",
+   "size": 23095918,
+   "git_oid": "e2813c1649664bc45dd302d3a63f2dd3975efba1",
+   "lfs": true
+  },
+  {
+   "path": "assets/encoder.onnx",
+   "size": 2976427,
+   "git_oid": "9aeb09b812cae2edd442d226625b4bd2080a5a8e",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_enc.onnx",
+   "size": 2628240,
+   "git_oid": "cefd295bbfc98c8b1e79298bf4cb2eb974b9f935",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_as.onnx",
+   "size": 663185,
+   "git_oid": "db79be54bacf695f5bcc8957b843ad5ad2af4efb",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_bn.onnx",
+   "size": 663185,
+   "git_oid": "c2882408cb0449014b55da7a74b8ac49c266fe7e",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_brx.onnx",
+   "size": 663185,
+   "git_oid": "b2c25c5e1a54fa3c1a29173685bb4d237079cca3",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_doi.onnx",
+   "size": 663185,
+   "git_oid": "b11d71ec2b977f4ce6baeee52bd3b79a52722cfe",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_gu.onnx",
+   "size": 663185,
+   "git_oid": "48b7084e342e596a56d14f99f64b0646beb86289",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_hi.onnx",
+   "size": 663185,
+   "git_oid": "a9211d0257e7bdaf640d969f4a193bf73bb0ed10",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_kn.onnx",
+   "size": 663185,
+   "git_oid": "74299d8fcd796e13f6af407b14a032c99242a945",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_kok.onnx",
+   "size": 663185,
+   "git_oid": "ed08dbe1e594dd9b2171b1ffa25711d69770b683",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_ks.onnx",
+   "size": 663185,
+   "git_oid": "92029a102cdc9af8917f6e1f8d6509eeb4d91137",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_mai.onnx",
+   "size": 663185,
+   "git_oid": "611a4672cac1d7e7b62f830c7a7816b471b52d4a",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_ml.onnx",
+   "size": 663185,
+   "git_oid": "6a9e3583b75700346c643957b9be4d105f53a26f",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_mni.onnx",
+   "size": 663185,
+   "git_oid": "ce384c2c3baed08ed466ab979b159587007627bc",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_mr.onnx",
+   "size": 663185,
+   "git_oid": "3172e7ed854442d294206d9770ff55f541cfef9b",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_ne.onnx",
+   "size": 663185,
+   "git_oid": "d72896234c447deab107928da9a592c94af21442",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_or.onnx",
+   "size": 663185,
+   "git_oid": "a9dc8b164812152a170bf4f14a7c1093cd743ee9",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_pa.onnx",
+   "size": 663185,
+   "git_oid": "869bd9e8d494771d9b5be074c4cdf128ea803433",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_sa.onnx",
+   "size": 663185,
+   "git_oid": "6830311d9839771198124297d707c68cf3d05158",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_sat.onnx",
+   "size": 663185,
+   "git_oid": "0c5b73ea633c01f994c5064eb32193c158af81b1",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_sd.onnx",
+   "size": 663185,
+   "git_oid": "b71ab764ed6146a65402a2e390a5f69a9de28680",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_ta.onnx",
+   "size": 663185,
+   "git_oid": "9f24a756e9f8182889f5f30908b6b10f14635e78",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_te.onnx",
+   "size": 663185,
+   "git_oid": "5eb61ebf6204f7a6c8d94887c5287ad782c86777",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_post_net_ur.onnx",
+   "size": 663185,
+   "git_oid": "5a91134196e988fc86727f954d37038fdbbf99f6",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_pre_net.onnx",
+   "size": 2773,
+   "git_oid": "cea8f6448e3d240dcc1c114ceabf9f28ca8b6f1d",
+   "lfs": true
+  },
+  {
+   "path": "assets/joint_pred.onnx",
+   "size": 1645197,
+   "git_oid": "02897479a1f49175760c1b7a69a734130ea66442",
+   "lfs": true
+  },
+  {
+   "path": "assets/language_masks.json",
+   "size": 862011,
+   "git_oid": "bf71d48c317f44b679d3740952596d666209f828",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.0.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "14ea538fbe4a0c928d52946342f995cffe8b7efd",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.0.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "2e1463c54f5b825172ee468e6e80f79e8d6dda86",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.0.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "7a2edd9802970ac01062c20b14d5cc3d98800c7c",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.0.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "d4fa38f9fed51ad161f63b732cd75a7e9e358575",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.0.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "0ea90eeab4ebc6cff18df57c3ffc365093446ca2",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.1.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "cace4c90780db2ebae84341274de45323f1e2035",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.1.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "b17590e09df1f50298fc79149923aaed3a8a8a71",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.1.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "86d10ad7a3c7bb8be3e6f0453f54ee45a95fdc5c",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.1.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "f12b47df8283de61b527ff543545ca9828885fee",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.1.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "d27b017e9adc454e0099bd2489ab903d26accece",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.10.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "0d479631b14ca52d9f4e44a0af441aa6dd4561b5",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.10.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "0861d46a21f11a9d21e1153448a7da8438bba408",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.10.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "9779159bc8441d2dbe90bfaa7302452f66288536",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.10.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "9def2c8dd2d7809086b8a94691face41c0ae13d3",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.10.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "9cf8e824cbf318d7f4691f4cdacf62a832141c50",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.11.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "52ac8c510400e1ddd3923dfb07208b81ac63d3ac",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.11.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "16f4ea99b96195ce1e74d13ea8d628f044450e65",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.11.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "b5b238c205a15a594cc1d103a286f6f34e4ed66f",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.11.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "1bcd0d39bd04297b17acf05c9873f23b4e75a4e2",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.11.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "31eee3edd3e45c83254e88bb2b6b42916b9a7271",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.12.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "daf72305d97cb795bf92398b97bc522d5dc5b1e2",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.12.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "1b16e00d7dec71d6456c962b64f8a0f312d026ba",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.12.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "82529ae54cc22d464a8c06b71e4984f5688a30ca",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.12.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "b41d70e3269c7a9afd6eb2285fca3352c20810e4",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.12.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "a34b543f27cdf39f76fb2364aa53d266c6289d6a",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.13.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "6d34f139ca924d1155ecd5c0631c04a2b6d98d65",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.13.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "97945cf3892b9477d124ca52284f3489c358546b",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.13.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "f5144f6c7936c7e7be3ae3aa25320c51a7b4bb4d",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.13.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "a34764c198f0dddd55a552e3944136afdac291ad",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.13.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "1851be2e3dd95c2678769bf97b871c0ef7e76e9e",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.14.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "9b26c6bfec67e25b090a4ca8838203bb319b6b9d",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.14.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "0a871aaeffcf1829668944eda47a87d768ae9ece",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.14.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "7eb3811297f30d650c38f0d6ffb4ac4f8e8a5899",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.14.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "6765f1e6abf3751d4e9ddd6a3f4a470a6f54a24e",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.14.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "8556fdab152ab1804e63895ba17f4331b50c4c41",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.15.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "eddf7a2640ba930257b1d2bd118917048f5332b7",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.15.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "2e1a78d0f44abdc97afe1e36b6958ca2c04b3203",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.15.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "93e8ec7762fb170dd8eeda29b4d1d87e282765f2",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.15.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "2e34316d239612353f7d5d3578d8023b42473610",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.15.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "4dc4e1ddf4bc05ff961dbc4e8155f1557c98ca7d",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.16.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "e63d21997b1ce84f708c2bd43a78891dbce2d643",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.16.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "2729f3d68d7916e81d2ae51e1a0fdc4450d4625a",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.16.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "9a0e0ef31e10bf818a2775454de539555d94f353",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.16.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "edef68f1521edd95d4f9ae089dd2a4332425651d",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.16.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "4c15065499e1ffb146909ef423aa329958205bae",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.17.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "dea5965c55f387878a3a1c3ee7eaa48a949128af",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.17.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "086772de932aeb579dc3574c00769bdf513dcd81",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.17.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "22b687fb2991bac811dc81f726ef2cb482c7cab1",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.17.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "2aef9d3fed32cd4b81eadef6e71dd88624f8087e",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.17.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "3d4e72a093f768b8f304a2001d6ddb4961f05057",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.18.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "7ae430eb390ebe324c5627b27eb4a05c61b5fdc1",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.18.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "5ed1d3275698b01a6f361f315904232e7e9dffdf",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.18.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "9ce5b389657e5c09397401176a8bffc4dea30ff7",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.18.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "e4f6a9cb7fa2730250301cde7a65d67764f11377",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.18.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "1a4414052fc6f8249d4e68e6cd5da6452dc458a2",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.19.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "a9328d788fefa649877a15ccd16714b510df9f7d",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.19.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "fa87db309ddc95a798a9a7bdd49f0fc89f5977a9",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.19.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "ec135cba2b5e13802522a4a617beb63f59221b75",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.19.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "410444620d723b1e2dfc7fb8c2bba44b32c10b78",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.19.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "9e7ebc1d09d27c3e0e01f4061f0334dd14806063",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.2.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "c8ec2927067d292666f485bcb7c8631b79f6f54d",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.2.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "6f360eb22737df88a87d08dc2c755af117497e04",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.2.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "51d6f146aedc4abf4c53d6bee6b53e1b290d69b4",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.2.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "3fd67158c0896437158752f084026bd075a0d4cb",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.2.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "7081e6a7a9875116199b26a9a929f4ddb02b0e26",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.20.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "f16786f1cd51da63f174a30b1b68f5c26b25ffc2",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.20.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "f627b30ef2e8e9aa53938f3869bed0507d93a2ef",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.20.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "b53e6f63866efccde31d65981da31b4702abe39b",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.20.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "487f1dba8ccbddd77925d51c55345fea234269a3",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.20.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "dd7a5adfcf1acdbd7837f02bd8215a98ce0e11b7",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.21.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "bc71bcaae7dd55dfa0de44d6f1551d1f86fafd09",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.21.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "9ae07bc231730e049b0b3d880368fc2c922f9560",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.21.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "f51ba04396ea5681b7f1e4fb59e7f554add63aeb",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.21.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "29401ecbb27c60829d6007222dc59bb09322fd0a",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.21.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "c491b56cf1751f768565324b0af13ab95401001e",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.22.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "63da34b5ffbda2c8735687d92e4e1333ef469d9d",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.22.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "7dfa0e789d8cb166f04f8d2daa2b3c33484652de",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.22.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "cb2a31e935b71f4adf0a30760cbed30c96b64d89",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.22.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "42662c1add5a9aed36d344011bbdb65f9724bbd0",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.22.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "52e909700dcd9f9551dc99b6c4ff43a356195cfc",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.23.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "accdb5a7594f0e40cf597669f3ed02554b82f983",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.23.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "08ce97d7b9c5d3f19af357f632a08ca36ca64bf2",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.23.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "76f7d00ebfafd61fbf142f023c85ed3402f59860",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.23.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "7009d20120d448ab3d562edc5267e0864fa3c972",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.23.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "f7b51b92e8478a0656b81b456962836e376218f5",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.3.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "e9552c855ced1493a6958ad6e1f38ca05a8df0b1",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.3.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "6225c3640f0ac4b4d135eaaa66a5eae8519b42a1",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.3.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "a66d33b93210364b157b6ed543f8beba37afd81e",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.3.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "189f7fa6077c8f263359e04191c74ea9ab8bfaf7",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.3.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "eaa9d904210d21243eba881c2046a076c6b89118",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.4.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "bf640fca1f6f6e26d169ac3a6b07d1d52dda93ff",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.4.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "7485088639a99280a10581c85798b47d7878c4bb",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.4.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "0fa169cf3457c87d1edc5b47ae5fa86ea79ab0a2",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.4.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "3b30c87af961113a8067b7d34528586a7c661c9c",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.4.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "8bdb69d32e39580af12d0be4b7da5a5c95dc2197",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.5.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "3ae2f0987665f63f9006c330634099096619ba3e",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.5.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "a5543ff05766664234f2818b7cd027b426011302",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.5.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "dcd3b3cc0c8f6e565df7856ab43a8ac22136e4a1",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.5.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "100917fabada0b19de44ca3eb2dfef6e56b4f27b",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.5.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "caa2023ccd8fef05284afaae5b6e39e7e7a5c9a9",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.6.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "7a826ab90c7fa3e9963062d0c2040d992eac3166",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.6.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "b5ff59803f2013a5e62d6c024394e56319f5dd7e",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.6.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "c993d2de87dececaf0e981bd2a55e24067659817",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.6.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "692f20045ee65f02f628d9f05a5618ad1239fd22",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.6.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "30cf8f408b09aafa68a927bfa79edb7cd2387e3a",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.7.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "f8226e4fe367764f60bca267b4f88008dfab9734",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.7.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "4f77739de22e0a39224e3c69c90ed0e650b011ca",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.7.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "3481d54e6f78b6e984bc5c4395f41adb13758ac1",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.7.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "2449a71d7f83bfeb371bd6962af94aca37cde338",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.7.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "609b9ecc1e3e1fabd46ad20bc5f6700beab38572",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.8.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "9159393b419b972724e707bc03b41627e518d917",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.8.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "56eb5461e522b56b8cc0736a6da0f8f00e0c409f",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.8.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "bd04552b18c1ef97cf92d88673aa959143fc9063",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.8.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "3176408fa01b36a580bb3de11289910ead5e3aff",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.8.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "16e385eb6a2782d72b8ed6cecd3766edeb2598aa",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.9.conv.pointwise_conv1.bias",
+   "size": 8192,
+   "git_oid": "e442c4b9400af0f51d73b64e809f351e0bc9b96a",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.9.conv.pointwise_conv1.weight",
+   "size": 8388608,
+   "git_oid": "1bcd7a9d682fbd9ccd54006b618398e5219c4473",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.9.conv.pointwise_conv2.weight",
+   "size": 4194304,
+   "git_oid": "494166ca4a225f903b9fc509adc551433575337b",
+   "lfs": true
+  },
+  {
+   "path": "assets/layers.9.feed_forward1.linear1.bias",
+   "size": 16384,
+   "git_oid": "004f135bdd49011a5283ae52c427cec8fc0112bb",
+   "lfs": false
+  },
+  {
+   "path": "assets/layers.9.feed_forward2.linear1.bias",
+   "size": 16384,
+   "git_oid": "a345a9bb63f5725abd6bca2a4a732787b60a73db",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_7995",
+   "size": 36864,
+   "git_oid": "a8ab3382996b5a20b363eb4f67a0b62f1f4b4895",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_7998",
+   "size": 36864,
+   "git_oid": "c4a92c3ccd6aceb30cc7d0669cbb02d5d087fcbd",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8001",
+   "size": 36864,
+   "git_oid": "b871516cd9aaea775d923b026cf284b7f9666065",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8004",
+   "size": 36864,
+   "git_oid": "4b1296e36884ec9cc9e3b74c4ba744ab8a74b92d",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8007",
+   "size": 36864,
+   "git_oid": "bbdff20adeea8b9e33402b9fa8e85a97a996ea1e",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8010",
+   "size": 36864,
+   "git_oid": "72b71428180423243afd3a205d85aa2677c5a2c7",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8013",
+   "size": 36864,
+   "git_oid": "4fdeff9535b93262ca82ccd6bc18a10249b0b604",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8016",
+   "size": 36864,
+   "git_oid": "78d4c6d5c73ebba08cc0575571272abcbc4b4a1d",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8019",
+   "size": 36864,
+   "git_oid": "644323cc29bc733eaeb568081e75869fd22de8f9",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8022",
+   "size": 36864,
+   "git_oid": "9f39f381d2123e710526469302a14eca5f8fd676",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8025",
+   "size": 36864,
+   "git_oid": "2ec51cadd936e4c27027aa8fb6b6705fe1ae5509",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8028",
+   "size": 36864,
+   "git_oid": "dde8625352f1f14df4c8287fa9df1570cc4b7b7c",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8031",
+   "size": 36864,
+   "git_oid": "37f1d707e499521760439be070b4e1a86067024d",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8034",
+   "size": 36864,
+   "git_oid": "cbb33dec0013a5b5e741b34bc956ec96099b6065",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8037",
+   "size": 36864,
+   "git_oid": "0cdb13dab403b6de1211355e94368ecd3185523d",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8040",
+   "size": 36864,
+   "git_oid": "9f1987ab3f734b3a4a5f2daf77bd8553c60c8e31",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8043",
+   "size": 36864,
+   "git_oid": "210e496633bceac5961c76bd8715793ca9615a47",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8046",
+   "size": 36864,
+   "git_oid": "b820a909cdc55b2b0c15c2570277e07e15daf586",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8049",
+   "size": 36864,
+   "git_oid": "35227af1b2919c6605c88e13942191427ea58d47",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8052",
+   "size": 36864,
+   "git_oid": "4b50440de04df900779478e91fbc08cfa86d74d7",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8055",
+   "size": 36864,
+   "git_oid": "78569a0cc2c6df2e94990dd2ba36b2234cca7922",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8058",
+   "size": 36864,
+   "git_oid": "e710cd975f90a379224c3838b136a102ed609e07",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8061",
+   "size": 36864,
+   "git_oid": "1734b649c3f3cacc966ced4a87fe42e09dbb50f1",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__Conv_8064",
+   "size": 36864,
+   "git_oid": "3115b15fb02f3a24ec76e65c07b5b06b7816b8db",
+   "lfs": false
+  },
+  {
+   "path": "assets/onnx__MatMul_8067",
+   "size": 10485760,
+   "git_oid": "fce8fd9f10f733cbd09bddc5931782ef4f4e7b47",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8083",
+   "size": 16777216,
+   "git_oid": "588b005690a6866ef8d3ffeeb8c19265d6045730",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8084",
+   "size": 16777216,
+   "git_oid": "459d5a05df66ef6205bb792123a3ea7eecddc789",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8085",
+   "size": 4194304,
+   "git_oid": "4c4da06e74eb3f7c46974edc350774408470b6f4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8095",
+   "size": 4194304,
+   "git_oid": "a645253ffb27f24421038608851f92afbd71d6c1",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8096",
+   "size": 4194304,
+   "git_oid": "c6cee9be469f590b9a9a7e1a65e7aa17a9c403fd",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8097",
+   "size": 4194304,
+   "git_oid": "6d7fc6c86e3bf4e1aff696134f594c96136fa2c4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8185",
+   "size": 4194304,
+   "git_oid": "dccf38be9a1d5fa988d74794173ffcab88f0fdfc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8191",
+   "size": 16777216,
+   "git_oid": "adfab7a09a1233857c6eb770c9a8e87f61b7d37c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8192",
+   "size": 16777216,
+   "git_oid": "2ec4e9c52dcda421753df61112d7c79955c90be8",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8193",
+   "size": 16777216,
+   "git_oid": "3d56f4ff8151520cc890f4e11ad7df3422425683",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8194",
+   "size": 16777216,
+   "git_oid": "2a20a3c52dcfe15b7b7d9f11aac6fc247465bce9",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8195",
+   "size": 4194304,
+   "git_oid": "b74ac01d58e775e91e5c210746af5dc35928d53b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8205",
+   "size": 4194304,
+   "git_oid": "1b9515ed33fcffa9679e325751eb9486d5000f17",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8206",
+   "size": 4194304,
+   "git_oid": "e67bbfe2871e783dce90fa52b2bfcf8cc5615eee",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8207",
+   "size": 4194304,
+   "git_oid": "a19e2a662894d8d48931e5377e9f2cb33b406858",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8223",
+   "size": 4194304,
+   "git_oid": "628b64de28845d8a308d2201a2cd2636fe624c72",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8229",
+   "size": 16777216,
+   "git_oid": "ef86fa70ba72049f42323da57057e199d186fa01",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8230",
+   "size": 16777216,
+   "git_oid": "8c7a876990630db7ba3a56dc95bee54887ac041d",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8231",
+   "size": 16777216,
+   "git_oid": "48c4ae61d55aaf3b709c82121e414ff99fe24e10",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8232",
+   "size": 16777216,
+   "git_oid": "bd087b6ad19b4e007fb083d025487f1e92f11c1b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8233",
+   "size": 4194304,
+   "git_oid": "c5d90af2a0e318fd6620963f164a44fda45caf09",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8243",
+   "size": 4194304,
+   "git_oid": "2e7246546aa03a9e51be0fd6cca9a67ce0730439",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8244",
+   "size": 4194304,
+   "git_oid": "aff6c47afc6c8cc330caf19115304cfe5ca1cd62",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8245",
+   "size": 4194304,
+   "git_oid": "c801658ab17b70e48d06179715aa6a2f7debfe49",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8261",
+   "size": 4194304,
+   "git_oid": "ee3523df1ee1e852c28f4df8af10724b1ae4da55",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8267",
+   "size": 16777216,
+   "git_oid": "cd448d02e2a604a30b05b0b5b844a75c1c1c8ed9",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8268",
+   "size": 16777216,
+   "git_oid": "4df741132fee9fa79f005902ae2e606c4b941191",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8269",
+   "size": 16777216,
+   "git_oid": "54662af132886fcb948d8c48f4ca585b03a4b8bc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8270",
+   "size": 16777216,
+   "git_oid": "d6f7c0bfa0955822b267cc63b50548904a226892",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8271",
+   "size": 4194304,
+   "git_oid": "4dc1620248779a635c1bd390f5383c367c20551c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8281",
+   "size": 4194304,
+   "git_oid": "e7ccebbefbbf77b7e99a0b5a62a505cc1857994c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8282",
+   "size": 4194304,
+   "git_oid": "c1870e92001eea1f644c9b6a9dc594287b2648e3",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8283",
+   "size": 4194304,
+   "git_oid": "7a3fcaa07354a54059caf5032291dd67cbad1ee9",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8299",
+   "size": 4194304,
+   "git_oid": "951cc9f166076346c1f7b3824bd344a2d27746bb",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8305",
+   "size": 16777216,
+   "git_oid": "0fb0d56c08d5dfb9f17e1d9aeb6130ea1fb955a3",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8306",
+   "size": 16777216,
+   "git_oid": "cda9f759b9ff23475a6795b726c3f7c251b99218",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8307",
+   "size": 16777216,
+   "git_oid": "dd744fc3ad2f62a3ff0886115db0ae5cee323186",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8308",
+   "size": 16777216,
+   "git_oid": "efc0feb601c921d20d8df2dbf6b46eeda6c21339",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8309",
+   "size": 4194304,
+   "git_oid": "e114c9c732f15062a23fca8024dc58d905621ee4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8319",
+   "size": 4194304,
+   "git_oid": "c4cf9b2fdecc961be43eafaccf7062d5a0cb7b24",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8320",
+   "size": 4194304,
+   "git_oid": "9f27b694ea005daa170aa1d4391baaccb4877583",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8321",
+   "size": 4194304,
+   "git_oid": "168b9363cf49a8726260b0fdd6df9bd0c79a45a6",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8337",
+   "size": 4194304,
+   "git_oid": "beba7db95745b7e34005a35cca83588c37d5a33e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8343",
+   "size": 16777216,
+   "git_oid": "fff92b0b4bedadfb5cb3b77bcdc9e254a601b486",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8344",
+   "size": 16777216,
+   "git_oid": "5fb345bffface6b42dfe473627af8b6dd3459b58",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8345",
+   "size": 16777216,
+   "git_oid": "156711769885ec4d2e0341a9adf2d0ecaf28f4a8",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8346",
+   "size": 16777216,
+   "git_oid": "787762b140c113315f418024648102fb4131b3d8",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8347",
+   "size": 4194304,
+   "git_oid": "f8fc31f691466f766cde821f6fda16d8a76c0801",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8357",
+   "size": 4194304,
+   "git_oid": "81f59e679cbced755354a77c5076e3888741e76b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8358",
+   "size": 4194304,
+   "git_oid": "471c8420e8685bf65923512ba1883654ab7a02a1",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8359",
+   "size": 4194304,
+   "git_oid": "9e0f915afecbc3d12b817a44a1760096abaeaf42",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8375",
+   "size": 4194304,
+   "git_oid": "012a3bb9112f20f1ecab485f15288ca34668d6f1",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8381",
+   "size": 16777216,
+   "git_oid": "6fadb97fe1d5a1253692ab23dd5a9cc160aedcb2",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8382",
+   "size": 16777216,
+   "git_oid": "c027d5ce2aed29ea5889f9501f8b2928e06113a8",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8383",
+   "size": 16777216,
+   "git_oid": "8be14043699b2c56d6a5c9c244b581116efaf846",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8384",
+   "size": 16777216,
+   "git_oid": "03324e1c4490bc5d34ee52fc7146afc43ad185b0",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8385",
+   "size": 4194304,
+   "git_oid": "41bc5117bf8031dc80248a0948e6be84b21126e5",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8395",
+   "size": 4194304,
+   "git_oid": "923198c1372a3e158c1675811aa5c2463319584b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8396",
+   "size": 4194304,
+   "git_oid": "c9c5bad65c47bf71fb7f046e0e718bc5690a548d",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8397",
+   "size": 4194304,
+   "git_oid": "8c6e58fedadc0a5625bdb677a36ed6a763afee22",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8413",
+   "size": 4194304,
+   "git_oid": "7608ab9a678a960f809da8e9bab9e82deabc6863",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8419",
+   "size": 16777216,
+   "git_oid": "1b53fc9a7b2009d4ecb1d6ebf492f516975cc186",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8420",
+   "size": 16777216,
+   "git_oid": "31ed296c87a64c3949412137ab7475cb144e4304",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8421",
+   "size": 16777216,
+   "git_oid": "1601316f876a6f0e85c61b9387d8e9edad3b1d6c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8422",
+   "size": 16777216,
+   "git_oid": "c24c339277b14838c37ae888711c96e4ec07cd8c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8423",
+   "size": 4194304,
+   "git_oid": "015dc3e374a8996f5446e42adf21982baee52dbb",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8433",
+   "size": 4194304,
+   "git_oid": "c079af8e44fbc5774b3ae7dbd8a5ea25fbb5f51a",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8434",
+   "size": 4194304,
+   "git_oid": "71aaaf8997deb0e606635ce90f567c91c678bcce",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8435",
+   "size": 4194304,
+   "git_oid": "9ddec44dd83992bc698e9e4a8d16c2a2b943fda4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8451",
+   "size": 4194304,
+   "git_oid": "a2500c18de1922e70a7ad0ba8e0a3adbbe079977",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8457",
+   "size": 16777216,
+   "git_oid": "36b87773c1917e9a5780f738f7aaa3eb3f6d1a23",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8458",
+   "size": 16777216,
+   "git_oid": "48f9644c97a74421d31215e0257599b9ddbfc2c5",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8459",
+   "size": 16777216,
+   "git_oid": "2faea3c134c19453e738aefe331bf954299d6040",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8460",
+   "size": 16777216,
+   "git_oid": "493ebf1433327d8d533188a2e1d623639e1ededc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8461",
+   "size": 4194304,
+   "git_oid": "0a7e99aa222f1d768a4e014c2a5d9cace7088d2f",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8471",
+   "size": 4194304,
+   "git_oid": "72325a20a7fa25915a2d25d9aca81ac9c4509904",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8472",
+   "size": 4194304,
+   "git_oid": "44d781214fb09f28d6be147ed1169ece1633e958",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8473",
+   "size": 4194304,
+   "git_oid": "09337b2461fe2b55942003a231976fb3ace67b4c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8489",
+   "size": 4194304,
+   "git_oid": "e2b1d027dc40e70ccbb8d37b7024ada240c1d361",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8495",
+   "size": 16777216,
+   "git_oid": "96d0a1c0787754811f7940660e137ff7d797c821",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8496",
+   "size": 16777216,
+   "git_oid": "52b80befa0cfcc3c730887f24b8c5c5d9ae6f72e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8497",
+   "size": 16777216,
+   "git_oid": "309043991898fc1e27bf77d658c59ed028f23e14",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8498",
+   "size": 16777216,
+   "git_oid": "e528c8eef46d8101a3eff81757a57e0cd7bc2da1",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8499",
+   "size": 4194304,
+   "git_oid": "c8cc688593a3296b75e1410af71c080b12db0878",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8509",
+   "size": 4194304,
+   "git_oid": "d3ece61070d4304e1d549d058ae9553c887258cc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8510",
+   "size": 4194304,
+   "git_oid": "fef39425e28d4efbba353da46ebdc91f7554e093",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8511",
+   "size": 4194304,
+   "git_oid": "ed41459f931027a2862e72b53561ea2ce0ced413",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8527",
+   "size": 4194304,
+   "git_oid": "d453a96d6a3a9084ce1347350c3ac09bfc5b63e7",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8533",
+   "size": 16777216,
+   "git_oid": "701c8f5d745ede2f375aa510bc92dca26d8a61e9",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8534",
+   "size": 16777216,
+   "git_oid": "432a2bddc4d8c7df9724df311572af89ad31c928",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8535",
+   "size": 16777216,
+   "git_oid": "80bb9f142418940ad87675905379aeb69b5297ef",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8536",
+   "size": 16777216,
+   "git_oid": "933ddedcd0cd5ea9a63bc69eb50fe31714f87693",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8537",
+   "size": 4194304,
+   "git_oid": "b246516f8ece752c4514ea1c01aa1d9c1abe6926",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8547",
+   "size": 4194304,
+   "git_oid": "a229340832c4bdc6674595dc3006a97136956445",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8548",
+   "size": 4194304,
+   "git_oid": "c08522f3236931a7a5c6ad3cca6ac70d067022e4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8549",
+   "size": 4194304,
+   "git_oid": "d6ddeb81426596c16ee8392f5f160f7b09fa4d04",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8565",
+   "size": 4194304,
+   "git_oid": "68f5b153bdab4edf95aab24e410fb79d74ceb627",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8571",
+   "size": 16777216,
+   "git_oid": "3c53745f540669a9383e77bc5984141c3ad26be7",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8572",
+   "size": 16777216,
+   "git_oid": "c0c643e1748e8bc124331e27ba3da693036b8813",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8573",
+   "size": 16777216,
+   "git_oid": "5c34a6ed3ffb6dcd4386ea7b8e143550c489aaee",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8574",
+   "size": 16777216,
+   "git_oid": "4ff486f497a8bd9ee7731cc89a8a794ceb455d70",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8575",
+   "size": 4194304,
+   "git_oid": "fa031d9403c4e0145827fe901cdb1731f6b44d2d",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8585",
+   "size": 4194304,
+   "git_oid": "d5d8ad8906bfd55c28e3585da262cd01c445cea5",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8586",
+   "size": 4194304,
+   "git_oid": "bc4365fcfef6d6cdebb3b4b24f35160fe6fc72a4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8587",
+   "size": 4194304,
+   "git_oid": "89de9e6369118a36c1c72540cf4e7298369f84d1",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8603",
+   "size": 4194304,
+   "git_oid": "e98d0998a2b9f28e74fec156df2d5832d51407d4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8609",
+   "size": 16777216,
+   "git_oid": "fdad576c353b117ee0dec3b536d9ee9b6a397fc2",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8610",
+   "size": 16777216,
+   "git_oid": "70675834644f768158ffeb237908c1241117c78b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8611",
+   "size": 16777216,
+   "git_oid": "106bd92b29e7f5bef50875a308a6adfdac1aff66",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8612",
+   "size": 16777216,
+   "git_oid": "4981db461fc8c8b381dacb477c600db3538370d8",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8613",
+   "size": 4194304,
+   "git_oid": "f944992337c691c55cfffcee3b291ea9aa34407d",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8623",
+   "size": 4194304,
+   "git_oid": "029968d02e362f657cbb359f26a3fd296f6d933e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8624",
+   "size": 4194304,
+   "git_oid": "c320f1f374e58304999012d7b0a85b26604f8761",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8625",
+   "size": 4194304,
+   "git_oid": "900c723e4669d8d8544f7a8a579d7c29d27b02dc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8641",
+   "size": 4194304,
+   "git_oid": "7443a2b16cb1ac9fdf377167ce83cdb4f7d66c39",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8647",
+   "size": 16777216,
+   "git_oid": "e1fccd74330098f4d52cff98d5bf0d118184c51c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8648",
+   "size": 16777216,
+   "git_oid": "feeb08a0411329c0f7733526df80dba00e2a424a",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8649",
+   "size": 16777216,
+   "git_oid": "dfbb1073fff3b11b51350333d0036c61cee5f512",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8650",
+   "size": 16777216,
+   "git_oid": "c2bca70f117d4f120f72c906675457485614d660",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8651",
+   "size": 4194304,
+   "git_oid": "613983bb60a65e545a6025d920e726f17232b505",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8661",
+   "size": 4194304,
+   "git_oid": "310cec7de49052a5584fa79a65b1cf39de4f30fa",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8662",
+   "size": 4194304,
+   "git_oid": "4ddea3a98fd3df6e49e1884ec1c649295051463a",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8663",
+   "size": 4194304,
+   "git_oid": "99b9d82b569c081ad618cdc6da0152360228e818",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8679",
+   "size": 4194304,
+   "git_oid": "f28a5375a81191e624a132060ef4b9f3ff2758bb",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8685",
+   "size": 16777216,
+   "git_oid": "0023f9fe5d470b097c6a16878a7fdc82387c83b0",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8686",
+   "size": 16777216,
+   "git_oid": "5e7a65bb267324af0c4d40a92eeffa34f6b5af42",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8687",
+   "size": 16777216,
+   "git_oid": "7fc2773a0610ea6b04605021b510791cda8c5afa",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8688",
+   "size": 16777216,
+   "git_oid": "d584a4d1ed70949d1b6a136262cd6dc5fc7e2c56",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8689",
+   "size": 4194304,
+   "git_oid": "9d972963ff29de8ac0cd6fdc5f0311379d309e5c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8699",
+   "size": 4194304,
+   "git_oid": "d13ba3dd32e6a3541b88f20dde89279cacc72f30",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8700",
+   "size": 4194304,
+   "git_oid": "b9ef536e11354cd78454fe0bf4fa043ad96a1454",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8701",
+   "size": 4194304,
+   "git_oid": "96c806529be7159c44573607d510bef286e7b9b3",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8717",
+   "size": 4194304,
+   "git_oid": "b2e7f9b6c02490b41cecb8c1b42324cdc575d16c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8723",
+   "size": 16777216,
+   "git_oid": "9028caec54cde13b3bf7b0b398ebc091abadabbb",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8724",
+   "size": 16777216,
+   "git_oid": "5a51abe59104d57b36ff110456471a937eafda37",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8725",
+   "size": 16777216,
+   "git_oid": "7817ecc0d119ccd9cd3b4c4b8eb057e99ece3531",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8726",
+   "size": 16777216,
+   "git_oid": "dd548cae94c2b930c9fc966c06615e6f214e1bfc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8727",
+   "size": 4194304,
+   "git_oid": "1e14c2f092428e105ca6734de4af73e5daa0a22b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8737",
+   "size": 4194304,
+   "git_oid": "800acb2fce187f25358c3b6db2ef98633ea74450",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8738",
+   "size": 4194304,
+   "git_oid": "c915b7e39b6eceaa8af5d9c6ddc669ba9af82d92",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8739",
+   "size": 4194304,
+   "git_oid": "0b3f132e44ce1e0959c2da4021fc792168a9771a",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8755",
+   "size": 4194304,
+   "git_oid": "53d176d0686cbf3906f45481a006a0da024fb16a",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8761",
+   "size": 16777216,
+   "git_oid": "cd2bbe0bc57f94c63072531c271daf1c3682096e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8762",
+   "size": 16777216,
+   "git_oid": "8c7f05a906b464926e3dccfbe21ccb5df966a5cc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8763",
+   "size": 16777216,
+   "git_oid": "194a18a61e36f0dc71d23208ef30749179d675f6",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8764",
+   "size": 16777216,
+   "git_oid": "0bda4e55138dbe60803c0534c320f63b6ec56987",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8765",
+   "size": 4194304,
+   "git_oid": "be4aa08ea289fa372982120b8ad77e71ee41b8e2",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8775",
+   "size": 4194304,
+   "git_oid": "c2962dd456e2e75b176f9093287029ea0bd05369",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8776",
+   "size": 4194304,
+   "git_oid": "86949366b9488987f5f5bd012c72d5609896aa1b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8777",
+   "size": 4194304,
+   "git_oid": "b02bb3b67e01fb9b254f7508ad2a53f91e40158f",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8793",
+   "size": 4194304,
+   "git_oid": "4913e6580fe37517fd638340ffb71a1785a98b06",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8799",
+   "size": 16777216,
+   "git_oid": "b0c2dcec22941c5f28d76d8d8eb0975fd82aa4f1",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8800",
+   "size": 16777216,
+   "git_oid": "04308de43f0645976b641b47b97e8066d46a6b14",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8801",
+   "size": 16777216,
+   "git_oid": "c4c124079c4cd5c54e3f57a49ea63e52a33eba92",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8802",
+   "size": 16777216,
+   "git_oid": "7798950fe59f27128c5f9b49b12873ef683f7f2e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8803",
+   "size": 4194304,
+   "git_oid": "f9782624585378a3be282034feb4242e577f9a9f",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8813",
+   "size": 4194304,
+   "git_oid": "876db672e2ba67b4caef0b75331f55210d22e5c6",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8814",
+   "size": 4194304,
+   "git_oid": "76134a8fc1557dbe3f778bc033b28c2d0bb8379a",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8815",
+   "size": 4194304,
+   "git_oid": "bfb1181853a0f70a9940af9be228ed20663a296f",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8831",
+   "size": 4194304,
+   "git_oid": "7a7ae4e203e88ae33156651f0ec1d50c4a590811",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8837",
+   "size": 16777216,
+   "git_oid": "bd09fe4425fd2085ddbb766979036e7bf674c053",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8838",
+   "size": 16777216,
+   "git_oid": "cd0e837ca50f374c3c95364bdf6d7f7cdd366d58",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8839",
+   "size": 16777216,
+   "git_oid": "54b6f5ce730466a89f1e01f0fc72666b16e8770c",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8840",
+   "size": 16777216,
+   "git_oid": "2277746a0f0cd1d471511c135728cd707f2f2c70",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8841",
+   "size": 4194304,
+   "git_oid": "8de4f537f6eb0048080b3f63316b76d803320c43",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8851",
+   "size": 4194304,
+   "git_oid": "575e7f0770af5b25730e2c297a5fc3cd2baab270",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8852",
+   "size": 4194304,
+   "git_oid": "c37993a9fbd5dbcd079d3c33ee4b3ec1c82cc52e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8853",
+   "size": 4194304,
+   "git_oid": "b7b5c3420c44905e244791c61dc28b37a8700834",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8869",
+   "size": 4194304,
+   "git_oid": "2da7234d4a5d6fedbe3ad2d17ae23db8d8c585fc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8875",
+   "size": 16777216,
+   "git_oid": "33c68ba1350a2d4648efb3924d35f2b2c81e50db",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8876",
+   "size": 16777216,
+   "git_oid": "1869dece66ea28f46b54a9bba62de3cc96ede748",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8877",
+   "size": 16777216,
+   "git_oid": "2d99a4538600ccd2041f90c4fde5069b1ba7c999",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8878",
+   "size": 16777216,
+   "git_oid": "115d6ab8b8fb41bcc0e29668007244b5894a75d2",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8879",
+   "size": 4194304,
+   "git_oid": "b7a98e49bfcb168299f9ee8d0b378deefd69924d",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8889",
+   "size": 4194304,
+   "git_oid": "786adbbd4af0dc0ab4600200035f3952c057fb91",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8890",
+   "size": 4194304,
+   "git_oid": "be70f1bae089e67e42d09bb802ffd02a51ad59fb",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8891",
+   "size": 4194304,
+   "git_oid": "5d281e0fd10e27997314e757797ede7870f6122b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8907",
+   "size": 4194304,
+   "git_oid": "9e3322d76f72232962dcee7576faf7f39ca1a87a",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8913",
+   "size": 16777216,
+   "git_oid": "e9420d03c2c7d9264bf3be68f424172348520b38",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8914",
+   "size": 16777216,
+   "git_oid": "d634ef4358a0f294fff6ff27e09ff1dc9d93085f",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8915",
+   "size": 16777216,
+   "git_oid": "e3bb21323c6fe86b19bf2ef11797c6a52aff9a5e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8916",
+   "size": 16777216,
+   "git_oid": "0f76a3b2ee17aafea7544c1fbc8597217eb4a0df",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8917",
+   "size": 4194304,
+   "git_oid": "a0eadf9b7f643265697d5f3c55ab95309519f501",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8927",
+   "size": 4194304,
+   "git_oid": "1accb808877ca1765f936e644a6c763e9c0f79d4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8928",
+   "size": 4194304,
+   "git_oid": "ca5519793c8ff5c86d70589e96337169c37a9bf6",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8929",
+   "size": 4194304,
+   "git_oid": "e1160991999a31e20da87e62ad5c84723f4beb54",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8945",
+   "size": 4194304,
+   "git_oid": "e180ed9234f8b08073efe8632dc8783aa2293e84",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8951",
+   "size": 16777216,
+   "git_oid": "0c45d380c83814293dc2b1eeeba1c595f7a43a89",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8952",
+   "size": 16777216,
+   "git_oid": "546cd1cfe4fdc5a4509097a5d22055117c545d83",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8953",
+   "size": 16777216,
+   "git_oid": "97caf2b3f044414bbeb989814fe9ab5599d57287",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8954",
+   "size": 16777216,
+   "git_oid": "0dc88f70d8e91832cea629d761d50364618c88b7",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8955",
+   "size": 4194304,
+   "git_oid": "3aa2df64981cfd6375fef3034bae343c550a45c8",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8965",
+   "size": 4194304,
+   "git_oid": "65c0628b39e79dd5880b5b8f83213b3ce8a31330",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8966",
+   "size": 4194304,
+   "git_oid": "25328b363f16712e7c7b104d58f9664a0133b7a5",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8967",
+   "size": 4194304,
+   "git_oid": "47256f8d95fb48fcd68366b312a1c040902aa1fc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8983",
+   "size": 4194304,
+   "git_oid": "9298d3a8030480cfdc402b78387073e483a866a6",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8989",
+   "size": 16777216,
+   "git_oid": "30aa70e8ca3f5261ef9bf98d78eebe3ca207bd81",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8990",
+   "size": 16777216,
+   "git_oid": "2b71c4b2702febfe908f53341b220752ab8844f7",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8991",
+   "size": 16777216,
+   "git_oid": "547eb42f26f7a8d9a3bddc81f4338887ea0cde6b",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8992",
+   "size": 16777216,
+   "git_oid": "495e522c6d574926a0fd739550698b062e3dfdcd",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_8993",
+   "size": 4194304,
+   "git_oid": "e27ebecb6283deb28f8a7af394a27ec063d638dc",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9003",
+   "size": 4194304,
+   "git_oid": "97396e3e77f2ce83466dae64f9c442e9ffdefc45",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9004",
+   "size": 4194304,
+   "git_oid": "81c61d09d616528aea6bd97033bf9dd7a941fdbf",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9005",
+   "size": 4194304,
+   "git_oid": "7773c8c797947d1a308e41a2b50d6aa03e1d0ee7",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9021",
+   "size": 4194304,
+   "git_oid": "b567ae297795b6bab866564884ff8ba5bb4ecbad",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9027",
+   "size": 16777216,
+   "git_oid": "b2caa4ef1b3e2ccc80abbd5fdef48b68667e3e43",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9028",
+   "size": 16777216,
+   "git_oid": "6bc3d22cb2b119ab3e38623be237fced3ec0798e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9029",
+   "size": 16777216,
+   "git_oid": "159e1efffb0853f5188ec63dd1e4e9ea79010cb1",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9030",
+   "size": 16777216,
+   "git_oid": "ca4290b493ab553b46405d279da2aeaab0c0bb74",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9031",
+   "size": 4194304,
+   "git_oid": "5c30a8b622da0018b65b17d079bd6fdf19ff90a9",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9041",
+   "size": 4194304,
+   "git_oid": "650ca6dcae0f6e3b0ef19568d2337cecfc070c1e",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9042",
+   "size": 4194304,
+   "git_oid": "186785d5df18fb334bebfd40cc25b66feffc8c69",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9043",
+   "size": 4194304,
+   "git_oid": "78134153ab7f9d4135e40360230b130ef7188c37",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9059",
+   "size": 4194304,
+   "git_oid": "2ebaa5ba6fedd91507cad16e37b23e5adcbbe1d6",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9065",
+   "size": 16777216,
+   "git_oid": "0ca21310dfc3dc2463ff85db29b296acd78dd5d4",
+   "lfs": true
+  },
+  {
+   "path": "assets/onnx__MatMul_9066",
+   "size": 16777216,
+   "git_oid": "30e03b96e50591be5502db716f0c4e88448f3cfe",
+   "lfs": true
+  },
+  {
+   "path": "assets/pre_encode.conv.0.weight",
+   "size": 9216,
+   "git_oid": "65bdb438e5bd00cab603ce2b080c8d6c06d587c9",
+   "lfs": false
+  },
+  {
+   "path": "assets/pre_encode.conv.2.weight",
+   "size": 9216,
+   "git_oid": "9a27346b2fc90932898f8a15aafcddf7449404fa",
+   "lfs": false
+  },
+  {
+   "path": "assets/pre_encode.conv.3.weight",
+   "size": 262144,
+   "git_oid": "94e38e85d5f33ddf4caf4e08fb49e83ee1da6abc",
+   "lfs": true
+  },
+  {
+   "path": "assets/pre_encode.conv.5.weight",
+   "size": 9216,
+   "git_oid": "6c0f12d1bd508d5b83e170d648f6e8fe61a0044f",
+   "lfs": false
+  },
+  {
+   "path": "assets/pre_encode.conv.6.weight",
+   "size": 262144,
+   "git_oid": "78d78a27b3484656dca8d1faa15b9cfc2f1fb2b0",
+   "lfs": true
+  },
+  {
+   "path": "assets/preprocessor.ts",
+   "size": 91662,
+   "git_oid": "352692f1d34c13d9ae80e43440d12aa3c678176c",
+   "lfs": false
+  },
+  {
+   "path": "assets/rnnt_decoder.onnx",
+   "size": 40680145,
+   "git_oid": "cac63dafb0e06d5be7dd35e8db2308be5d4060c2",
+   "lfs": true
+  },
+  {
+   "path": "assets/vocab.json",
+   "size": 96743,
+   "git_oid": "572b383ffdf366f025958ec556fa89b603fdbb16",
+   "lfs": false
+  },
+  {
+   "path": "config.json",
+   "size": 241,
+   "git_oid": "49adb383dc80592abf219715d33a726a29fe62cb",
+   "lfs": false
+  },
+  {
+   "path": "model_onnx.py",
+   "size": 9638,
+   "git_oid": "a9814bda5874d9276fc96ac39799ee53eed7dc4e",
+   "lfs": false
+  },
+  {
+   "path": "model_onnx_1b_batched_rnnt.py",
+   "size": 15255,
+   "git_oid": "876154445a19736f1918988a9bb345ae76850eb1",
+   "lfs": false
+  },
+  {
+   "path": "model_ts.py",
+   "size": 6171,
+   "git_oid": "80bd066e0f6e3432222152d86ba0c30df4288465",
+   "lfs": false
+  }
+ ]
+}
