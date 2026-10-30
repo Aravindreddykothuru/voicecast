@@ -1,0 +1,81 @@
+{
+ "created": "2026-10-01",
+ "question": "Does a full 7-stage dub behave the same with TTS_USE_RUNTIME true and false?",
+ "answer": "Yes. Both runs passed every check and the exported audio is bit-identical.",
+ "source": "data/e2e/verified-run-2026-09-13/input_english.mp4 (32.56 s, two speakers, 9 spoken segments)",
+ "target_language": "kn",
+ "command": "python scripts/e2e_dub.py --video data/e2e/verified-run-2026-09-13/input_english.mp4 --target kn --source en --asr-check",
+ "runs": [
+  {
+   "flag": "TTS_USE_RUNTIME=false",
+   "project": "00dfb9f8-fa8e-435a-8504-244b76054373",
+   "out": "data/e2e/kn-runtime-off-full2",
+   "verdict": "E2E PASSED",
+   "stages_completed": 7,
+   "queued_to_ready_s": 390.0,
+   "synthesize_stage_s": 127.8,
+   "provider_path": "in-process SyspinTTSProvider; all voices loaded in the worker's startup self-check, before the job"
+  },
+  {
+   "flag": "TTS_USE_RUNTIME=true",
+   "project": "4188d759-6c5c-425f-bd21-ddb2a3300f82",
+   "out": "data/e2e/kn-runtime-on-full2",
+   "verdict": "E2E PASSED",
+   "stages_completed": 7,
+   "queued_to_ready_s": 758.9,
+   "synthesize_stage_s": 264.6,
+   "provider_path": "RuntimeSyspinTTSProvider; worker log line 'SYSPIN renders will run in an isolated subprocess (TTS_USE_RUNTIME=true), timeout 60s' proves the path was taken, so the report cannot claim a path it did not take"
+  }
+ ],
+ "audio_identity": {
+  "method": "ffmpeg -v error -i <dubbed.mp4> -map 0:a -f s16le -ac 1 -ar 16000 - , then sha256 of the decoded PCM",
+  "bytes": 1041750,
+  "equal": true,
+  "sha256_both_abbreviated": "f87fd701...fa61419d",
+  "why_abbreviated": "the full digest is a 64-char hex string, which the repo's detect-secrets hook flags as a high-entropy secret. Recording it would mean adding an entry to .secrets.baseline; the claim is reproducible without it -- run the command above on both files under runs[].out and compare.",
+  "reproduce": "for f in data/e2e/kn-runtime-off-full2/dubbed.mp4 data/e2e/kn-runtime-on-full2/dubbed.mp4; do ffmpeg -v error -i $f -map 0:a -f s16le -ac 1 -ar 16000 - | sha256sum; done"
+ },
+ "checks_identical_in_both_runs": {
+  "duration_matches_source": "32.560s expected, 32.560s got",
+  "every_spoken_segment_rendered": "9 of 9",
+  "no_overruns": {
+   "overrun_segment_count": 0,
+   "total_overrun_ms": 0,
+   "max_tempo": 1.3437,
+   "avg_sync_offset_pct": 57.17
+  },
+  "no_overlapping_speech": true,
+  "dub_language_detected": "kn (0.95)",
+  "corpus_cer": 0.131,
+  "per_line_cer": {
+   "0": 0.214,
+   "1": 0.057,
+   "2": 0.042,
+   "3": 0.092,
+   "4": 0.143,
+   "5": 0.077,
+   "6": 0.182,
+   "8": 0.282
+  },
+  "note": "line 7 is a 569 ms clip, checked for presence rather than read back"
+ },
+ "on_the_stage_wall_clock": "127.8 s vs 264.6 s for the synthesize stage is NOT the per-line cost of the flag. The in-process provider loads every voice during worker startup, outside the job; the runtime worker loads lazily inside it. The per-line steady-state overhead was measured separately with both providers warmed: -0.141 s (-1.7%), docs/tts-runtime-overhead.json. These are also single runs on a loaded laptop, so the wall clocks carry no CI.",
+ "attempts_that_did_not_produce_a_result": [
+  {
+   "project": "fc2bb47d-4f69-4bcf-84f1-94affe0272f9",
+   "flag": "false",
+   "source": ".tools/test_video.mp4 (3.48 s, one line)",
+   "outcome": "all 7 stages ran, 3 checks failed: the Kannada translation does not fit a 3.48 s window, so plan_timeline hit MAX_TEMPO 1.35 and still overran by 1233 ms, truncating the read-back (CER 0.396). A time-fit failure of too short a source window, not a synthesis failure. Clip replaced, not the check."
+  },
+  {
+   "project": "d980a562-b1b8-49aa-9130-983a2ff916f2",
+   "flag": "false",
+   "outcome": "failed at synthesize: S3 Connect timeout fetching audio.wav. Intermittent network; the same endpoint answered 8 of 8 TCP probes in under 0.16 s minutes later."
+  },
+  {
+   "project": "b7519236-7baf-4403-8c91-87e9e66109da",
+   "flag": "true",
+   "outcome": "failed at synthesize: S3 connection error uploading tts.wav. Same intermittent network. Both arms were retried with an unchanged environment rather than hardening one of them."
+  }
+ ]
+}

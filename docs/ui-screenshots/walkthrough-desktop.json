@@ -1,0 +1,63 @@
+{
+ "viewport": "1440x900",
+ "hasProject": true,
+ "results": [
+  {
+   "screen": "01-landing",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "02-login",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "03-dashboard",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "04-new-dub",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "05-projects",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "06-voices",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "07-settings",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "08-settings-light",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "09-projects-table",
+   "ok": true,
+   "newProblems": 0
+  },
+  {
+   "screen": "10-progress-or-editor",
+   "ok": true,
+   "newProblems": 1
+  }
+ ],
+ "problems": [
+  {
+   "screen": "10-progress-or-editor",
+   "type": "warning",
+   "text": "WebSocket connection to 'ws://localhost:8000/ws/projects/9c02713c-50b6-421f-9f17-5c64de9639b8?token=<redacted: session token, the very leak this run found>' failed: We"
+  }
+ ]
+}

@@ -1,0 +1,48 @@
+{
+ "lines": 9,
+ "runs": 3,
+ "lang": "te",
+ "construct": {
+  "in_process_construct_s": 217.4,
+  "runtime_construct_s": 164.4
+ },
+ "synthesize": {
+  "in_process": {
+   "n": 27,
+   "mean_s": 8.204,
+   "sd_s": 4.889,
+   "min_s": 2.677,
+   "max_s": 21.891,
+   "total_s": 221.5
+  },
+  "runtime": {
+   "n": 27,
+   "mean_s": 8.063,
+   "sd_s": 4.496,
+   "min_s": 2.953,
+   "max_s": 18.977,
+   "total_s": 217.7
+  }
+ },
+ "render_raw": {
+  "in_process": {
+   "n": 27,
+   "mean_s": 8.187,
+   "sd_s": 4.887,
+   "min_s": 2.64,
+   "max_s": 21.861,
+   "total_s": 221.0
+  },
+  "runtime": {
+   "n": 27,
+   "mean_s": 8.043,
+   "sd_s": 4.492,
+   "min_s": 2.937,
+   "max_s": 18.961,
+   "total_s": 217.2
+  }
+ },
+ "overhead_per_line_s": -0.141,
+ "overhead_pct": -1.7,
+ "render_raw_overhead_per_line_s": -0.144
+}

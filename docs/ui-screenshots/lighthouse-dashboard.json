@@ -1,0 +1,33 @@
+{
+ "url": "http://localhost:4173/",
+ "sessionPlanted": true,
+ "finalUrl": "http://localhost:4173/",
+ "scores": {
+  "performance": 97,
+  "accessibility": 100,
+  "best-practices": 96
+ },
+ "metrics": [
+  {
+   "id": "first-contentful-paint",
+   "value": "1.0 s"
+  },
+  {
+   "id": "largest-contentful-paint",
+   "value": "1.0 s"
+  },
+  {
+   "id": "total-blocking-time",
+   "value": "0 ms"
+  },
+  {
+   "id": "cumulative-layout-shift",
+   "value": "0"
+  },
+  {
+   "id": "speed-index",
+   "value": "1.0 s"
+  }
+ ],
+ "failedAccessibilityAudits": []
+}

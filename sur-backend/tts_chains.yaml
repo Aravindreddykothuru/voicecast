@@ -1,0 +1,81 @@
+# Which TTS models speak which language, in what order, and how the runtime
+# (app/tts_runtime) reacts when one fails. Validated strictly at startup: an
+# unknown key, an unknown model, or a model outside the licence allowlist
+# (app/tts_runtime/licenses.py) refuses to start -- never a silent default.
+#
+# Order is evidence: a chain is reordered only by `tts benchmark` results
+# (docs/tts-runtime.md).
+#
+# SYSPIN only, deliberately, because this deployment is CPU-only and SYSPIN
+# is the one engine that works at a usable speed on it:
+#
+#   syspin         sentence 6.1-7.2 s, RTF 1.6-2.2   (docs/tts-benchmark.md)
+#   indic_parler   RTF 44-74, load 189 s, peak 3.9 GB (docs/tts-warmup-run.json)
+#   indicf5        disabled regardless: no reference clip has verified consent
+#
+# Indic Parler is ~33x slower per second of audio, which puts a 32 s clip at
+# roughly 35 minutes per language. Listing it as failover would mean a
+# SYSPIN failure silently turns a 10-minute job into an hour-long one, so it
+# is not listed: a line SYSPIN cannot speak is flagged instead. Both models
+# are provisioned and verified on disk; tts_chains.gpu.yaml puts them back
+# in the chain for a host that can actually run them.
+#
+# All five languages here are proven end to end on this config
+# (docs/tts-languages-working.json). ta/ml/gu/pa/or/as are absent because
+# no allowlisted engine speaks them; POST /api/projects refuses them with
+# 422 rather than failing at the synthesize stage.
+chains:
+  hi: [syspin]
+  mr: [syspin]
+  bn: [syspin]
+  te: [syspin]
+  kn: [syspin]
+  default: [syspin]
+
+# Per-model synthesis timeouts, from measurement on this CPU-only box.
+#   syspin: a sentence takes 6.1-7.2 s and a short line 10.6-14.1 s (three
+#     draws of carrier+word), so 60 s is ~4x the worst case (docs/tts-benchmark.md).
+#   indic_parler / indicf5: parler-tts-tiny-v1 needs ~45 s per 2 s of audio
+#     here, and the Indic model is larger, so a 10 s sentence can approach
+#     several minutes; at 60 s every sentence died as a timeout and the
+#     benchmark measured nothing. 600 s is the bound on a CPU host -- lower it
+#     on a GPU host, where these run in seconds.
+timeouts:
+  synth_s: 60               # default, and what SYSPIN gets
+  check_s: 30               # reader decode
+  per_model:
+    indic_parler: 600
+    indicf5: 600
+retries: { per_model: 1, network_backoff: [2, 4, 8, 16, 32, 60, 120, 300] }  # seconds, capped
+
+# A model is disabled for a language when it fails more than fail_ratio of its
+# last `window` lines -- evaluated once it has min_samples lines, so two early
+# failures cannot open it -- or fails its health check. Half-open after cooldown.
+circuit_breaker: { window: 20, fail_ratio: 0.30, cooldown_s: 600, min_samples: 10 }
+
+# SYSPIN is skipped for a line containing a known-bad word (known_bad/<lang>.txt).
+# Words are learned only from single-word lines: a failed sentence does not say
+# which word failed. Never auto-removed.
+known_bad: { auto_add_after: "3 of last 5", auto_remove: false }
+
+scene_consistency: true
+max_models_on_gpu: 2          # also bounds models resident in RAM on CPU hosts
+offline_mode: auto            # auto | force | off
+
+# Carrier-and-cut (CONTRACTS.md #7) only for models measured to need it.
+# `unmeasured`: not applied -- the cut was validated on SYSPIN only.
+carrier: { syspin: true, indic_parler: unmeasured, indicf5: unmeasured }
+
+# Pause a batch (with an alert) when free disk falls below this.
+disk: { min_free_mb: 2048 }
+
+# Readers for the reader-check trigger. Only where a reader is reliable on the
+# lines it scores (CONTRACTS.md #7): te and kn.
+readers: { te: [vakyansh], kn: [vakyansh] }
+
+# Models whose dependencies conflict with the backend venv run under their own
+# interpreter (e.g. parler-tts pins a different transformers). Paths are
+# relative to sur-backend/. Missing interpreter => model unavailable, logged.
+interpreters:
+  indic_parler: .venv-parler/Scripts/python.exe
+  indicf5: .venv-indicf5/Scripts/python.exe

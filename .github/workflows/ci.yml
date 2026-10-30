@@ -1,0 +1,133 @@
+name: CI
+
+# CONTRACTS.md names these tests as the guard on three invariants that each
+# shipped a silent bug. They only guard anything if they actually run, so this
+# workflow exists to run them -- in particular the timeline tests, which need
+# real ffmpeg (the bug lived in the ffmpeg invocation, so mocking it would
+# test nothing), and the backend suite, which needs real Postgres (SQLite
+# doesn't enforce column widths, FKs, NOT NULL, unique, or CHECK constraints
+# -- that gap is what let projects.status ship as VARCHAR(10) in production
+# while every SQLite-backed test stayed green; see
+# sur-backend/tests/conftest.py and test_schema_matches_migrations.py).
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  # The same scan the pre-commit hook runs, enforced server-side too: a hook
+  # only protects people who installed it.
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install detect-secrets
+        run: pip install detect-secrets
+
+      - name: Scan for credentials
+        run: detect-secrets-hook --baseline .secrets.baseline $(git ls-files)
+
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      CI: "true"          # makes test_ffmpeg_is_available_in_ci fail loudly if ffmpeg is absent
+      TEST_DATABASE_URL: "postgresql+psycopg2://postgres:test@localhost:5434/test"
+      ASR_PROVIDER: mock
+      DIARIZATION_PROVIDER: mock
+      TRANSLATION_PROVIDER: mock
+      EMOTION_PROVIDER: mock
+      TTS_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Required: the timeline-accuracy tests measure real audio energy.
+      # Without ffmpeg they would skip, silently leaving the sync invariant
+      # unguarded -- which is why the suite fails rather than skips in CI.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        working-directory: sur-backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      # Run migrations as their own step, not just implicitly via the
+      # conftest fixture: a broken migration chain should fail here with a
+      # clear signal, distinct from a test assertion failing.
+      - name: Apply migrations to a clean database
+        working-directory: sur-backend
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: alembic upgrade head
+
+      - name: Assert exactly one migration head
+        working-directory: sur-backend
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          heads=$(alembic heads | grep -c '(head)')
+          echo "migration heads: $heads"
+          test "$heads" -eq 1 || { echo "::error::expected 1 head, found $heads -- parallel migrations need merging"; exit 1; }
+
+      - name: Run tests
+        working-directory: sur-backend
+        run: pytest -q
+
+      # Reported separately so schema drift is unmistakable in the run
+      # summary rather than buried among the other failures.
+      - name: Schema matches migrations (drift check)
+        working-directory: sur-backend
+        run: pytest tests/test_schema_matches_migrations.py -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: sur-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: sur-frontend
+        run: npm ci || npm install
+
+      - name: Typecheck
+        working-directory: sur-frontend
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: sur-frontend
+        run: npm test
+
+      - name: Build
+        working-directory: sur-frontend
+        run: npm run build

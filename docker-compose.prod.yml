@@ -1,0 +1,143 @@
+version: "3.9"
+
+# Shared environment for backend API and Celery workers
+x-common-env: &common-env
+  HF_TOKEN: ${HF_TOKEN:-}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://sur:sur@postgres:5432/sur}  # pragma: allowlist secret
+  ASYNC_DATABASE_URL: ${ASYNC_DATABASE_URL:-postgresql+asyncpg://sur:sur@postgres:5432/sur}  # pragma: allowlist secret
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+  STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+  ALLOW_REMOTE_STORAGE: ${ALLOW_REMOTE_STORAGE:-false}
+  LOCAL_STORAGE_ROOT: /srv/data/storage
+  STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-}
+  STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-}
+  STORAGE_BUCKET: ${STORAGE_BUCKET:-}
+  STORAGE_REGION: ${STORAGE_REGION:-ap-south-2}
+  STORAGE_ENDPOINT_URL: ${STORAGE_ENDPOINT_URL:-}
+  STORAGE_PUBLIC_ENDPOINT_URL: ${STORAGE_PUBLIC_ENDPOINT_URL:-}
+  STORAGE_USE_SSL: ${STORAGE_USE_SSL:-true}
+  ASR_PROVIDER: ${ASR_PROVIDER:-real}
+  DIARIZATION_PROVIDER: ${DIARIZATION_PROVIDER:-real}
+  TRANSLATION_PROVIDER: ${TRANSLATION_PROVIDER:-real}
+  EMOTION_PROVIDER: ${EMOTION_PROVIDER:-real}
+  TTS_PROVIDER: ${TTS_PROVIDER:-real}
+  TTS_ENGINE: ${TTS_ENGINE:-syspin}
+  TTS_REQUIRE_COMMERCIAL_LICENSE: ${TTS_REQUIRE_COMMERCIAL_LICENSE:-true}
+  TTS_VOICE_CLONE: ${TTS_VOICE_CLONE:-true}
+  TTS_VOICE_CLONE_ENGINE: ${TTS_VOICE_CLONE_ENGINE:-openvoice}
+  API_CORS_ORIGINS: "*"
+
+services:
+  # Database
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sur}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sur}
+      POSTGRES_DB: ${POSTGRES_DB:-sur}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sur"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Broker & Cache
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Database Migrations (runs once on deploy)
+  migrate:
+    build:
+      context: ./sur-backend
+      dockerfile: Dockerfile.api
+    command: alembic upgrade head
+    environment:
+      <<: *common-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # FastAPI Web API
+  api:
+    build:
+      context: ./sur-backend
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+    volumes:
+      - storage-data:/srv/data/storage
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+
+  # Celery Worker Main (ASR, Diarization, Translation, Emotion, Muxing)
+  worker-main:
+    build:
+      context: ./sur-backend
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    volumes:
+      - storage-data:/srv/data/storage
+      - hf-cache:/root/.cache/huggingface
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    command: ["celery", "-A", "app.celery_app", "worker", "-Q", "q.extract_audio,q.chunk_and_diarize,q.transcribe,q.detect_emotion,q.translate,q.mux_export", "--loglevel=INFO", "-n", "main@%h", "--concurrency=1"]
+
+  # Celery Worker TTS (SYSPIN VITS TTS, OpenVoice V2 Voice Cloning)
+  worker-tts:
+    build:
+      context: ./sur-backend
+      dockerfile: Dockerfile.worker-tts
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+    volumes:
+      - storage-data:/srv/data/storage
+      - hf-cache:/root/.cache/huggingface
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    command: ["celery", "-A", "app.celery_app", "worker", "-Q", "q.synthesize", "--loglevel=INFO", "-n", "tts@%h", "--concurrency=1"]
+
+  # Frontend Web UI (Nginx reverse proxy + React SPA)
+  frontend:
+    build:
+      context: ./sur-frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
+  redis-data:
+  storage-data:
+  hf-cache:

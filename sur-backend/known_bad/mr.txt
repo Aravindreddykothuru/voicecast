@@ -1,0 +1,5 @@
+# SYSPIN known-bad words for Marathi (see known_bad/hi.txt for the rules).
+#
+# Evidence (CONTRACTS.md #7, measured 2026-09-22):
+आत्ता  # 0 of 40 renders read correctly, even uncut (no cut to blame); median-of-3 reads "आता" (CER 0.400)
+खरच  # median-of-3 reads "रज" (CER 0.667); 24 of 40 single renders pass after the cut, 34 of 40 uncut

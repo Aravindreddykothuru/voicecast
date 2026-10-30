@@ -1,0 +1,1414 @@
+{
+ "step": "3 conformer-reader-calibration",
+ "created": "2026-10-03 11:09:54",
+ "method": "IndicConformer 600M CTC inference on SYSPIN short lines (draws 0-5), compared to Vakyansh ground truth",
+ "summary": {
+  "hi": {
+   "n_clips": 48,
+   "conformer_mean_cer": 0.1083,
+   "conformer_pass_rate_035": 0.875,
+   "vakyansh_mean_cer": null,
+   "vakyansh_pass_rate_035": null,
+   "cer_improvement": null
+  },
+  "mr": {
+   "n_clips": 48,
+   "conformer_mean_cer": 0.2118,
+   "conformer_pass_rate_035": 0.812,
+   "vakyansh_mean_cer": null,
+   "vakyansh_pass_rate_035": null,
+   "cer_improvement": null
+  },
+  "bn": {
+   "n_clips": 47,
+   "conformer_mean_cer": 0.178,
+   "conformer_pass_rate_035": 0.787,
+   "vakyansh_mean_cer": null,
+   "vakyansh_pass_rate_035": null,
+   "cer_improvement": null
+  }
+ },
+ "word_recheck": {
+  "क्यों": {
+   "n": 6,
+   "conformer_mean_cer": 0.0333,
+   "vakyansh_mean_cer": 0.0,
+   "samples": [
+    {
+     "draw": 0,
+     "hyp": "क्यों",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 1,
+     "hyp": "क्यों",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 2,
+     "hyp": "च्यों",
+     "conformer_cer": 0.2,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 3,
+     "hyp": "क्यों",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 4,
+     "hyp": "क्यों",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 5,
+     "hyp": "क्यों",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    }
+   ]
+  },
+  "रुकिए": {
+   "n": 6,
+   "conformer_mean_cer": 0.1667,
+   "vakyansh_mean_cer": 0.0,
+   "samples": [
+    {
+     "draw": 0,
+     "hyp": "रुकिए",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 1,
+     "hyp": "रू कििए",
+     "conformer_cer": 0.4,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 2,
+     "hyp": "रुकिए",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 3,
+     "hyp": "जझुकिए",
+     "conformer_cer": 0.4,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 4,
+     "hyp": "रोकिए",
+     "conformer_cer": 0.2,
+     "vakyansh_cer": null
+    },
+    {
+     "draw": 5,
+     "hyp": "रुकिए",
+     "conformer_cer": 0.0,
+     "vakyansh_cer": null
+    }
+   ]
+  }
+ },
+ "details_by_lang": {
+  "hi": [
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "ठीक है।",
+    "hyp": "ठीक है",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\c6bdee765cb4-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "ठीक है।",
+    "hyp": "ठीक है",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\c6bdee765cb4-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "ठीक है।",
+    "hyp": "ठीक है",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\c6bdee765cb4-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "ठीक है।",
+    "hyp": "ठीक है",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\c6bdee765cb4-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "ठीक है।",
+    "hyp": "ठीक है",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\c6bdee765cb4-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "ठीक है।",
+    "hyp": "ठीक है",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\c6bdee765cb4-d5.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "हां.",
+    "hyp": "हार",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\b02852e665a5-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "हां.",
+    "hyp": "हर",
+    "cer": 0.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\b02852e665a5-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "हां.",
+    "hyp": "हाँथ",
+    "cer": 0.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\b02852e665a5-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "हां.",
+    "hyp": "हर",
+    "cer": 0.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\b02852e665a5-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "हां.",
+    "hyp": "हाँ",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\b02852e665a5-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "हां.",
+    "hyp": "हाँ",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\b02852e665a5-d5.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "नहीं।",
+    "hyp": "नहीं",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\e187c7b41a6c-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "नहीं।",
+    "hyp": "नहीं",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\e187c7b41a6c-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "नहीं।",
+    "hyp": "नहीं",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\e187c7b41a6c-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "नहीं।",
+    "hyp": "नहीं",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\e187c7b41a6c-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "नहीं।",
+    "hyp": "नहीं",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\e187c7b41a6c-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "नहीं।",
+    "hyp": "नहीं",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\e187c7b41a6c-d5.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "रुकिए।",
+    "hyp": "रुकिए",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\a8dffa8c3a13-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "रुकिए।",
+    "hyp": "रू कििए",
+    "cer": 0.4,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\a8dffa8c3a13-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "रुकिए।",
+    "hyp": "रुकिए",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\a8dffa8c3a13-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "रुकिए।",
+    "hyp": "जझुकिए",
+    "cer": 0.4,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\a8dffa8c3a13-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "रुकिए।",
+    "hyp": "रोकिए",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\a8dffa8c3a13-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "रुकिए।",
+    "hyp": "रुकिए",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\a8dffa8c3a13-d5.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "क्यों?",
+    "hyp": "क्यों",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\14f24bcfd34c-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "क्यों?",
+    "hyp": "क्यों",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\14f24bcfd34c-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "क्यों?",
+    "hyp": "च्यों",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\14f24bcfd34c-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "क्यों?",
+    "hyp": "क्यों",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\14f24bcfd34c-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "क्यों?",
+    "hyp": "क्यों",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\14f24bcfd34c-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "क्यों?",
+    "hyp": "क्यों",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\14f24bcfd34c-d5.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "अभी।",
+    "hyp": "अभी",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\59513783702a-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "अभी।",
+    "hyp": "अभी",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\59513783702a-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "अभी।",
+    "hyp": "अभी",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\59513783702a-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "अभी।",
+    "hyp": "अभी",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\59513783702a-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "अभी।",
+    "hyp": "अभी",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\59513783702a-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "अभी।",
+    "hyp": "अभी",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\59513783702a-d5.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "सच में?",
+    "hyp": "सच में",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\fe6642cc3a9e-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "सच में?",
+    "hyp": "सच में",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\fe6642cc3a9e-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "सच में?",
+    "hyp": "सच में",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\fe6642cc3a9e-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "सच में?",
+    "hyp": "सच में",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\fe6642cc3a9e-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "सच में?",
+    "hyp": "सच में",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\fe6642cc3a9e-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "सच में?",
+    "hyp": "सच में",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\fe6642cc3a9e-d5.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 0,
+    "text": "बेशक।",
+    "hyp": "बेशक",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\ec957a09fad9-d0.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 1,
+    "text": "बेशक।",
+    "hyp": "बीशक",
+    "cer": 0.25,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\ec957a09fad9-d1.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 2,
+    "text": "बेशक।",
+    "hyp": "बशक",
+    "cer": 0.25,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\ec957a09fad9-d2.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 3,
+    "text": "बेशक।",
+    "hyp": "बीषक",
+    "cer": 0.5,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\ec957a09fad9-d3.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 4,
+    "text": "बेशक।",
+    "hyp": "बेशक",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\ec957a09fad9-d4.wav"
+   },
+   {
+    "lang": "hi",
+    "draw": 5,
+    "text": "बेशक।",
+    "hyp": "बेशक",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\hi\\ec957a09fad9-d5.wav"
+   }
+  ],
+  "mr": [
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "ठीक आहे.",
+    "hyp": "ठीक आहे",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\9b8751344d10-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "ठीक आहे.",
+    "hyp": "ठीक आहे",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\9b8751344d10-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "ठीक आहे.",
+    "hyp": "ठीक आहे",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\9b8751344d10-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "ठीक आहे.",
+    "hyp": "ठीक आहे",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\9b8751344d10-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "ठीक आहे.",
+    "hyp": "ठीक आहे",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\9b8751344d10-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "ठीक आहे.",
+    "hyp": "ठीक आहे",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\9b8751344d10-d5.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "होय.",
+    "hyp": "होय",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\ba0390359054-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "होय.",
+    "hyp": "होय",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\ba0390359054-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "होय.",
+    "hyp": "होय",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\ba0390359054-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "होय.",
+    "hyp": "होय",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\ba0390359054-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "होय.",
+    "hyp": "होय",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\ba0390359054-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "होय.",
+    "hyp": "खर",
+    "cer": 1.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\ba0390359054-d5.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "नाही.",
+    "hyp": "नाही",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\29f31df5e0f3-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "नाही.",
+    "hyp": "बातमी आहे नाही",
+    "cer": 2.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\29f31df5e0f3-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "नाही.",
+    "hyp": "नाही",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\29f31df5e0f3-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "नाही.",
+    "hyp": "नाही",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\29f31df5e0f3-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "नाही.",
+    "hyp": "ेत नाही",
+    "cer": 0.5,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\29f31df5e0f3-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "नाही.",
+    "hyp": "नाही",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\29f31df5e0f3-d5.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "थांबा.",
+    "hyp": "थांबा",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c3847cad9507-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "थांबा.",
+    "hyp": "तांबा",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c3847cad9507-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "थांबा.",
+    "hyp": "थांबा",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c3847cad9507-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "थांबा.",
+    "hyp": "थांब",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c3847cad9507-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "थांबा.",
+    "hyp": "थांबा",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c3847cad9507-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "थांबा.",
+    "hyp": "थांबा",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c3847cad9507-d5.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "का?",
+    "hyp": "काहा",
+    "cer": 1.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\8b784533d80c-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "का?",
+    "hyp": "का",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\8b784533d80c-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "का?",
+    "hyp": "का",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\8b784533d80c-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "का?",
+    "hyp": "काा",
+    "cer": 0.5,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\8b784533d80c-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "का?",
+    "hyp": "क्र",
+    "cer": 1.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\8b784533d80c-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "का?",
+    "hyp": "खा",
+    "cer": 0.5,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\8b784533d80c-d5.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "आत्ता.",
+    "hyp": "अत्ता",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\0d4f46b24fa5-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "आत्ता.",
+    "hyp": "आता",
+    "cer": 0.4,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\0d4f46b24fa5-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "आत्ता.",
+    "hyp": "अत्ता",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\0d4f46b24fa5-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "आत्ता.",
+    "hyp": "अत्ता",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\0d4f46b24fa5-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "आत्ता.",
+    "hyp": "अगत्ता",
+    "cer": 0.4,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\0d4f46b24fa5-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "आत्ता.",
+    "hyp": "अत्ता",
+    "cer": 0.2,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\0d4f46b24fa5-d5.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "खरच?",
+    "hyp": "खरंच",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c0a5a1e289c8-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "खरच?",
+    "hyp": "खरच",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c0a5a1e289c8-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "खरच?",
+    "hyp": "खरंच",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c0a5a1e289c8-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "खरच?",
+    "hyp": "खरंच",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c0a5a1e289c8-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "खरच?",
+    "hyp": "खरंच",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c0a5a1e289c8-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "खरच?",
+    "hyp": "खरंच",
+    "cer": 0.3333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\c0a5a1e289c8-d5.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 0,
+    "text": "अर्थात.",
+    "hyp": "अर्थात",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\4acb1ff25aba-d0.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 1,
+    "text": "अर्थात.",
+    "hyp": "अर्थात",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\4acb1ff25aba-d1.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 2,
+    "text": "अर्थात.",
+    "hyp": "अर्थात",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\4acb1ff25aba-d2.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 3,
+    "text": "अर्थात.",
+    "hyp": "अर्थात",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\4acb1ff25aba-d3.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 4,
+    "text": "अर्थात.",
+    "hyp": "अर्थात",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\4acb1ff25aba-d4.wav"
+   },
+   {
+    "lang": "mr",
+    "draw": 5,
+    "text": "अर्थात.",
+    "hyp": "अर्थात",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\mr\\4acb1ff25aba-d5.wav"
+   }
+  ],
+  "bn": [
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "ঠিক আছে।",
+    "hyp": "ঠিক আছে",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\9b0ca724039d-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "ঠিক আছে।",
+    "hyp": "ঠিক আছে",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\9b0ca724039d-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "ঠিক আছে।",
+    "hyp": "ঠিক আছে",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\9b0ca724039d-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "ঠিক আছে।",
+    "hyp": "ঠিক আছে",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\9b0ca724039d-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "ঠিক আছে।",
+    "hyp": "ঠিক আছে",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\9b0ca724039d-d5.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 0,
+    "text": "হ্যাঁ।",
+    "hyp": "হ্যাঁ",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\b6e4c7b90d5a-d0.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "হ্যাঁ।",
+    "hyp": "হের",
+    "cer": 0.8,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\b6e4c7b90d5a-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "হ্যাঁ।",
+    "hyp": "হ্যাঁ",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\b6e4c7b90d5a-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "হ্যাঁ।",
+    "hyp": "হ্যাঁ",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\b6e4c7b90d5a-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "হ্যাঁ।",
+    "hyp": "হ্যাঁ",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\b6e4c7b90d5a-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "হ্যাঁ।",
+    "hyp": "হ্যাঁ",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\b6e4c7b90d5a-d5.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 0,
+    "text": "না।",
+    "hyp": "না",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\0d944353cd17-d0.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "না।",
+    "hyp": "না",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\0d944353cd17-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "না।",
+    "hyp": "না",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\0d944353cd17-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "না।",
+    "hyp": "না",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\0d944353cd17-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "না।",
+    "hyp": "না",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\0d944353cd17-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "না।",
+    "hyp": "না",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\0d944353cd17-d5.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 0,
+    "text": "থামুন।",
+    "hyp": "থামুন",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\3358cdff1c36-d0.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "থামুন।",
+    "hyp": "থামো",
+    "cer": 0.4,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\3358cdff1c36-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "থামুন।",
+    "hyp": "থামুন",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\3358cdff1c36-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "থামুন।",
+    "hyp": "থামুন",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\3358cdff1c36-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "থামুন।",
+    "hyp": "থামুন",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\3358cdff1c36-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "থামুন।",
+    "hyp": "থামুন",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\3358cdff1c36-d5.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 0,
+    "text": "কেন?",
+    "hyp": "ক্যেন",
+    "cer": 0.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\340fff39f6f1-d0.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "কেন?",
+    "hyp": "কেন",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\340fff39f6f1-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "কেন?",
+    "hyp": "ক্যেন",
+    "cer": 0.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\340fff39f6f1-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "কেন?",
+    "hyp": "ক্যামূ",
+    "cer": 1.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\340fff39f6f1-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "কেন?",
+    "hyp": "ক্যেন",
+    "cer": 0.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\340fff39f6f1-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "কেন?",
+    "hyp": "কেন",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\340fff39f6f1-d5.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 0,
+    "text": "এখনই।",
+    "hyp": "এখনই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\76c40c2c87ce-d0.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "এখনই।",
+    "hyp": "এখনই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\76c40c2c87ce-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "এখনই।",
+    "hyp": "এখনই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\76c40c2c87ce-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "এখনই।",
+    "hyp": "এখনই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\76c40c2c87ce-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "এখনই।",
+    "hyp": "এখনই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\76c40c2c87ce-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "এখনই।",
+    "hyp": "এখনই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\76c40c2c87ce-d5.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 0,
+    "text": "সত্যিই?",
+    "hyp": "শুতি",
+    "cer": 0.8333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\7afcf60c42e8-d0.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "সত্যিই?",
+    "hyp": "শুতি",
+    "cer": 0.8333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\7afcf60c42e8-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "সত্যিই?",
+    "hyp": "ছোত্রি",
+    "cer": 0.6667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\7afcf60c42e8-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "সত্যিই?",
+    "hyp": "শুতি",
+    "cer": 0.8333,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\7afcf60c42e8-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "সত্যিই?",
+    "hyp": "সত্যি",
+    "cer": 0.1667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\7afcf60c42e8-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "সত্যিই?",
+    "hyp": "সত্যি",
+    "cer": 0.1667,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\7afcf60c42e8-d5.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 0,
+    "text": "অবশ্যই।",
+    "hyp": "অবশ্যই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\abc4d5b6489d-d0.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 1,
+    "text": "অবশ্যই।",
+    "hyp": "অবশ্যই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\abc4d5b6489d-d1.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 2,
+    "text": "অবশ্যই।",
+    "hyp": "অবশ্যই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\abc4d5b6489d-d2.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 3,
+    "text": "অবশ্যই।",
+    "hyp": "অবশ্যই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\abc4d5b6489d-d3.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 4,
+    "text": "অবশ্যই।",
+    "hyp": "অবশ্যই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\abc4d5b6489d-d4.wav"
+   },
+   {
+    "lang": "bn",
+    "draw": 5,
+    "text": "অবশ্যই।",
+    "hyp": "অবশ্যই",
+    "cer": 0.0,
+    "vakyansh_cer": null,
+    "path": "C:\\Users\\aravind reddy\\OneDrive\\Desktop\\ai_dub\\sur-backend\\.tts_runtime\\bench\\audio\\syspin\\bn\\abc4d5b6489d-d5.wav"
+   }
+  ]
+ }
+}

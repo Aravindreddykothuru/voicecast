@@ -1,0 +1,87 @@
+{
+ "method": "set A (draws (0, 1, 2)) SYSPIN renders, all of them; speech-rate range = observed min/max widened by 1.25x, silence = observed max x 1.5; margins fixed before looking. Evaluated on held-out set B.",
+ "generated_by": "tts benchmark",
+ "created": "2026-09-23",
+ "ranges": {
+  "bn": {
+   "short": {
+    "cps_lo": 4.859,
+    "cps_hi": 22.372,
+    "n": 23
+   },
+   "long": {
+    "cps_lo": 6.808,
+    "cps_hi": 23.665,
+    "n": 60
+   }
+  },
+  "hi": {
+   "short": {
+    "cps_lo": 6.051,
+    "cps_hi": 20.881,
+    "n": 24
+   },
+   "long": {
+    "cps_lo": 5.69,
+    "cps_hi": 13.518,
+    "n": 60
+   }
+  },
+  "kn": {
+   "short": {
+    "cps_lo": 5.467,
+    "cps_hi": 25.056,
+    "n": 24
+   },
+   "long": {
+    "cps_lo": 7.901,
+    "cps_hi": 19.634,
+    "n": 60
+   }
+  },
+  "mr": {
+   "short": {
+    "cps_lo": 3.864,
+    "cps_hi": 23.491,
+    "n": 24
+   },
+   "long": {
+    "cps_lo": 6.335,
+    "cps_hi": 18.234,
+    "n": 60
+   }
+  },
+  "te": {
+   "short": {
+    "cps_lo": 5.418,
+    "cps_hi": 23.079,
+    "n": 27
+   },
+   "long": {
+    "cps_lo": 6.824,
+    "cps_hi": 18.919,
+    "n": 60
+   }
+  }
+ },
+ "default": {
+  "short": {
+   "cps_lo": 3.864,
+   "cps_hi": 25.056,
+   "n": 122
+  },
+  "long": {
+   "cps_lo": 5.69,
+   "cps_hi": 23.665,
+   "n": 300
+  }
+ },
+ "silence": {
+  "max_lead_s": 0.3,
+  "max_trail_s": 0.3
+ },
+ "clip": {
+  "level": 0.999,
+  "max_fraction": 0.001
+ }
+}

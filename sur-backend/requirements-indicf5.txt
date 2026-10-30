@@ -1,0 +1,18 @@
+# .venv-indicf5 -- IndicF5 runs in its own interpreter because its stack
+# pins versions the rest of the backend cannot use.
+#
+# Versions are not guesses: ai4bharat/IndicF5's config.json at the pinned
+# revision records transformers_version 4.49.0, and its model.py imports the
+# f5_tts package for inference (docs/indicf5-adapter-diff.md).
+#
+# Licence note: the f5-tts PACKAGE is MIT. The SWivid/F5-TTS WEIGHTS are
+# CC-BY-NC and are refused by name in app/tts_runtime/licenses.py. This venv
+# exists to run IndicF5's own MIT weights with that package's code.
+f5-tts==1.1.7
+transformers==4.49.0
+numpy==1.26.4
+torch==2.4.1
+soundfile==0.12.1
+pydub==0.25.1
+safetensors>=0.4.3
+huggingface_hub>=0.26,<1.0

@@ -1,0 +1,87 @@
+{
+ "project": "fc117803-dec2-431a-be89-45b77e01289d",
+ "in_process": {
+  "provider": "SyspinTTSProvider",
+  "seconds": 68.4
+ },
+ "runtime": {
+  "provider": "RuntimeSyspinTTSProvider",
+  "seconds": 163.1
+ },
+ "lines": [
+  {
+   "index": 0,
+   "text": "అందరికీ శుభోదయం.",
+   "in_process_sha256": "f475c4197dcaeacca025642ff7d028de61edd1cd88e778eab1fdc1cc24a57cdd",
+   "runtime_sha256": "f475c4197dcaeacca025642ff7d028de61edd1cd88e778eab1fdc1cc24a57cdd",
+   "equal": true,
+   "duration_ms": 1217
+  },
+  {
+   "index": 1,
+   "text": "ఈ రోజు సమావేశానికి వచ్చినందుకు ధన్యవాదాలు.",
+   "in_process_sha256": "98f14fb59844ad9d0d6398fb6b1efa210b17cdb53767011c38440565e6668f80",
+   "runtime_sha256": "98f14fb59844ad9d0d6398fb6b1efa210b17cdb53767011c38440565e6668f80",
+   "equal": true,
+   "duration_ms": 2868
+  },
+  {
+   "index": 2,
+   "text": "మీ అందరినీ ఇక్కడ చూడటం నాకు చాలా ఆనందంగా ఉంది.",
+   "in_process_sha256": "490919eb756f9ffe6d832caee940a3b1cfee55492717687000b6f1086b020270",
+   "runtime_sha256": "490919eb756f9ffe6d832caee940a3b1cfee55492717687000b6f1086b020270",
+   "equal": true,
+   "duration_ms": 3622
+  },
+  {
+   "index": 3,
+   "text": "సర్వర్తో మాకు తీవ్రమైన సమస్య ఉంది, దానిని ఈ రాత్రి పరిష్కరించాల్సి ఉంది.",
+   "in_process_sha256": "4af373fe5ffdd5f29d9be524b71cd27d00c4d4e419802fe62e5cf77ec69a4ea5",
+   "runtime_sha256": "4af373fe5ffdd5f29d9be524b71cd27d00c4d4e419802fe62e5cf77ec69a4ea5",
+   "equal": true,
+   "duration_ms": 4899
+  },
+  {
+   "index": 4,
+   "text": "అది భయంకరమైన వార్త.",
+   "in_process_sha256": "cfd17d39aa4a1d8841b1822af50fb0e054541a055e7e826dcf10d0c8ec64f4fd",
+   "runtime_sha256": "cfd17d39aa4a1d8841b1822af50fb0e054541a055e7e826dcf10d0c8ec64f4fd",
+   "equal": true,
+   "duration_ms": 1577
+  },
+  {
+   "index": 5,
+   "text": "దానికి ఏమైంది?",
+   "in_process_sha256": "c7245a57f45ef4b8310082f908d35823d3a748845936aa18cb45bbd3b50e6295",
+   "runtime_sha256": "c7245a57f45ef4b8310082f908d35823d3a748845936aa18cb45bbd3b50e6295",
+   "equal": true,
+   "duration_ms": 1207
+  },
+  {
+   "index": 6,
+   "text": "ఎవరికీ ఇంకా తెలియదు, కానీ మొత్తం బృందం ప్రస్తుతం దానిపై పని చేస్తోంది.",
+   "in_process_sha256": "359754f02fcc5df7a8a4724d43c0a4ae08083c9aa91c810a99716360605ad378",
+   "runtime_sha256": "359754f02fcc5df7a8a4724d43c0a4ae08083c9aa91c810a99716360605ad378",
+   "equal": true,
+   "duration_ms": 4551
+  },
+  {
+   "index": 7,
+   "text": "సరే.",
+   "in_process_sha256": "95f1fa341cb940ebfea1eb64f3ba1b70bc49ad27610598c829137a461ec50583",
+   "runtime_sha256": "95f1fa341cb940ebfea1eb64f3ba1b70bc49ad27610598c829137a461ec50583",
+   "equal": true,
+   "duration_ms": 501
+  },
+  {
+   "index": 8,
+   "text": "రేపు ఉదయం తొమ్మిది గంటలకు మళ్లీ కలుద్దాం.",
+   "in_process_sha256": "d044d30989e634a977f99ecca2743c15318423c163a5be43b9cc60769c8d9dcb",
+   "runtime_sha256": "d044d30989e634a977f99ecca2743c15318423c163a5be43b9cc60769c8d9dcb",
+   "equal": true,
+   "duration_ms": 2995
+  }
+ ],
+ "lines_total": 9,
+ "lines_byte_identical": 9
+}

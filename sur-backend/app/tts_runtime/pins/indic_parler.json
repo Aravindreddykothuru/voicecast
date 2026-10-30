@@ -1,0 +1,57 @@
+{
+ "name": "indic_parler",
+ "repo": "ai4bharat/indic-parler-tts",
+ "revision": "7b527af5ee8ed1f9a28d80b19703ed9bb8ba10ca",
+ "license": "Apache-2.0",
+ "gated": true,
+ "files": [
+  {
+   "path": "config.json",
+   "size": 7338,
+   "git_oid": "16b7203d25b7827bf0d3cd2eca43f687638866f1",
+   "lfs": false
+  },
+  {
+   "path": "generation_config.json",
+   "size": 223,
+   "git_oid": "317ab0c2dcb070d9c6b6de9a8bfaea506311c49f",
+   "lfs": false
+  },
+  {
+   "path": "model.safetensors",
+   "size": 3751321772,
+   "git_oid": "74c3556851a9e26d6750263bd141e32b4de04b7e",
+   "lfs": true
+  },
+  {
+   "path": "preprocessor_config.json",
+   "size": 206,
+   "git_oid": "6a86814ebf860588057d969d67d7a3e1adacf636",
+   "lfs": false
+  },
+  {
+   "path": "special_tokens_map.json",
+   "size": 552,
+   "git_oid": "8bedc05a6476080d7f473a9da72394f2cee48340",
+   "lfs": false
+  },
+  {
+   "path": "tokenizer.json",
+   "size": 10272460,
+   "git_oid": "4e69255622d209ad444a019a340bfbab4a602fb5",
+   "lfs": false
+  },
+  {
+   "path": "tokenizer.model",
+   "size": 1795391,
+   "git_oid": "2c5c7d3b1e56c6d6fe775e419836cf000f9e42fc",
+   "lfs": true
+  },
+  {
+   "path": "tokenizer_config.json",
+   "size": 990,
+   "git_oid": "77573bd5e710bb4ceca8d2947788a9bd6d4d75de",
+   "lfs": false
+  }
+ ]
+}

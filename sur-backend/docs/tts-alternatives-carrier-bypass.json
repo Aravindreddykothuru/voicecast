@@ -1,0 +1,41 @@
+{
+ "created": "2026-09-30 22:08",
+ "lang": "te",
+ "lines": 9,
+ "licence_note": "facebook/mms-tts-* is CC-BY-NC-4.0: benchmark-only, never shippable here.",
+ "mms_isolated_no_carrier": {
+  "A": {
+   "renders": 27,
+   "pass": 12,
+   "pass_rate": 0.444,
+   "pass_ci95": [
+    0.276,
+    0.627
+   ],
+   "mean_cer": 0.6249
+  },
+  "B": {
+   "renders": 27,
+   "pass": 10,
+   "pass_rate": 0.37,
+   "pass_ci95": [
+    0.215,
+    0.558
+   ],
+   "mean_cer": 0.6206
+  }
+ },
+ "syspin_with_carrier_committed": {
+  "renders": 54,
+  "pass": 52,
+  "pass_rate": 0.963,
+  "pass_ci95": [
+   0.875,
+   0.99
+  ],
+  "mean_cer": 0.0507
+ },
+ "bar": "a render passes at CER <= 0.35",
+ "decision": "keep the carrier for mms: isolated short words do not clear a 0.8 lower bound in both sets",
+ "does_not_transfer": "Says nothing about indic_parler or indicf5, which were never run; and nothing about mr/bn, whose short-line readers are unreliable."
+}

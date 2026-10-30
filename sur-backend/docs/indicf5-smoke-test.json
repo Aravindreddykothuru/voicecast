@@ -1,0 +1,33 @@
+{
+ "step": "4 indicf5-adapter",
+ "created": "2026-10-03 11:05:28",
+ "status": "DISABLED_AS_REQUIRED",
+ "checks": {
+  "is_disabled": true,
+  "disabled_reason": "no reference clip with verified licence and consent in app/tts_runtime/data/tts_references.yaml",
+  "total_references": 2,
+  "verified_references": 0,
+  "supports_cpu_fallback": true,
+  "sample_rate": 24000,
+  "languages": [
+   "as",
+   "bn",
+   "gu",
+   "hi",
+   "kn",
+   "ml",
+   "mr",
+   "or",
+   "pa",
+   "ta",
+   "te"
+  ],
+  "pins": [
+   "indicf5",
+   "vocos"
+  ],
+  "adapter_file": "app/tts_runtime/adapters/indicf5.py",
+  "diff_document": "docs/indicf5-adapter-diff.md"
+ },
+ "duration_s": 0.261
+}
